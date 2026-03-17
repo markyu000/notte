@@ -27,30 +27,46 @@
 
 ## 二、主路径流程图
 
+### 图 1：Collection 层
+
 ```mermaid
 flowchart LR
   A["打开 App"] --> B["Collection 列表"]
   B --> C{"有 Collection?"}
   C -- "否（空状态）" --> D["创建 Collection\n输入标题 / 图标 / 颜色"]
-  C -- "是" --> E["选择或创建 Collection"]
+  C -- "是" --> E["选择 Collection"]
   D --> E
-  E --> F["进入 Collection\nPage 列表"]
-  F --> G{"有 Page?"}
-  G -- "否（空状态）" --> H["创建 Page\n输入标题"]
-  G -- "是" --> I["选择或创建 Page"]
-  H --> I
-  I --> J["进入 Page\nNode 编辑器"]
-  J --> K{"有 Node?"}
-  K -- "否（空状态）" --> L["创建第一个 Node\n输入标题"]
-  K -- "是" --> M["继续编辑已有 Node"]
-  L --> M
-  M --> N["编辑 Node 内容区\ntext Block"]
-  N --> O["调整 Node 层级 / 顺序\n缩进 / 排序 / 折叠"]
-  O --> P["退出 App / 重启"]
-  P --> Q["数据完整保留\nLocal-first 闭环 ✓"]
-  Q --> R{"已登录 iCloud?"}
-  R -- "是" --> S["跨设备同步\n（M7 启用）"]
-  R -- "否" --> T["纯本地模式\n功能不受影响"]
+  E --> F["→ 进入 Page 层"]
+```
+
+### 图 2：Page 层
+
+```mermaid
+flowchart LR
+  A["← 来自 Collection 层"] --> B["Page 列表"]
+  B --> C{"有 Page?"}
+  C -- "否（空状态）" --> D["创建 Page\n输入标题"]
+  C -- "是" --> E["选择 Page"]
+  D --> E
+  E --> F["→ 进入 Node 编辑器层"]
+```
+
+### 图 3：Node 编辑器层
+
+```mermaid
+flowchart LR
+  A["← 来自 Page 层"] --> B["Node 编辑器"]
+  B --> C{"有 Node?"}
+  C -- "否（空状态）" --> D["创建 Node\n输入标题"]
+  C -- "是" --> E["编辑已有 Node"]
+  D --> E
+  E --> F["编辑内容区\ntext Block"]
+  F --> G["调整层级 / 顺序\n缩进 / 排序 / 折叠"]
+  G --> H["退出 / 重启"]
+  H --> I["数据完整保留 ✓"]
+  I --> J{"已登录 iCloud?"}
+  J -- "是" --> K["跨设备同步\n（MVP-M7）"]
+  J -- "否" --> L["纯本地模式"]
 ```
 
 ---
