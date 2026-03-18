@@ -146,6 +146,7 @@ develop ──●──●──●───────────────
 | `docs` | 文档、注释、README | `docs: update mvp scope in readme` |
 | `chore` | 依赖更新、构建配置、杂务 | `chore: update swift package dependencies` |
 | `wip` | 开发中临时存档 | `wip: node editor engine skeleton` |
+| `merge` | 合并时描述被合并分支内容、目的 | `merge: complete the whole mvp features` |
 
 ### 规范细则
 
