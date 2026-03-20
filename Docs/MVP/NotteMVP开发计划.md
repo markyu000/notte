@@ -116,9 +116,7 @@ Target: iPhone（MVP 主平台）→ iPad → macOS
 [M0] Create GitHub issue template
 [M0] Create GitHub PR template
 [M0] Define branch strategy
-[M0] Create GitHub Project board and configure columns
 [M0] Create all labels
-[M0] Create all Milestones
 [M0] Create low-fidelity wireframes in Figma (3 main screens + Node Editor layout + empty states)
 ```
 
