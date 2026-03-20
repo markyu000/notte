@@ -86,6 +86,9 @@ Target: iPhone（MVP 主平台）→ iPad → macOS
 - [ ] 命名规范文档（类名、文件名、变量名规则）
 - [ ] Issue 模板 & PR 模板
 - [ ] 分支策略说明
+- [ ] 低保真线框草图（Figma）：三个主界面导航结构 + Node Editor 编辑区布局 + 关键空态
+
+> **设计原则**：MVP 阶段不做高保真 Figma 稿。SwiftUI 本身作为原型工具，边写边验证交互手感。Figma 在此阶段只用于确认信息架构和布局方向，不涉及颜色、字体、动效。
 
 #### Out-of-Scope（MVP 不做）
 
@@ -116,6 +119,7 @@ Target: iPhone（MVP 主平台）→ iPad → macOS
 [M0] Create GitHub Project board and configure columns
 [M0] Create all labels
 [M0] Create all Milestones
+[M0] Create low-fidelity wireframes in Figma (3 main screens + Node Editor layout + empty states)
 ```
 
 #### 验收
@@ -123,6 +127,7 @@ Target: iPhone（MVP 主平台）→ iPad → macOS
 - 所有团队成员（或自己）对 MVP 边界认知一致
 - Out-of-Scope 列表明确，任何新想法都先进 Backlog
 - GitHub Project 可用
+- 低保真线框草图完成：三个主界面结构清晰，Node Editor 编辑区布局方向确定
 
 ---
 
@@ -1216,6 +1221,7 @@ NotificationCenter.default.addObserver(
 - 空状态视觉：Collection / Page / Node 三处空状态插图或图标
 - 删除确认：文案清晰（"删除后不可恢复" / "包含 X 个 Page"）
 - Loading 态：首次加载骨架屏或 ProgressView
+- **Figma 精稿**：对照实现完成后，在 Figma 中补全高保真视觉稿（颜色、字体、图标、间距），作为 App Store 截图和后续迭代的设计基准
 
 ##### 8.2 回归测试清单
 
@@ -1279,6 +1285,7 @@ Dynamic Type
 [M8] Improve NodeEditor empty state prompt
 [M8] Improve delete confirmation copy (warn cascade effects)
 [M8] Add loading skeleton or ProgressView for initial load
+[M8] Create Figma hi-fi design reference (colors, typography, icons, spacing)
 [M8] Run and fix main path regression checklist
 [M8] Run and fix editor regression checklist
 [M8] Run sync regression checklist
