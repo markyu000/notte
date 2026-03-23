@@ -10,9 +10,16 @@ import SwiftData
 
 @main
 struct NotteApp: App {
+    @StateObject private var appBootstrap = AppBootStrap()
+
     var body: some Scene {
         WindowGroup {
-            
+            if appBootstrap.isReady {
+                RootView()
+                    .environmentObject(appBootstrap)
+            } else {
+                ProgressView("启动中...")
+            }
         }
     }
 }
