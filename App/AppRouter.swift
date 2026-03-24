@@ -6,8 +6,26 @@
 //
 
 import Foundation
+import Combine
 
 enum AppRoute: Hashable {
     case pageList(collectionID: UUID)
     case nodeEditor(pageID: UUID)
+}
+
+@MainActor
+class AppRouter: ObservableObject {
+    @Published var path: [AppRoute] = []
+
+    func navigate(to route: AppRoute) {
+        path.append(route)
+    }
+
+    func goBack() {
+        path.removeLast()
+    }
+
+    func goRoot() {
+        path.removeAll()
+    }
 }
