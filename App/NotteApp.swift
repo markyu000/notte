@@ -21,5 +21,6 @@ struct NotteApp: App {
                 ProgressView("启动中...")
             }
         }
+        .modelContainer(appBootstrap.modelContainer)
     }
 }
