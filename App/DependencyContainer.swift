@@ -10,7 +10,7 @@ import SwiftData
 
 @MainActor
 class DependencyContainer: ObservableObject {
-    let collecitonRepository: CollecitonRepositoryProtocol
+    let collecitonRepository: CollectionRepositoryProtocol
     let pageRepository: PageRepositoryProtocol
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
