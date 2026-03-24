@@ -10,7 +10,8 @@ import SwiftData
 @MainActor
 class AppBootStrap: ObservableObject {
     @Published var isReady: Bool = false
-    private(set) var modelContainer: ModelContainer
+    let modelContainer: ModelContainer
+    private(set) var dependencyContainer: DependencyContainer?
 
     init() {
         do {
@@ -27,6 +28,10 @@ class AppBootStrap: ObservableObject {
             modelContainer = try ModelContainer(
                 for: schema,
                 configurations: config
+            )
+
+            dependencyContainer = DependencyContainer(
+                modelContainer: modelContainer
             )
             isReady = true
         } catch {
