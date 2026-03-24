@@ -10,15 +10,9 @@ import SwiftData
 @MainActor
 class AppBootStrap: ObservableObject {
     @Published var isReady: Bool = false
-    private(set) var modelContainer: ModelContainer?
+    private(set) var modelContainer: ModelContainer
 
     init() {
-        Task {
-            await setup()
-        }
-    }
-
-    private func setup() async {
         do {
             let schema = Schema([
                 CollectionModel.self,
