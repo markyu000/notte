@@ -36,3 +36,17 @@ class PageModel {
         self.isArchived = isArchived
     }
 }
+
+extension PageModel {
+    func toDomain() -> Page {
+        Page(
+            id: id,
+            collectionID: collectionID,
+            title: title,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            sortIndex: sortIndex,
+            isArchived: isArchived
+        )
+    }
+}

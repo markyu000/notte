@@ -39,3 +39,18 @@ class CollectionModel {
         self.isPinned = isPinned
     }
 }
+
+extension CollectionModel {
+    func toDomain() -> Collection {
+        Collection(
+            id: id,
+            title: title,
+            iconName: iconName,
+            colorToken: colorToken
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            sortIndex: sortIndex,
+            isPinned: isPinned
+        )
+    }
+}

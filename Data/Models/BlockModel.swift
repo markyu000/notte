@@ -36,3 +36,17 @@ class BlockModel {
         self.updatedAt = updatedAt
     }
 }
+
+extension BlockModel {
+    func toDomain() -> Block {
+        Block(
+            id: id,
+            nodeID: nodeID,
+            type: BlockType(rawValue: type) ?? .text,
+            content: content,
+            sortIndex: sortIndex,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}

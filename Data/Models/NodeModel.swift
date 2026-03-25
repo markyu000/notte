@@ -42,3 +42,19 @@ class NodeModel {
         self.updatedAt = updatedAt
     }
 }
+
+extension NodeModel {
+    func toDomain() -> Node {
+        Node(
+            id: id,
+            pageID: pageID,
+            parentNodeID: parentNodeID
+            title: title,
+            depth: depth,
+            sortIndex: sortIndex,
+            isCollapsed: isCollapsed,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
