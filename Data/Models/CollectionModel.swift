@@ -11,6 +11,13 @@ import SwiftData
 @Model
 class CollectionModel {
     var id: UUID = UUID()
+    var title: String = ""
+    var iconName: String? = nil
+    var colorToken: String? = nil
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var sortIndex: Double = 0
+    var isPinned: Bool = false
 
     init() {}
 }
