@@ -13,7 +13,7 @@ struct Collection: Identifiable, Hashable {
     var iconName: String?
     var colorToken: String?
     var createdAt: Date
-    var updatedAt: Data
+    var updatedAt: Date
     var sortIndex: Double
     var isPinned: Bool
 }
