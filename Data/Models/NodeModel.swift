@@ -11,6 +11,14 @@ import SwiftData
 @Model
 class NodeModel {
     var id: UUID = UUID()
+    var pageID: UUID = UUID()
+    var parentNodeID: UUID? = nil
+    var title: String = ""
+    var depth: Int = 0
+    var sortIndex: Double = 0
+    var isCollapsed: Bool = false
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
 
     init() {}
 }
