@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 class PageModel {
-    var id: UUID = UUID()
+    @Attribute(.unique) var id: UUID = UUID()
     var collectionID: UUID = UUID()
     var title: String = ""
     var createdAt: Date = Date()
@@ -18,5 +18,35 @@ class PageModel {
     var sortIndex: Double = 0
     var isArchived: Bool = false
 
-    init() {}
+    init(
+        id: UUID = UUID(),
+        collectionID: UUID,
+        title: String,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date(),
+        sortIndex: Double = 0,
+        isArchived: Bool = false
+    ) {
+        self.id = id
+        self.collectionID = collectionID
+        self.title = title
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.sortIndex = sortIndex
+        self.isArchived = isArchived
+    }
+}
+
+extension PageModel {
+    func toDomain() -> Page {
+        Page(
+            id: id,
+            collectionID: collectionID,
+            title: title,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            sortIndex: sortIndex,
+            isArchived: isArchived
+        )
+    }
 }
