@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 class CollectionModel {
-    var id: UUID = UUID()
+    @Attribute(.unique) var id: UUID = UUID()
     var title: String = ""
     var iconName: String? = nil
     var colorToken: String? = nil

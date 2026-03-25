@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 class NodeModel {
-    var id: UUID = UUID()
+    @Attribute(.unique) var id: UUID = UUID()
     var pageID: UUID = UUID()
     var parentNodeID: UUID? = nil
     var title: String = ""

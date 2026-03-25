@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 class PageModel {
-    var id: UUID = UUID()
+    @Attribute(.unique) var id: UUID = UUID()
     var collectionID: UUID = UUID()
     var title: String = ""
     var createdAt: Date = Date()

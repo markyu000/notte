@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 class BlockModel {
-    var id: UUID = UUID()
+    @Attribute(.unique) var id: UUID = UUID()
     var nodeID: UUID = UUID()
     var type: String = BlockType.text.rawValue
     var content: String = ""
