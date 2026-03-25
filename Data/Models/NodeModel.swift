@@ -20,5 +20,25 @@ class NodeModel {
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
-    init() {}
+    init(
+        id: UUID = UUID(),
+        pageID: UUID,
+        parentNodeID: UUID? = nil,
+        title: String,
+        depth: Int = 0,
+        sortIndex: Double = 0,
+        isCollapsed: Bool = false,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
+    ) {
+        self.id = id
+        self.pageID = pageID
+        self.parentNodeID = parentNodeID
+        self.title = title
+        self.depth = depth
+        self.sortIndex = sortIndex
+        self.isCollapsed = isCollapsed
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
 }

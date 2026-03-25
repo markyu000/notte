@@ -18,5 +18,21 @@ class BlockModel {
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
-    init() {}
+    init(
+        id: UUID = UUID(),
+        nodeID: UUID,
+        type: String = BlockType.text.rawValue,
+        content: String = "",
+        sortIndex: Double = 0,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
+    ) {
+        self.id = id
+        self.nodeID = nodeID
+        self.type = type
+        self.content = content
+        self.sortIndex = sortIndex
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
 }
