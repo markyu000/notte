@@ -10,16 +10,15 @@ import SwiftData
 
 struct PersistenceController {
     static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
-        let schema = Schema([
-            CollectionModel.self,
-            PageModel.self,
-            NodeModel.self,
-            BlockModel.self
-        ])
+        let schema = Schema(versionedSchema: SchemaV1.self)
         let config = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: inMemory
         )
-        return try ModelContainer(for: schema, configurations: config)
+        return try ModelContainer(
+            for: schema,
+            migrationPlan: NotteMigrationPlan.self,
+            configurations: config
+        )
     }
 }
