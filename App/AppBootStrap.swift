@@ -15,21 +15,7 @@ class AppBootStrap: ObservableObject {
 
     init() {
         do {
-            let schema = Schema([
-                CollectionModel.self,
-                PageModel.self,
-                NodeModel.self,
-                BlockModel.self
-            ])
-            let config = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: false
-            )
-            modelContainer = try ModelContainer(
-                for: schema,
-                configurations: config
-            )
-
+            modelContainer = try PersistenceController.makeContainer()
             dependencyContainer = DependencyContainer(
                 modelContainer: modelContainer
             )
