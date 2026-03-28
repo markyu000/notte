@@ -21,16 +21,6 @@
 		33FF83AC2F6974E900055106 /* Notte.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Notte.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		33E68F992F7170A900A82BA0 /* Exceptions for "Notte" folder in "Notte" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Docs/NotteGit规范.md",
-			);
-			target = 33FF83AB2F6974E900055106 /* Notte */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		33E68F882F715A2400A82BA0 /* NotteTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -39,9 +29,6 @@
 		};
 		33FF83AE2F6974E900055106 /* Notte */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				33E68F992F7170A900A82BA0 /* Exceptions for "Notte" folder in "Notte" target */,
-			);
 			path = Notte;
 			sourceTree = "<group>";
 		};
