@@ -7,16 +7,8 @@
 
 import Foundation
 
-enum AppError: LocalizedError {
-    case repositoryError(RepositoryError)
-    case unknown(Error)
-
-    var errorDescription: String? {
-        switch self {
-        case .repositoryError(let e):
-            return "数据操作失败：\(e)"
-        case .unknown(let e):
-            return "未知错误：\(e.localizedDescription)"
-        }
+struct AppErrorPresenter {
+    static func present(_ error: AppError, in viewModel: any ObservableObject) {
+        // MVP 阶段占位，后续填充
     }
 }
