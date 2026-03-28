@@ -1,0 +1,26 @@
+//
+//  DependencyContainer.swift
+//  Notte
+//
+//  Created by yuzheyuan on 2026/3/23.
+//
+
+import Combine
+import SwiftData
+
+@MainActor
+class DependencyContainer: ObservableObject {
+    let collecitonRepository: CollectionRepositoryProtocol
+    let pageRepository: PageRepositoryProtocol
+    let nodeRepository: NodeRepositoryProtocol
+    let blockRepository: BlockRepositoryProtocol
+
+    init(modelContainer: ModelContainer) {
+        let context = ModelContext(modelContainer)
+
+        self.collecitonRepository = CollectionRepository(context: context)
+        self.pageRepository = PageRepository(context: context)
+        self.nodeRepository = NodeRepository(context: context)
+        self.blockRepository = BlockRepository(context: context)
+    }
+}
