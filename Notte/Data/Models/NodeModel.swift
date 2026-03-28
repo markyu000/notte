@@ -48,7 +48,7 @@ extension NodeModel {
         Node(
             id: id,
             pageID: pageID,
-            parentNodeID: parentNodeID
+            parentNodeID: parentNodeID,
             title: title,
             depth: depth,
             sortIndex: sortIndex,

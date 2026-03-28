@@ -46,7 +46,7 @@ extension CollectionModel {
             id: id,
             title: title,
             iconName: iconName,
-            colorToken: colorToken
+            colorToken: colorToken,
             createdAt: createdAt,
             updatedAt: updatedAt,
             sortIndex: sortIndex,
