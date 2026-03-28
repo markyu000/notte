@@ -9,12 +9,13 @@ import XCTest
 import SwiftData
 @testable import Notte
 
+@MainActor
 final class RepositoryProtocolTests: XCTestCase {
     var container: ModelContainer!
     var context: ModelContext!
 
-    override func setUp() throws {
-        container = try PersistenceController.makeContainer(inMemory: true)
+    override func setUp() {
+        container = try? PersistenceController.makeContainer(inMemory: true)
         context = ModelContext(container)
     }
 
