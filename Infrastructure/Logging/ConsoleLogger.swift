@@ -9,19 +9,19 @@ import Foundation
 
 struct ConsoleLogger: AppLogger {
 
-    func debug(_ message: String) {
+    func debug(_ message: String, file: String = #file, function: String) {
         #if DEBUG
         print("[DEBUG] \(message)")
         #endif
     }
 
-    func info(_ message: String) {
+    func info(_ message: String, file: String = #file, function: String) {
         #if DEBUG
         print("[INFO] \(message)")
         #endif
     }
 
-    func error(_ message: String, error: Error? = nil) {
+    func error(_ message: String, error: Error? = nil, file: String = #file, function: String) {
         #if DEBUG
         if let error = error {
             print("[ERROR] \(message) — \(error)")

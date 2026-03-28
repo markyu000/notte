@@ -8,7 +8,7 @@
 import Foundation
 
 protocol AppLogger {
-    func debug(_ message: String)
-    func info(_ message: String)
-    func error(_ message: String, error: Error?)
+    func debug(_ message: String, file: String, function: String)
+    func info(_ message: String, file: String, function: String)
+    func error(_ message: String, error: Error?, file: String, function: String)
 }
