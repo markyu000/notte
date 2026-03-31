@@ -10,8 +10,8 @@ import Foundation
 struct SortIndexNormalizer {
     static func normalizeIdNeeded(
         _ collecitons: [Collection],
-        update: (Collection) throws -> Void
-    ) throws {
+        update: (Collection) async throws -> Void
+    ) async throws {
         let sorted = collecitons.sorted { $0.sortIndex < $1.sortIndex }
 
         let needsNorm = zip(sorted, sorted.dropFirst()).contains { a, b in
@@ -26,7 +26,7 @@ struct SortIndexNormalizer {
             var updated = collection
             updated.sortIndex = newIndex
             updated.updatedAt = Date()
-            try update(updated)
+            try await update(updated)
         }
     }
 }
