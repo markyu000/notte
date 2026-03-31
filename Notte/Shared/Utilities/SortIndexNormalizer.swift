@@ -8,7 +8,7 @@
 import Foundation
 
 struct SortIndexNormalizer {
-    static func normalizeIdNeeded(
+    static func normalizeIfNeeded(
         _ collecitons: [Collection],
         update: (Collection) async throws -> Void
     ) async throws {
