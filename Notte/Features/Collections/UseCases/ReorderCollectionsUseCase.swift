@@ -40,15 +40,13 @@ struct ReorderCollectionsUseCase {
         }
         collection.sortIndex = newIndex
         collection.updatedAt = Date()
-        try repository.update(collection)
-    }
+        try await repository.update(collection)
 
-    func insertSortIndex(between lower: Double?, and upper: Double?) -> Double {
-        switch (lower, upper) {
-        case (nil, nil):       return 1000.0           // 列表为空
-        case (nil, let u?):    return u / 2.0          // 插到最前
-        case (let l?, nil):    return l + 1000.0       // 插到最后
-        case (let l?, let u?): return (l + u) / 2.0    // 插到中间
+        Task.detached {
+            let latest = try await repository.fetchAll()
+            try await SortIndexNormalizer.normalizeIfNeeded(latest) { updated in
+                try await repository.update(updated)
+            }
         }
     }
 }
