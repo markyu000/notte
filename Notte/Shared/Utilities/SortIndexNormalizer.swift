@@ -9,10 +9,10 @@ import Foundation
 
 struct SortIndexNormalizer {
     static func normalizeIfNeeded(
-        _ collecitons: [Collection],
+        _ collections: [Collection],
         update: (Collection) async throws -> Void
     ) async throws {
-        let sorted = collecitons.sorted { $0.sortIndex < $1.sortIndex }
+        let sorted = collections.sorted { $0.sortIndex < $1.sortIndex }
 
         let needsNorm = zip(sorted, sorted.dropFirst()).contains { a, b in
             SortIndexPolicy
