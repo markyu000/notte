@@ -23,7 +23,18 @@ struct ReorderCollectionsUseCase {
             all.indices.contains(idx + 1) ? all[idx + 1].sortIndex : nil
         }
 
-        let newIndex = insertSortIndex(between: lower, and: upper)
+        let newIndex: Double!
+        switch (lower, upper) {
+        case (nil, nil):
+            newIndex = SortIndexPolicy.initialIndex()
+        case (nil, let u?):
+            newIndex = SortIndexPolicy.indexBetween(before: 0, after: u)
+        case (let l?, nil):
+            newIndex = SortIndexPolicy.indexAfter(last: l)
+        case (let l?, let u?):
+            newIndex = SortIndexPolicy.indexBetween(before: l, after: u)
+        }
+        
         guard var collection = try repository.fetch(by: id) else {
             throw AppError.repositoryError(.notFound)
         }
