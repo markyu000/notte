@@ -10,6 +10,7 @@ import Foundation
 struct CreateCollectionUseCase {
     let repository: CollectionRepositoryProtocol
 
+    @discardableResult
     func execute(title: String) async throws -> Collection {
         let all = try await repository.fetchAll()
         let maxIndex = all.map(\.sortIndex).max() ?? 0
