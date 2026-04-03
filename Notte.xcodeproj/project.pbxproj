@@ -22,10 +22,33 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		33E68F992F7170A900A82BA0 /* Exceptions for "Notte" folder in "Notte" target */ = {
+		33E691862F77F8BC00A82BA0 /* Exceptions for "Notte" folder in "Notte" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Docs/MVP/NotteMVP-M0页面功能清单.md",
+				"Docs/MVP/NotteMVP工程设计文档.md",
+				"Docs/MVP/NotteMVP功能范围文档.md",
+				"Docs/MVP/NotteMVP开发计划.md",
+				"Docs/Notte产品信息.md",
+				"Docs/Notte核心用户旅程.md",
+				"Docs/Notte竞品深度分析报告.md",
+				"Docs/Notte命名规范.md",
+				"Docs/Notte目录结构说明.md",
+				"Docs/Notte配色方案.md",
+				"Docs/Notte数据模型定义.md",
 				"Docs/NotteGit规范.md",
+				"Docs/old/Notte_MVP_开发计划-old.md",
+				"Docs/old/Notte产品信息-old.md",
+				"Docs/old/Notte目录结构说明-old2.md",
+				"Docs/old/Notte市场经济分析-old.md",
+				"Docs/old/Notte文件目录结构-old.md",
+				"Docs/old/NotteGit规范.md",
+				"Docs/old/NotteMVP工程设计文档-old2.md",
+				"Docs/old/NotteMVP开发计划-old.md",
+				"Docs/old/NotteMVP开发计划-old2.md",
+				"Docs/old/NotteMVP开发计划-old3.md",
+				"Docs/old/NotteMVP目录结构.md",
+				"Docs/old/NotteMVPGit规范.md",
 			);
 			target = 33FF83AB2F6974E900055106 /* Notte */;
 		};
@@ -40,7 +63,7 @@
 		33FF83AE2F6974E900055106 /* Notte */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				33E68F992F7170A900A82BA0 /* Exceptions for "Notte" folder in "Notte" target */,
+				33E691862F77F8BC00A82BA0 /* Exceptions for "Notte" folder in "Notte" target */,
 			);
 			path = Notte;
 			sourceTree = "<group>";
