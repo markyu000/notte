@@ -28,7 +28,7 @@ struct CollectionCard: View {
                         .foregroundStyle(ColorTokens.textPrimary)
                         .lineLimit(1)
                     if collection.isPinned {
-                        collectionPinnedIndicator()
+                        CollectionPinnedIndicator()
                     }
                 }
             }
