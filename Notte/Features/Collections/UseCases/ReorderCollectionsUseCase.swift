@@ -35,7 +35,7 @@ struct ReorderCollectionsUseCase {
             newIndex = SortIndexPolicy.indexBetween(before: l, after: u)
         }
         
-        guard var collection = try repository.fetch(by: id) else {
+        guard var collection = try await repository.fetch(by: id) else {
             throw AppError.repositoryError(.notFound)
         }
         collection.sortIndex = newIndex
