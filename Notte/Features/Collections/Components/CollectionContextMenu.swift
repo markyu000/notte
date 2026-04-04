@@ -14,6 +14,23 @@ struct CollectionContextMenu: View {
     let onDelete: () -> Void
 
     var body: some View {
-        EmptyView()
+        Group {
+            Button(action: onRename) {
+                Label("重命名", systemImage: "pencil")
+            }
+
+            Button(action: onPin) {
+                Label(
+                    collection.isPinned ? "取消固定" : "固定",
+                    systemImage: collection.isPinned ? "pin.slash" : "pin"
+                )
+            }
+
+            Divider()
+
+            Button(role: .destructive, action: onDelete) {
+                Label("删除", systemImage: "trash")
+            }
+        }
     }
 }
