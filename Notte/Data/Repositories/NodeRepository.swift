@@ -15,27 +15,27 @@ class NodeRepository: NodeRepositoryProtocol {
         self.context = context
     }
 
-    func fetchAll(in pageID: UUID) throws -> [Node] {
+    func fetchAll(in pageID: UUID) async throws -> [Node] {
         throw RepositoryError.notImplemented
     }
 
-    func fetch(by id: UUID) throws -> Node? {
+    func fetch(by id: UUID) async throws -> Node? {
         throw RepositoryError.notImplemented
     }
 
-    func create(_ node: Node) throws {
+    func create(_ node: Node) async throws {
         throw RepositoryError.notImplemented
     }
 
-    func update(_ node: Node) throws {
+    func update(_ node: Node) async throws {
         throw RepositoryError.notImplemented
     }
 
-    func delete(by id: UUID) throws {
+    func delete(by id: UUID) async throws {
         throw RepositoryError.notImplemented
     }
 
-    func deleteAll(in pageID: UUID) throws {
+    func deleteAll(in pageID: UUID) async throws {
         throw RepositoryError.notImplemented
     }
 }

@@ -15,23 +15,23 @@ class CollectionRepository: CollectionRepositoryProtocol {
         self.context = context
     }
 
-    func fetchAll() throws -> [Collection] {
+    func fetchAll() async throws -> [Collection] {
         throw RepositoryError.notImplemented
     }
 
-    func fetch(by id: UUID) throws -> Collection? {
+    func fetch(by id: UUID) async throws -> Collection? {
         throw RepositoryError.notImplemented
     }
 
-    func create(_ collection: Collection) throws {
+    func create(_ collection: Collection) async throws {
         throw RepositoryError.notImplemented
     }
 
-    func update(_ collection: Collection) throws {
+    func update(_ collection: Collection) async throws {
         throw RepositoryError.notImplemented
     }
 
-    func delete(by id: UUID) throws {
+    func delete(by id: UUID) async throws {
         throw RepositoryError.notImplemented
     }
 }

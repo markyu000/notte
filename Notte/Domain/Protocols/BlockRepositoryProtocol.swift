@@ -8,10 +8,10 @@
 import Foundation
 
 protocol BlockRepositoryProtocol {
-    func fetchAll(in nodeID: UUID) throws -> [Block]
-    func fetch(by id: UUID) throws -> Block?
-    func create(_ block: Block) throws
-    func update(_ block: Block) throws
-    func delete(by id: UUID) throws
-    func deleteAll(in nodeID: UUID) throws
+    func fetchAll(in nodeID: UUID) async throws -> [Block]
+    func fetch(by id: UUID) async throws -> Block?
+    func create(_ block: Block) async throws
+    func update(_ block: Block) async throws
+    func delete(by id: UUID) async throws
+    func deleteAll(in nodeID: UUID) async throws
 }
