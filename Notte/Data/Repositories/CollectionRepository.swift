@@ -58,8 +58,9 @@ class CollectionRepository: CollectionRepositoryProtocol {
     }
 
     func update(_ collection: Collection) async throws {
+        let id = collection.id
         let descriptor = FetchDescriptor<CollectionModel>(
-            predicate: #Predicate { $0.id == collection.id }
+            predicate: #Predicate { $0.id == id }
         )
         guard let model = try context.fetch(descriptor).first else {
             throw RepositoryError.notFound
