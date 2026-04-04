@@ -57,13 +57,15 @@ struct CollectionCard: View {
 }
 
 #Preview {
-    CollectionCard(collection: Collection(
-        id: UUID(),
-        title: "示例 Collection",
-        createdAt: Date(),
-        updatedAt: Date(),
-        sortIndex: 1000,
-        isPinned: true
-    ))
+    CollectionCard(
+        collection: Collection(
+            id: UUID(),
+            title: "示例 Collection",
+            createdAt: Date(),
+            updatedAt: Date(),
+            sortIndex: 1000,
+            isPinned: true
+        )
+    )
     .padding()
 }
