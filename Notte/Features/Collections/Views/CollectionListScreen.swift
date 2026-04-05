@@ -32,7 +32,7 @@ struct CollectionListScreen: View {
                     collectionList
                 }
             }
-            .navigationTitle("我的收藏")
+            .navigationTitle("我的 Colleciton")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
