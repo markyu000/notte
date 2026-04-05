@@ -37,18 +37,6 @@
 				"Docs/Notte配色方案.md",
 				"Docs/Notte数据模型定义.md",
 				"Docs/NotteGit规范.md",
-				"Docs/old/Notte_MVP_开发计划-old.md",
-				"Docs/old/Notte产品信息-old.md",
-				"Docs/old/Notte目录结构说明-old2.md",
-				"Docs/old/Notte市场经济分析-old.md",
-				"Docs/old/Notte文件目录结构-old.md",
-				"Docs/old/NotteGit规范.md",
-				"Docs/old/NotteMVP工程设计文档-old2.md",
-				"Docs/old/NotteMVP开发计划-old.md",
-				"Docs/old/NotteMVP开发计划-old2.md",
-				"Docs/old/NotteMVP开发计划-old3.md",
-				"Docs/old/NotteMVP目录结构.md",
-				"Docs/old/NotteMVPGit规范.md",
 			);
 			target = 33FF83AB2F6974E900055106 /* Notte */;
 		};
