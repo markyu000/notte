@@ -14,6 +14,8 @@ struct ReorderCollectionsUseCase {
         let all = try await repository.fetchAll()
             .sorted { $0.sortIndex < $1.sortIndex }
 
+        let firstSortIndex = all.first?.sortIndex
+
         let targetIndex = targetID.flatMap { tid in
             all.firstIndex { $0.id == tid }
         }
@@ -26,7 +28,13 @@ struct ReorderCollectionsUseCase {
         let newIndex: Double!
         switch (lower, upper) {
         case (nil, nil):
-            newIndex = SortIndexPolicy.initialIndex()
+            // 移动到最前面：用 (0 + 当前第一项sortIndex)/2，避免出现与第一项相同的 sortIndex。
+            // 例如当前第一项是 1000，则新值是 500。
+            if let firstSortIndex {
+                newIndex = SortIndexPolicy.indexBetween(before: 0, after: firstSortIndex)
+            } else {
+                newIndex = SortIndexPolicy.initialIndex()
+            }
         case (nil, let u?):
             newIndex = SortIndexPolicy.indexBetween(before: 0, after: u)
         case (let l?, nil):
