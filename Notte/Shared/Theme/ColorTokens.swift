@@ -14,4 +14,5 @@ struct ColorTokens {
     static let textSecondary = Color("TextSecondary")
     static let accent = Color("Accent")
     static let separator = Color("Separator")
+    static let toolbar = Color("Toolbar")
 }
