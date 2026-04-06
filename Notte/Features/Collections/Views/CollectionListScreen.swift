@@ -41,10 +41,12 @@ struct CollectionListScreen: View {
                         viewModel.isShowingCreateSheet = true
                     } label: {
                         Image(systemName: "plus")
+                            .foregroundStyle(ColorTokens.accent)
                     }
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()
+                        .tint(ColorTokens.accent)
                 }
             }
             .environment(\.editMode, $editMode)
