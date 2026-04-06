@@ -21,6 +21,7 @@ struct CollectionEmptyState: View {
             VStack(spacing: SpacingTokens.sm) {
                 Text("还没有Collection")
                     .font(TypographyTokens.title)
+                    .bold()
                     .foregroundStyle(ColorTokens.textPrimary)
 
                 Text("点击下方按钮创建第一个Collection")
