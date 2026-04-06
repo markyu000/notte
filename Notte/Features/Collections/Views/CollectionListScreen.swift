@@ -47,6 +47,7 @@ struct CollectionListScreen: View {
                 ToolbarItem(placement: .topBarLeading) {
                     EditButton()
                         .tint(ColorTokens.accent)
+                        .disabled(viewModel.collections.isEmpty)
                 }
             }
             .environment(\.editMode, $editMode)
