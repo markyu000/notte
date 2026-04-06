@@ -34,8 +34,10 @@ final class CreateCollectionUseCaseTests: XCTestCase {
         do {
             _ = try await useCase.execute(title: "失败测试")
             XCTFail("应该抛出错误")
+        } catch is RepositoryError {
+            // 正确抛出了 RepositoryError
         } catch {
-            XCTAssertNotNil(error)
+            XCTFail("抛出了非预期的错误类型：\(error)")
         }
     }
 }
