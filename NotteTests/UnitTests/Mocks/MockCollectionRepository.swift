@@ -36,7 +36,7 @@ class MockCollectionRepository: CollectionRepositoryProtocol {
     }
     
     func delete(by id: UUID) async throws {
-        guard let index = storedCollections.firstIndex(where: $0.id == id) else {
+        guard let index = storedCollections.firstIndex(where: { $0.id == id }) else {
             throw RepositoryError.notFound
         }
         storedCollections.remove(at: index)
