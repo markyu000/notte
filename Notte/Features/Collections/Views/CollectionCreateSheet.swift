@@ -45,6 +45,7 @@ struct CollectionCreateSheet: View {
                         viewModel.newCollectionTitle
                             .trimmingCharacters(in: .whitespaces).isEmpty
                     )
+                    .tint(ColorTokens.accent)
                 }
             }
             .onAppear {
