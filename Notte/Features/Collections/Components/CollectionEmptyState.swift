@@ -13,33 +13,34 @@ struct CollectionEmptyState: View {
     var body: some View {
         VStack(spacing: SpacingTokens.lg) {
             Spacer()
+            Spacer()
 
             Image(systemName: "tray")
                 .font(.system(size: 70))
                 .foregroundStyle(ColorTokens.accent)
 
             VStack(spacing: SpacingTokens.sm) {
-                Text("还没有Collection")
+                Text("用 Collection 整理你的内容")
                     .font(TypographyTokens.title)
                     .bold()
                     .foregroundStyle(ColorTokens.textPrimary)
 
-                Text("点击下方按钮创建第一个Collection")
-                    .font(TypographyTokens.boldBody)
+                Text("把相关的 Page 放在一起")
+                    .font(TypographyTokens.subTitle)
+                    .bold()
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
+                Button(action: onCreateTapped) {
+                    Label("新建 Collection", systemImage: "square.grid.3x1.folder.badge.plus")
+                        .font(TypographyTokens.title2)
+                        .padding(.horizontal, SpacingTokens.md)
+                        .padding(.vertical, SpacingTokens.xs)
+                }
+                .buttonStyle(.glass)
             }
 
-            Button(action: onCreateTapped) {
-                Label("新建Collection", systemImage: "plus")
-                    .font(TypographyTokens.boldBody)
-                    .padding(.horizontal, SpacingTokens.lg)
-                    .padding(.vertical, SpacingTokens.sm)
-                    .background(ColorTokens.accent)
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
-            }
-
+            Spacer()
+            Spacer()
             Spacer()
         }
         .padding(SpacingTokens.xl)
