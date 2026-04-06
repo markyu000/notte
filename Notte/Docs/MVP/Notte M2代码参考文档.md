@@ -1223,7 +1223,8 @@ feat: replace RootView placeholder with CollectionListScreen
 import Foundation
 @testable import Notte
 
-actor MockCollectionRepository: CollectionRepositoryProtocol {
+@MainActor
+class MockCollectionRepository: CollectionRepositoryProtocol {
 
     var storedCollections: [Collection] = []
     var shouldThrowOnCreate = false
@@ -1257,7 +1258,13 @@ actor MockCollectionRepository: CollectionRepositoryProtocol {
 }
 ```
 
----
+**解释：**
+
+- `@MainActor class` 而不是 `actor`，避免 `Collection` 的属性（在 `@MainActor` 隔离域）在 `actor` 隔离域里被引用时产生编译警告。
+- `shouldThrowOnCreate` 直接作为普通属性设置，不需要异步方法。
+- Mock 放在 `Tests/UnitTests/Mocks/` 目录，M3、M4 的 Mock 也放这里统一管理。
+
+-----
 
 ### `Tests/UnitTests/CollectionRepositoryTests.swift`
 
@@ -1351,7 +1358,7 @@ final class CollectionRepositoryTests: XCTestCase {
 test: add CollectionRepository unit tests
 ```
 
----
+-----
 
 ### `Tests/UnitTests/CreateCollectionUseCaseTests.swift`
 
@@ -1359,6 +1366,7 @@ test: add CollectionRepository unit tests
 import XCTest
 @testable import Notte
 
+@MainActor
 final class CreateCollectionUseCaseTests: XCTestCase {
 
     var repository: MockCollectionRepository!
@@ -1381,7 +1389,7 @@ final class CreateCollectionUseCaseTests: XCTestCase {
     }
 
     func test_execute_whenRepositoryThrows_propagatesError() async {
-        await repository.setShouldThrow(true)
+        repository.shouldThrowOnCreate = true
         do {
             _ = try await useCase.execute(title: "失败测试")
             XCTFail("应该抛出错误")
@@ -1398,13 +1406,411 @@ final class CreateCollectionUseCaseTests: XCTestCase {
 test: add CreateCollectionUseCase unit tests
 ```
 
-**解释：**
+-----
 
-- `MockCollectionRepository` 声明为 `actor` 以匹配 `async throws` 的并发要求，用内存数组模拟数据库，UseCase 测试完全不依赖 SwiftData。
-- 测试方法都是 `async throws`，对应 UseCase 和 Repository 的 `async throws` 签名。
-- Mock 放在 `Tests/UnitTests/Mocks/` 目录，M3、M4 的 Mock 也放这里统一管理。
+### `Tests/UnitTests/RenameCollectionUseCaseTests.swift`
 
----
+```swift
+import XCTest
+@testable import Notte
+
+@MainActor
+final class RenameCollectionUseCaseTests: XCTestCase {
+
+    var repository: MockCollectionRepository!
+    var useCase: RenameCollectionUseCase!
+
+    override func setUp() {
+        repository = MockCollectionRepository()
+        useCase = RenameCollectionUseCase(repository: repository)
+    }
+
+    func test_execute_withValidID_updatesTitle() async throws {
+        let collection = makeCollection(title: "旧标题")
+        repository.storedCollections = [collection]
+
+        try await useCase.execute(id: collection.id, newTitle: "新标题")
+
+        let updated = repository.storedCollections.first
+        XCTAssertEqual(updated?.title, "新标题")
+    }
+
+    func test_execute_updatesTimestamp() async throws {
+        let collection = makeCollection(title: "测试")
+        repository.storedCollections = [collection]
+        let before = collection.updatedAt
+
+        try await useCase.execute(id: collection.id, newTitle: "新标题")
+
+        let updated = repository.storedCollections.first!
+        XCTAssertGreaterThanOrEqual(updated.updatedAt, before)
+    }
+
+    func test_execute_withNonExistentID_throwsNotFound() async {
+        do {
+            try await useCase.execute(id: UUID(), newTitle: "新标题")
+            XCTFail("应该抛出错误")
+        } catch let error as AppError {
+            if case .repositoryError(let repoError) = error {
+                XCTAssertEqual(repoError, .notFound)
+            } else {
+                XCTFail("错误类型不符")
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func makeCollection(title: String) -> Collection {
+        Collection(
+            id: UUID(),
+            title: title,
+            createdAt: Date(),
+            updatedAt: Date(),
+            sortIndex: 1000,
+            isPinned: false
+        )
+    }
+}
+```
+
+**Git commit message：**
+
+```
+test: add RenameCollectionUseCase unit tests
+```
+
+-----
+
+### `Tests/UnitTests/DeleteCollectionUseCaseTests.swift`
+
+```swift
+import XCTest
+@testable import Notte
+
+@MainActor
+final class DeleteCollectionUseCaseTests: XCTestCase {
+
+    var repository: MockCollectionRepository!
+    var useCase: DeleteCollectionUseCase!
+
+    override func setUp() {
+        repository = MockCollectionRepository()
+        useCase = DeleteCollectionUseCase(repository: repository)
+    }
+
+    func test_execute_withValidID_removesCollection() async throws {
+        let collection = makeCollection(title: "待删除")
+        repository.storedCollections = [collection]
+
+        try await useCase.execute(id: collection.id)
+
+        XCTAssertTrue(repository.storedCollections.isEmpty)
+    }
+
+    func test_execute_withNonExistentID_throwsError() async {
+        do {
+            try await useCase.execute(id: UUID())
+            XCTFail("应该抛出错误")
+        } catch {
+            XCTAssertNotNil(error)
+        }
+    }
+
+    func test_execute_onlyDeletesTargetCollection() async throws {
+        let target = makeCollection(title: "删除目标")
+        let other = makeCollection(title: "保留")
+        repository.storedCollections = [target, other]
+
+        try await useCase.execute(id: target.id)
+
+        XCTAssertEqual(repository.storedCollections.count, 1)
+        XCTAssertEqual(repository.storedCollections.first?.title, "保留")
+    }
+
+    // MARK: - Helpers
+
+    private func makeCollection(title: String) -> Collection {
+        Collection(
+            id: UUID(),
+            title: title,
+            createdAt: Date(),
+            updatedAt: Date(),
+            sortIndex: 1000,
+            isPinned: false
+        )
+    }
+}
+```
+
+**Git commit message：**
+
+```
+test: add DeleteCollectionUseCase unit tests
+```
+
+-----
+
+### `Tests/UnitTests/PinCollectionUseCaseTests.swift`
+
+```swift
+import XCTest
+@testable import Notte
+
+@MainActor
+final class PinCollectionUseCaseTests: XCTestCase {
+
+    var repository: MockCollectionRepository!
+    var useCase: PinCollectionUseCase!
+
+    override func setUp() {
+        repository = MockCollectionRepository()
+        useCase = PinCollectionUseCase(repository: repository)
+    }
+
+    func test_execute_unpinnedCollection_becomesPin() async throws {
+        let collection = makeCollection(isPinned: false)
+        repository.storedCollections = [collection]
+
+        try await useCase.execute(id: collection.id)
+
+        XCTAssertTrue(repository.storedCollections.first!.isPinned)
+    }
+
+    func test_execute_pinnedCollection_becomesUnpinned() async throws {
+        let collection = makeCollection(isPinned: true)
+        repository.storedCollections = [collection]
+
+        try await useCase.execute(id: collection.id)
+
+        XCTAssertFalse(repository.storedCollections.first!.isPinned)
+    }
+
+    func test_execute_withNonExistentID_throwsNotFound() async {
+        do {
+            try await useCase.execute(id: UUID())
+            XCTFail("应该抛出错误")
+        } catch let error as AppError {
+            if case .repositoryError(let repoError) = error {
+                XCTAssertEqual(repoError, .notFound)
+            } else {
+                XCTFail("错误类型不符")
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func makeCollection(isPinned: Bool) -> Collection {
+        Collection(
+            id: UUID(),
+            title: "测试",
+            createdAt: Date(),
+            updatedAt: Date(),
+            sortIndex: 1000,
+            isPinned: isPinned
+        )
+    }
+}
+```
+
+**Git commit message：**
+
+```
+test: add PinCollectionUseCase unit tests
+```
+
+-----
+
+### `Tests/UnitTests/ReorderCollectionsUseCaseTests.swift`
+
+```swift
+import XCTest
+@testable import Notte
+
+@MainActor
+final class ReorderCollectionsUseCaseTests: XCTestCase {
+
+    var repository: MockCollectionRepository!
+    var useCase: ReorderCollectionsUseCase!
+
+    override func setUp() {
+        repository = MockCollectionRepository()
+        useCase = ReorderCollectionsUseCase(repository: repository)
+    }
+
+    func test_execute_moveToFront_assignsSmallerIndex() async throws {
+        let a = makeCollection(title: "A", sortIndex: 1000)
+        let b = makeCollection(title: "B", sortIndex: 2000)
+        let c = makeCollection(title: "C", sortIndex: 3000)
+        repository.storedCollections = [a, b, c]
+
+        // 把 C 移到最前面（targetID = nil）
+        try await useCase.execute(moving: c.id, after: nil)
+
+        let updated = repository.storedCollections.first { $0.id == c.id }!
+        XCTAssertLessThan(updated.sortIndex, a.sortIndex)
+    }
+
+    func test_execute_moveBetweenTwo_assignsMiddleIndex() async throws {
+        let a = makeCollection(title: "A", sortIndex: 1000)
+        let b = makeCollection(title: "B", sortIndex: 2000)
+        let c = makeCollection(title: "C", sortIndex: 3000)
+        repository.storedCollections = [a, b, c]
+
+        // 把 C 移到 A 之后
+        try await useCase.execute(moving: c.id, after: a.id)
+
+        let updated = repository.storedCollections.first { $0.id == c.id }!
+        XCTAssertGreaterThan(updated.sortIndex, a.sortIndex)
+        XCTAssertLessThan(updated.sortIndex, b.sortIndex)
+    }
+
+    func test_execute_withNonExistentID_throwsNotFound() async {
+        let a = makeCollection(title: "A", sortIndex: 1000)
+        repository.storedCollections = [a]
+
+        do {
+            try await useCase.execute(moving: UUID(), after: nil)
+            XCTFail("应该抛出错误")
+        } catch let error as AppError {
+            if case .repositoryError(let repoError) = error {
+                XCTAssertEqual(repoError, .notFound)
+            } else {
+                XCTFail("错误类型不符")
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func makeCollection(title: String, sortIndex: Double) -> Collection {
+        Collection(
+            id: UUID(),
+            title: title,
+            createdAt: Date(),
+            updatedAt: Date(),
+            sortIndex: sortIndex,
+            isPinned: false
+        )
+    }
+}
+```
+
+**Git commit message：**
+
+```
+test: add ReorderCollectionsUseCase unit tests
+```
+
+-----
+
+### `Tests/UnitTests/CollectionListViewModelTests.swift`
+
+```swift
+import XCTest
+@testable import Notte
+
+@MainActor
+final class CollectionListViewModelTests: XCTestCase {
+
+    var repository: MockCollectionRepository!
+    var viewModel: CollectionListViewModel!
+
+    override func setUp() {
+        repository = MockCollectionRepository()
+        viewModel = CollectionListViewModel(repository: repository)
+    }
+
+    func test_loadCollections_populatesCollections() async {
+        repository.storedCollections = [makeCollection(title: "测试")]
+
+        await viewModel.loadCollections()
+
+        XCTAssertEqual(viewModel.collections.count, 1)
+        XCTAssertEqual(viewModel.collections.first?.title, "测试")
+    }
+
+    func test_loadCollections_setsLoadingState() async {
+        let task = Task { await viewModel.loadCollections() }
+        // loadCollections 开始时 isLoading 应为 true
+        // 结束后应为 false
+        await task.value
+        XCTAssertFalse(viewModel.isLoading)
+    }
+
+    func test_createCollection_addsToList() async {
+        viewModel.newCollectionTitle = "新建"
+        await viewModel.createCollection()
+
+        XCTAssertEqual(viewModel.collections.count, 1)
+        XCTAssertEqual(viewModel.collections.first?.title, "新建")
+    }
+
+    func test_createCollection_withEmptyTitle_doesNotCreate() async {
+        viewModel.newCollectionTitle = "   "
+        await viewModel.createCollection()
+
+        XCTAssertTrue(viewModel.collections.isEmpty)
+    }
+
+    func test_createCollection_clearsTitle() async {
+        viewModel.newCollectionTitle = "新建"
+        await viewModel.createCollection()
+
+        XCTAssertEqual(viewModel.newCollectionTitle, "")
+    }
+
+    func test_createCollection_closesSheet() async {
+        viewModel.isShowingCreateSheet = true
+        viewModel.newCollectionTitle = "新建"
+        await viewModel.createCollection()
+
+        XCTAssertFalse(viewModel.isShowingCreateSheet)
+    }
+
+    func test_deleteCollection_removesFromList() async {
+        let collection = makeCollection(title: "待删除")
+        repository.storedCollections = [collection]
+        await viewModel.loadCollections()
+
+        await viewModel.deleteCollection(id: collection.id)
+
+        XCTAssertTrue(viewModel.collections.isEmpty)
+    }
+
+    func test_pinCollection_togglesPin() async {
+        let collection = makeCollection(title: "测试", isPinned: false)
+        repository.storedCollections = [collection]
+        await viewModel.loadCollections()
+
+        await viewModel.pinCollection(id: collection.id)
+
+        XCTAssertTrue(viewModel.collections.first!.isPinned)
+    }
+
+    // MARK: - Helpers
+
+    private func makeCollection(title: String, isPinned: Bool = false) -> Collection {
+        Collection(
+            id: UUID(),
+            title: title,
+            createdAt: Date(),
+            updatedAt: Date(),
+            sortIndex: 1000,
+            isPinned: isPinned
+        )
+    }
+}
+```
+
+**Git commit message：**
+
+```
+test: add CollectionListViewModel unit tests
+```
+
+-----
 
 ## 目录结构速览
 
@@ -1426,13 +1832,13 @@ Notte/
 │       │   └── ReorderCollectionsUseCase.swift
 │       ├── ViewModels/
 │       │   └── CollectionListViewModel.swift
-│       └── Views/
-│           ├── CollectionListScreen.swift
+│       ├── Views/
+│       │   ├── CollectionListScreen.swift
+│       │   ├── CollectionCreateSheet.swift
+│       │   └── CollectionRenameSheet.swift
+│       └── Components/
 │           ├── CollectionCard.swift
 │           ├── CollectionEmptyState.swift
-│           ├── CollectionCreateSheet.swift
-│           ├── CollectionRenameSheet.swift
-│           ├── CollectionDeleteDialog.swift
 │           ├── CollectionContextMenu.swift
 │           └── CollectionPinnedIndicator.swift
 │
@@ -1448,6 +1854,10 @@ Notte/
 │   └── Utilities/
 │       └── SortIndexNormalizer.swift                ← 新增
 │
+├── Domain/
+│   └── Enums/
+│       └── RepositoryError.swift                    ← 更新：遵循 Equatable
+│
 └── Infrastructure/
     └── AppError.swift                               ← 更新：新增 validationFailure case
 
@@ -1455,10 +1865,11 @@ Tests/
 └── UnitTests/
     ├── CollectionRepositoryTests.swift
     ├── CreateCollectionUseCaseTests.swift
-    ├── RenameCollectionUseCaseTests.swift           ← 结构与 Create 测试类似，略
+    ├── RenameCollectionUseCaseTests.swift
     ├── DeleteCollectionUseCaseTests.swift
-    ├── ReorderCollectionsUseCaseTests.swift         ← 验证 sortIndex 插入逻辑
-    ├── CollectionListViewModelTests.swift           ← 验证状态更新逻辑
+    ├── PinCollectionUseCaseTests.swift
+    ├── ReorderCollectionsUseCaseTests.swift
+    ├── CollectionListViewModelTests.swift
     └── Mocks/
         └── MockCollectionRepository.swift
 ```
