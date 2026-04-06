@@ -43,6 +43,7 @@ struct CollectionEmptyState: View {
         }
         .padding(SpacingTokens.xl)
         .frame(maxWidth: .infinity)
+        .background(ColorTokens.backgroundPrimary)
     }
 }
 
