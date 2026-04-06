@@ -24,14 +24,14 @@ struct CollectionEmptyState: View {
                     .foregroundStyle(ColorTokens.textPrimary)
 
                 Text("点击下方按钮创建第一个Collection")
-                    .font(TypographyTokens.body)
+                    .font(TypographyTokens.boldBody)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
             Button(action: onCreateTapped) {
                 Label("新建Collection", systemImage: "plus")
-                    .font(TypographyTokens.body)
+                    .font(TypographyTokens.boldBody)
                     .padding(.horizontal, SpacingTokens.lg)
                     .padding(.vertical, SpacingTokens.sm)
                     .background(ColorTokens.accent)
