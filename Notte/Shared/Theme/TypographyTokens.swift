@@ -12,6 +12,7 @@ struct TypographyTokens {
     static let title = Font.system(.title2, design: .rounded, weight: .semibold)
     static let body = Font.system(.body)
     static let caption = Font.system(.caption)
+    static let boldBody = Font.system(.body).bold()
 
     // Node 标题渲染，对应 depth 0-5
     static func nodeTitle(depth: Int) -> Font {
