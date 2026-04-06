@@ -1,0 +1,41 @@
+//
+//  CreateCollectionUseCaseTests.swift
+//  Notte
+//
+//  Created by 余哲源 on 2026/4/6.
+//
+
+import XCTest
+@testable import Notte
+
+@MainActor
+final class CreateCollectionUseCaseTests: XCTestCase {
+    var useCase: CreateCollectionUseCase!
+    var repository: MockCollectionRepository!
+
+    override func setUp() {
+        repository = MockCollectionRepository()
+        useCase = CreateCollectionUseCase(repository: repository)
+    }
+
+    func test_execute_withValidTitle_returnsCollection() async throws {
+        let result = try await useCase.execute(title: "新建")
+        XCTAssertEqual(result.title, "新建")
+    }
+
+    func test_execute_assignsIncrementingSortIndex() async throws {
+        let first = try await useCase.execute(title: "第一")
+        let second = try await useCase.execute(title: "第二")
+        XCTAssertGreaterThan(second.sortIndex, first.sortIndex)
+    }
+
+    func test_execute_whenRepositoryThrows_propagatesError() async {
+        repository.shouldThrowOnCreate = true
+        do {
+            _ = try await useCase.execute(title: "失败测试")
+            XCTFail("应该抛出错误")
+        } catch {
+            XCTAssertNotNil(error)
+        }
+    }
+}
