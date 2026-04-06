@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct CollectionListScreen: View {
     @StateObject private var viewModel: CollectionListViewModel
@@ -137,7 +138,7 @@ struct CollectionListScreen: View {
 }
 
 #Preview {
-    NavigationStack {
-        Text("CollectionListScreen Preview")
-    }
+    var container = try! PersistenceController.makeContainer(inMemory: true)
+    var repo = try! CollectionRepository(context: ModelContext(container))
+    CollectionListScreen(repository: repo)
 }
