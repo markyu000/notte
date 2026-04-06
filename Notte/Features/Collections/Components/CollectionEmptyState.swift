@@ -16,7 +16,7 @@ struct CollectionEmptyState: View {
 
             Image(systemName: "tray")
                 .font(.system(size: 70))
-                .foregroundStyle(ColorTokens.textSecondary)
+                .foregroundStyle(ColorTokens.accent)
 
             VStack(spacing: SpacingTokens.sm) {
                 Text("还没有Collection")
