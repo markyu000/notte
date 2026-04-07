@@ -44,8 +44,6 @@ struct CollectionCard: View {
         .padding(.vertical, SpacingTokens.sm)
         .background(ColorTokens.backgroundSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, SpacingTokens.md)
-        .padding(.vertical, SpacingTokens.xs)
     }
 
     private var accentColor: Color {
