@@ -141,7 +141,14 @@ struct CollectionListScreen: View {
 }
 
 #Preview {
-    var container = try! PersistenceController.makeContainer(inMemory: true)
-    var repo = try! CollectionRepository(context: ModelContext(container))
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    let repo = try! CollectionRepository(context: ModelContext(container))
+    
     CollectionListScreen(repository: repo)
+        .task {
+            let createUsecase = CreateCollectionUseCase(repository: repo)
+            try! await createUsecase.execute(title: "实例1")
+            try! await createUsecase.execute(title: "实例2")
+        }
+        .environmentObject(AppRouter())
 }
