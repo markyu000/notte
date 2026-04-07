@@ -117,8 +117,16 @@ struct CollectionListScreen: View {
                                         .deleteCollection(id: collection.id)
                                 }
                             } label: {
-                                Image(systemName: "trash")
+                                Label("删除", systemImage: "trash")
                             }
+                            
+                            Button {
+                                viewModel.renamingCollectionID = collection.id
+                                viewModel.renameTitle = collection.title
+                            } label: {
+                                Label("重命名", systemImage: "pencil")
+                            }
+                            .tint(ColorTokens.accent)
                         }
                     
                     // 在最后一个 pinned collection 后添加分割线
