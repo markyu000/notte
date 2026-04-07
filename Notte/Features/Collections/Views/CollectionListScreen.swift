@@ -12,6 +12,7 @@ struct CollectionListScreen: View {
     @StateObject private var viewModel: CollectionListViewModel
     @EnvironmentObject private var router: AppRouter
     @State private var editMode: EditMode = .inactive
+    @State private var collectionToDelete: Collection?
 
     init(repository: CollectionRepositoryProtocol) {
         _viewModel = StateObject(
@@ -70,6 +71,22 @@ struct CollectionListScreen: View {
             } message: { error in
                 Text(error.errorDescription ?? "未知错误")
             }
+            .alert("确认删除", isPresented: Binding(
+                get: { collectionToDelete != nil },
+                set: { if !$0 { collectionToDelete = nil } }
+            ), presenting: collectionToDelete) { collection in
+                Button("取消", role: .cancel) {
+                    collectionToDelete = nil
+                }
+                Button("删除", role: .destructive) {
+                    Task {
+                        await viewModel.deleteCollection(id: collection.id)
+                        collectionToDelete = nil
+                    }
+                }
+            } message: { collection in
+                Text("确定要删除「\(collection.title)」吗？此操作无法撤销。")
+            }
             .task {
                 await viewModel.loadCollections()
             }
@@ -103,19 +120,13 @@ struct CollectionListScreen: View {
                                     }
                                 },
                                 onDelete: {
-                                    Task {
-                                        await viewModel
-                                            .deleteCollection(id: collection.id)
-                                    }
+                                    collectionToDelete = collection
                                 }
                             )
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
-                                Task {
-                                    await viewModel
-                                        .deleteCollection(id: collection.id)
-                                }
+                                collectionToDelete = collection
                             } label: {
                                 Label("删除", systemImage: "trash")
                             }
