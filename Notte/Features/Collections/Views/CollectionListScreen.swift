@@ -117,7 +117,7 @@ struct CollectionListScreen: View {
                                         .deleteCollection(id: collection.id)
                                 }
                             } label: {
-                                Label("删除", systemImage: "trash")
+                                Image(systemName: "trash")
                             }
                         }
                     
