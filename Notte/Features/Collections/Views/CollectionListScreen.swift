@@ -78,49 +78,67 @@ struct CollectionListScreen: View {
 
     private var collectionList: some View {
         List {
-            ForEach(viewModel.collections) { collection in
-                CollectionCard(collection: collection)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        guard editMode == .inactive else { return }
-                        router
-                            .navigate(
-                                to: .pageList(collectionID: collection.id)
-                            )
-                    }
-                    .contextMenu {
-                        CollectionContextMenu(
-                            collection: collection,
-                            onRename: {
-                                viewModel.renamingCollectionID = collection.id
-                                viewModel.renameTitle = collection.title
-                            },
-                            onPin: {
-                                Task {
-                                    await viewModel
-                                        .pinCollection(id: collection.id)
+            ForEach(Array(viewModel.collections.enumerated()), id: \.element.id) { index, collection in
+                VStack(spacing: 0) {
+                    CollectionCard(collection: collection)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard editMode == .inactive else { return }
+                            router
+                                .navigate(
+                                    to: .pageList(collectionID: collection.id)
+                                )
+                        }
+                        .contextMenu {
+                            CollectionContextMenu(
+                                collection: collection,
+                                onRename: {
+                                    viewModel.renamingCollectionID = collection.id
+                                    viewModel.renameTitle = collection.title
+                                },
+                                onPin: {
+                                    Task {
+                                        await viewModel
+                                            .pinCollection(id: collection.id)
+                                    }
+                                },
+                                onDelete: {
+                                    Task {
+                                        await viewModel
+                                            .deleteCollection(id: collection.id)
+                                    }
                                 }
-                            },
-                            onDelete: {
+                            )
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
                                 Task {
                                     await viewModel
                                         .deleteCollection(id: collection.id)
                                 }
+                            } label: {
+                                Label("删除", systemImage: "trash")
                             }
-                        )
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            Task {
-                                await viewModel
-                                    .deleteCollection(id: collection.id)
-                            }
-                        } label: {
-                            Label("删除", systemImage: "trash")
+                        }
+                    
+                    // 在最后一个 pinned collection 后添加分割线
+                    if isLastPinnedCollection(at: index) {
+                        VStack(spacing: 0) {
+                            Spacer()
+                                .frame(height: SpacingTokens.md)
+                            
+                            Rectangle()
+                                .fill(ColorTokens.separator)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, SpacingTokens.md)
+                            
+                            Spacer()
+                                .frame(height: SpacingTokens.sm)
                         }
                     }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
             .onMove { from, to in
                 guard let sourceIndex = from.first else { return }
@@ -138,6 +156,22 @@ struct CollectionListScreen: View {
         .listStyle(.plain)
         .listRowSpacing(-20)
         .background(ColorTokens.backgroundPrimary)
+    }
+    
+    /// 判断指定索引的 collection 是否是最后一个 pinned collection
+    private func isLastPinnedCollection(at index: Int) -> Bool {
+        guard index < viewModel.collections.count else { return false }
+        let collection = viewModel.collections[index]
+        
+        // 当前 collection 必须是 pinned
+        guard collection.isPinned else { return false }
+        
+        // 检查后面是否有非 pinned 的 collection
+        let hasUnpinnedAfter = viewModel.collections
+            .dropFirst(index + 1)
+            .contains { !$0.isPinned }
+        
+        return hasUnpinnedAfter
     }
 }
 
