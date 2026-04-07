@@ -34,7 +34,7 @@ struct CollectionListScreen: View {
                     collectionList
                 }
             }
-            .navigationTitle("我的 Colleciton")
+            .navigationTitle("Notte")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
