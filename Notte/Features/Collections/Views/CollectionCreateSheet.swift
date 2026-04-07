@@ -46,7 +46,6 @@ struct CollectionCreateSheet: View {
                             .trimmingCharacters(in: .whitespaces).isEmpty
                     )
                     .tint(ColorTokens.accent)
-                    .buttonStyle(.bordered)
                 }
             }
             .onAppear {

@@ -47,7 +47,6 @@ struct CollectionRenameSheet: View {
                     }
                     .disabled(viewModel.renameTitle.trimmingCharacters(in: .whitespaces).isEmpty)
                     .tint(ColorTokens.accent)
-                    .buttonStyle(.bordered)
                 }
             }
             .onAppear {
