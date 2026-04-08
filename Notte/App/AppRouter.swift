@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 enum AppRoute: Hashable {
-    case pageList(collectionID: UUID)
+    case pageList(collectionID: UUID, collectionTitle: String)
     case nodeEditor(pageID: UUID)
 }
 

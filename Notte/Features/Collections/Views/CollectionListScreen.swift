@@ -103,7 +103,7 @@ struct CollectionListScreen: View {
                             guard editMode == .inactive else { return }
                             router
                                 .navigate(
-                                    to: .pageList(collectionID: collection.id)
+                                    to: .pageList(collectionID: collection.id, collectionTitle: collection.title)
                                 )
                         }
                         .contextMenu {
