@@ -17,3 +17,5 @@ struct Collection: Identifiable, Hashable {
     var sortIndex: Double
     var isPinned: Bool
 }
+
+extension Collection: SortIndexable {}
