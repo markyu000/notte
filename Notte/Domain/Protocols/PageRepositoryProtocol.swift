@@ -8,9 +8,9 @@
 import Foundation
 
 protocol PageRepositoryProtocol {
-    func fetchAll(in collectionID: UUID) throws -> [Page]
-    func fetch(by id: UUID) throws -> Page?
-    func create(_ page: Page) throws
-    func update(_ page: Page) throws
-    func delete(by id: UUID) throws
+    func fetchAll(in collectionID: UUID) async throws -> [Page]
+    func fetch(by id: UUID) async throws -> Page?
+    func create(_ page: Page) async throws
+    func update(_ page: Page) async throws
+    func delete(by id: UUID) async throws
 }

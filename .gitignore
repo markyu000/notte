@@ -4,3 +4,5 @@ Notte.xcodeproj/project.xcworkspace/xcuserdata/*
 Notte.xcodeproj/project.xcworkspace/xcuserdata/
 Notte.xcodeproj/xcuserdata/
 Notte.xcodeproj/project.xcworkspace/xcuserdata
+buildServer.json
+*.xcuserstate

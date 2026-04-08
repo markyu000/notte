@@ -15,23 +15,23 @@ class PageRepository: PageRepositoryProtocol {
         self.context = context
     }
 
-    func fetchAll(in collectionID: UUID) throws -> [Page] {
+    func fetchAll(in collectionID: UUID) async throws -> [Page] {
         throw RepositoryError.notImplemented
     }
 
-    func fetch(by id: UUID) throws -> Page? {
+    func fetch(by id: UUID) async throws -> Page? {
         throw RepositoryError.notImplemented
     }
 
-    func create(_ page: Page) throws {
+    func create(_ page: Page) async throws {
         throw RepositoryError.notImplemented
     }
 
-    func update(_ page: Page) throws {
+    func update(_ page: Page) async throws {
         throw RepositoryError.notImplemented
     }
 
-    func delete(by id: UUID) throws {
+    func delete(by id: UUID) async throws {
         throw RepositoryError.notImplemented
     }
 }

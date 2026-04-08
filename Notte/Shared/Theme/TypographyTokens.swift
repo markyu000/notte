@@ -9,7 +9,9 @@ import SwiftUI
 
 struct TypographyTokens {
     static let largeTitle = Font.system(.largeTitle, design: .rounded, weight: .bold)
-    static let title = Font.system(.title2, design: .rounded, weight: .semibold)
+    static let title = Font.system(size: 20, weight: .bold, design: .rounded)
+    static let subTitle = Font.system(size: 15, weight: .regular, design: .rounded)
+    static let title2 = Font.system(size: 17, weight: .semibold, design: .rounded)
     static let body = Font.system(.body)
     static let caption = Font.system(.caption)
 

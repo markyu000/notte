@@ -8,10 +8,10 @@
 import Foundation
 
 protocol NodeRepositoryProtocol {
-    func fetchAll(in pageID: UUID) throws -> [Node]
-    func fetch(by id: UUID) throws -> Node?
-    func create(_ node: Node) throws
-    func update(_ node: Node) throws
-    func delete(by id: UUID) throws
-    func deleteAll(in pageID: UUID) throws
+    func fetchAll(in pageID: UUID) async throws -> [Node]
+    func fetch(by id: UUID) async throws -> Node?
+    func create(_ node: Node) async throws
+    func update(_ node: Node) async throws
+    func delete(by id: UUID) async throws
+    func deleteAll(in pageID: UUID) async throws
 }
