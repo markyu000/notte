@@ -31,11 +31,19 @@ class CollectionListViewModel: ObservableObject {
     private let pinUseCase: PinCollectionUseCase
     private let reorderUseCase: ReorderCollectionsUseCase
 
-    init(repository: CollectionRepositoryProtocol) {
+    init(
+        repository: CollectionRepositoryProtocol,
+        pageRepository: PageRepositoryProtocol,
+        nodeRepository: NodeRepositoryProtocol
+    ) {
         self.fetchUseCase = FetchCollectionsUseCase(repository: repository)
         self.createUseCase = CreateCollectionUseCase(repository: repository)
         self.renameUseCase = RenameCollectionUseCase(repository: repository)
-        self.deleteUseCase = DeleteCollectionUseCase(repository: repository)
+        self.deleteUseCase = DeleteCollectionUseCase(
+            repository: repository,
+            pageRepository: pageRepository,
+            nodeRepository: nodeRepository
+        )
         self.pinUseCase = PinCollectionUseCase(repository: repository)
         self.reorderUseCase = ReorderCollectionsUseCase(repository: repository)
     }

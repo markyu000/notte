@@ -15,7 +15,9 @@ struct RootView: View {
     var body: some View {
         NavigationStack(path: $router.path) {
             CollectionListScreen(
-                repository: dependencyContainer.collectionRepository
+                repository: dependencyContainer.collectionRepository,
+                pageRepository: dependencyContainer.pageRepository,
+                nodeRepository: dependencyContainer.nodeRepository
             )
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
