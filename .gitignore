@@ -6,3 +6,4 @@ Notte.xcodeproj/xcuserdata/
 Notte.xcodeproj/project.xcworkspace/xcuserdata
 buildServer.json
 *.xcuserstate
+.vscode/*
