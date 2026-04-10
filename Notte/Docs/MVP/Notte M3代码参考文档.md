@@ -756,7 +756,6 @@ feat: add PageListViewModel with full state management
 import SwiftUI
 
 struct PageListScreen: View {
-
     @StateObject private var viewModel: PageListViewModel
     @EnvironmentObject private var router: AppRouter
     @State private var editMode: EditMode = .inactive
@@ -777,12 +776,35 @@ struct PageListScreen: View {
             )
         )
     }
-
+    
     var body: some View {
+        contentView
+            .navigationTitle(viewModel.collectionTitle)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar { toolbarContent }
+            .environment(\.editMode, $editMode)
+            .sheet(isPresented: $viewModel.isShowingCreateSheet) {
+                PageCreateSheet(viewModel: viewModel)
+            }
+            .sheet(
+                isPresented: Binding(
+                    get: { viewModel.renamingPageID != nil },
+                    set: { if !$0 { viewModel.renamingPageID = nil } }
+                )
+            ) {
+                PageRenameSheet(viewModel: viewModel)
+            }
+            .modifier(PageDeleteAlertModifier(pageToDelete: $pageToDelete, viewModel: viewModel))
+            .modifier(PageErrorAlertModifier(viewModel: viewModel))
+            .task {
+                await viewModel.loadPages()
+            }
+    }
+
+    private var contentView: some View {
         Group {
             if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                loadingView
             } else if viewModel.pages.isEmpty {
                 PageEmptyState {
                     viewModel.isShowingCreateSheet = true
@@ -791,61 +813,22 @@ struct PageListScreen: View {
                 pageList
             }
         }
-        .navigationTitle(viewModel.collectionTitle)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    viewModel.isShowingCreateSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                        .foregroundStyle(ColorTokens.accent)
-                }
-            }
-            ToolbarItem(placement: .topBarLeading) {
-                EditButton()
-                    .tint(ColorTokens.accent)
-                    .disabled(viewModel.pages.isEmpty)
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                viewModel.isShowingCreateSheet = true
+            } label: {
+                Image(systemName: "plus")
+                    .foregroundStyle(ColorTokens.accent)
             }
         }
-        .environment(\.editMode, $editMode)
-        .sheet(isPresented: $viewModel.isShowingCreateSheet) {
-            PageCreateSheet(viewModel: viewModel)
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { viewModel.renamingPageID != nil },
-                set: { if !$0 { viewModel.renamingPageID = nil } }
-            )
-        ) {
-            PageRenameSheet(viewModel: viewModel)
-        }
-        .alert("确认删除", isPresented: Binding(
-            get: { pageToDelete != nil },
-            set: { if !$0 { pageToDelete = nil } }
-        ), presenting: pageToDelete) { page in
-            Button("取消", role: .cancel) {
-                pageToDelete = nil
-            }
-            Button("删除", role: .destructive) {
-                Task {
-                    await viewModel.deletePage(id: page.id)
-                    pageToDelete = nil
-                }
-            }
-        } message: { page in
-            Text("删除「\(page.title)」将同时删除其全部内容，此操作无法撤销。")
-        }
-        .alert("出错了", isPresented: Binding(
-            get: { viewModel.error != nil },
-            set: { if !$0 { viewModel.error = nil } }
-        ), presenting: viewModel.error) { _ in
-            Button("好", role: .cancel) { viewModel.error = nil }
-        } message: { error in
-            Text(error.errorDescription ?? "未知错误")
-        }
-        .task {
-            await viewModel.loadPages()
+        ToolbarItem(placement: .topBarLeading) {
+            EditButton()
+                .tint(ColorTokens.accent)
+                .disabled(viewModel.pages.isEmpty)
         }
     }
 
@@ -860,7 +843,7 @@ struct PageListScreen: View {
                     }
                     .contextMenu {
                         PageContextMenu(
-                            page: page,
+                            page: page, 
                             onRename: {
                                 viewModel.renamingPageID = page.id
                                 viewModel.renameTitle = page.title
@@ -894,8 +877,8 @@ struct PageListScreen: View {
                 guard let sourceIndex = from.first else { return }
                 let movingID = viewModel.pages[sourceIndex].id
                 let targetID: UUID? = to > 0
-                    ? viewModel.pages[min(to - 1, viewModel.pages.count - 1)].id
-                    : nil
+                ? viewModel.pages[min(to - 1, viewModel.pages.count - 1)].id
+                : nil
                 Task {
                     await viewModel.reorderPage(moving: movingID, after: targetID)
                 }
@@ -904,6 +887,52 @@ struct PageListScreen: View {
         .listStyle(.plain)
         .background(ColorTokens.backgroundPrimary)
     }
+    
+    private var loadingView: some View {
+        ProgressView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Alert Modifiers
+
+private struct PageDeleteAlertModifier: ViewModifier {
+    @Binding var pageToDelete: Page?
+    let viewModel: PageListViewModel
+
+    func body(content: Content) -> some View {
+        content.alert("确认删除", isPresented: Binding(
+            get: { pageToDelete != nil },
+            set: { if !$0 { pageToDelete = nil } }
+        ), presenting: pageToDelete) { page in
+            Button("取消", role: .cancel) {
+                pageToDelete = nil
+            }
+            Button("删除", role: .destructive) {
+                Task {
+                    await viewModel.deletePage(id: page.id)
+                    pageToDelete = nil
+                }
+            }
+        } message: { page in
+            Text("删除「\(page.title)」将同时删除其全部内容，此操作无法撤销。")
+        }
+    }
+}
+
+private struct PageErrorAlertModifier: ViewModifier {
+    @ObservedObject var viewModel: PageListViewModel
+
+    func body(content: Content) -> some View {
+        content.alert("出错了", isPresented: Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        ), presenting: viewModel.error) { _ in
+            Button("好", role: .cancel) { viewModel.error = nil }
+        } message: { error in
+            Text(error.errorDescription ?? "未知错误")
+        }
+    }
 }
 
 #Preview {
@@ -911,6 +940,7 @@ struct PageListScreen: View {
         Text("PageListScreen Preview")
     }
 }
+
 ```
 
 **Git commit message：**
