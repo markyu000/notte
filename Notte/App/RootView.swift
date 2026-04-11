@@ -15,12 +15,19 @@ struct RootView: View {
     var body: some View {
         NavigationStack(path: $router.path) {
             CollectionListScreen(
-                repository: dependencyContainer.collectionRepository
+                repository: dependencyContainer.collectionRepository,
+                pageRepository: dependencyContainer.pageRepository,
+                nodeRepository: dependencyContainer.nodeRepository
             )
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
                 case .pageList(let collectionID, let collectionTitle):
-                    Text("Page List 占位 \(collectionID) \(collectionTitle)")
+                    PageListScreen(
+                        collectionID: collectionID,
+                        collectionTitle: collectionTitle,
+                        pageRepository: dependencyContainer.pageRepository,
+                        nodeRepository: dependencyContainer.nodeRepository
+                    )
                 case .nodeEditor(let pageID):
                     Text("Node Editor 占位 \(pageID)")
                 }

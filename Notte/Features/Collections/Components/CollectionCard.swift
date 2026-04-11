@@ -34,15 +34,10 @@ struct CollectionCard: View {
             }
 
             Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(ColorTokens.textSecondary)
-
         }
         .padding(.horizontal, SpacingTokens.md)
         .padding(.vertical, SpacingTokens.sm)
-        .background(ColorTokens.backgroundSecondary)
+//        .background(ColorTokens.backgroundSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 

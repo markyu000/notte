@@ -14,9 +14,17 @@ struct CollectionListScreen: View {
     @State private var editMode: EditMode = .inactive
     @State private var collectionToDelete: Collection?
 
-    init(repository: CollectionRepositoryProtocol) {
+    init(
+        repository: CollectionRepositoryProtocol,
+        pageRepository: PageRepositoryProtocol,
+        nodeRepository: NodeRepositoryProtocol
+    ) {
         _viewModel = StateObject(
-            wrappedValue: CollectionListViewModel(repository: repository)
+            wrappedValue: CollectionListViewModel(
+                repository: repository,
+                pageRepository: pageRepository,
+                nodeRepository: nodeRepository
+            )
         )
     }
 
@@ -173,7 +181,7 @@ struct CollectionListScreen: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(-20)
+        .listRowSpacing(-30)
         .background(ColorTokens.backgroundPrimary)
     }
     
@@ -196,13 +204,20 @@ struct CollectionListScreen: View {
 
 #Preview {
     let container = try! PersistenceController.makeContainer(inMemory: true)
-    let repo = try! CollectionRepository(context: ModelContext(container))
-    
-    CollectionListScreen(repository: repo)
-        .task {
-            let createUsecase = CreateCollectionUseCase(repository: repo)
-            try! await createUsecase.execute(title: "实例1")
-            try! await createUsecase.execute(title: "实例2")
-        }
-        .environmentObject(AppRouter())
+    let context = ModelContext(container)
+    let repo = try! CollectionRepository(context: context)
+    let pageRepo = PageRepository(context: context)
+    let nodeRepo = NodeRepository(context: context)
+
+    CollectionListScreen(
+        repository: repo,
+        pageRepository: pageRepo,
+        nodeRepository: nodeRepo
+    )
+    .task {
+        let createUsecase = CreateCollectionUseCase(repository: repo)
+        try! await createUsecase.execute(title: "实例1")
+        try! await createUsecase.execute(title: "实例2")
+    }
+    .environmentObject(AppRouter())
 }

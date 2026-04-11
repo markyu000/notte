@@ -12,10 +12,18 @@ import XCTest
 final class CollectionListViewModelTests: XCTestCase {
     var viewModel: CollectionListViewModel!
     var repository: MockCollectionRepository!
+    var pageRepository: MockPageRepository!
+    var nodeRepository: MockNodeRepository!
 
     override func setUp() {
         repository = MockCollectionRepository()
-        viewModel = CollectionListViewModel(repository: repository)
+        pageRepository = MockPageRepository()
+        nodeRepository = MockNodeRepository()
+        viewModel = CollectionListViewModel(
+            repository: repository,
+            pageRepository: pageRepository,
+            nodeRepository: nodeRepository
+        )
     }
 
     func test_loadCollections_populatesCollections() async {
