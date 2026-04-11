@@ -18,8 +18,8 @@ struct PageContextMenu: View {
             Button(action: onRename) {
                 Label("重命名", systemImage: "pencil")
             }
-            Button(action: onDelete) {
-                Label("删除", systemImage: "trash")
+            Button(action: onDuplicate) {
+                Label("复制页面", systemImage: "doc.on.doc")
             }
         }
 
