@@ -15,29 +15,29 @@ struct PageEmptyState: View {
             Spacer()
 
             Image(systemName: "doc.badge.plus")
-                .font(.system(size: 60))
-                .foregroundStyle(ColorTokens.textSecondary)
+                .font(.system(size: 70))
+                .foregroundStyle(ColorTokens.accent)
 
             VStack(spacing: SpacingTokens.sm) {
                 Text("还没有页面")
                     .font(TypographyTokens.title)
+                    .bold()
                     .foregroundStyle(ColorTokens.textPrimary)
 
                 Text("点击下方按钮创建第一个页面")
-                    .font(TypographyTokens.body)
+                    .font(TypographyTokens.subTitle)
+                    .bold()
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
             Button(action: onCreateTapped) {
-                Label("新建页面", systemImage: "plus")
-                    .font(TypographyTokens.body)
-                    .padding(.horizontal, SpacingTokens.lg)
-                    .padding(.vertical, SpacingTokens.sm)
-                    .background(ColorTokens.accent)
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
+                Label("新建页面", systemImage: "document.badge.plus")
+                    .font(TypographyTokens.title2)
+                    .padding(.horizontal, SpacingTokens.md)
+                    .padding(.vertical, SpacingTokens.xs)
             }
+            .buttonStyle(.glass)
 
             Spacer()
         }
