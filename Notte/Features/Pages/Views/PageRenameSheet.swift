@@ -15,7 +15,7 @@ struct PageRenameSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("页面名称", text: $viewModel.renameTitle)
+                    TextField("Page名称", text: $viewModel.renameTitle)
                         .focused($isTitleFocused)
                         .submitLabel(.done)
                         .onSubmit {

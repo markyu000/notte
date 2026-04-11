@@ -16,7 +16,7 @@ struct PageCreateSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("页面名称", text: $viewModel.newPageTitle)
+                    TextField("Page名称", text: $viewModel.newPageTitle)
                         .focused($isTitleFocused)
                         .submitLabel(.done)
                         .onSubmit {
@@ -24,7 +24,7 @@ struct PageCreateSheet: View {
                         }
                 }
             }
-            .navigationTitle("新建页面")
+            .navigationTitle("新建Page")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
