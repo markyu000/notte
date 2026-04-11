@@ -100,11 +100,11 @@ struct PageListScreen: View {
                                 viewModel.renamingPageID = page.id
                                 viewModel.renameTitle = page.title
                             },
-                            onDuplicate: {
-                                Task { await viewModel.duplicatePage(id: page.id) }
-                            },
                             onDelete: {
                                 pageToDelete = page
+                            },
+                            onDuplicate: {
+                                Task { await viewModel.duplicatePage(id: page.id) }
                             }
                         )
                     }
