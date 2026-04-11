@@ -13,6 +13,7 @@ struct PageEmptyState: View {
     var body: some View {
         VStack(spacing: SpacingTokens.lg) {
             Spacer()
+            Spacer()
 
             Image(systemName: "doc.badge.plus")
                 .font(.system(size: 70))
@@ -40,9 +41,12 @@ struct PageEmptyState: View {
             .buttonStyle(.glass)
 
             Spacer()
+            Spacer()
+            Spacer()
         }
         .padding(SpacingTokens.xl)
         .frame(maxWidth: .infinity)
+        .background(ColorTokens.backgroundPrimary)
     }
 }
 
