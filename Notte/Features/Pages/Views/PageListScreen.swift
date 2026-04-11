@@ -88,7 +88,7 @@ struct PageListScreen: View {
     private var pageList: some View {
         List {
             ForEach(viewModel.pages) { page in
-                PageRow(page: page)
+                PageCard(page: page)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard editMode == .inactive else { return }

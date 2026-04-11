@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct PageRow: View {
+struct PageCard: View {
     let page: Page
 
     var body: some View {
@@ -36,7 +36,7 @@ struct PageRow: View {
 }
 
 #Preview {
-    PageRow(page: Page(
+    PageCard(page: Page(
         id: UUID(),
         collectionID: UUID(),
         title: "SwiftUI 学习笔记",
