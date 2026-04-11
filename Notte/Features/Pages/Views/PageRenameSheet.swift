@@ -27,9 +27,15 @@ struct PageRenameSheet: View {
                         }
                 }
             }
-            .navigationTitle("重命名")
+            .navigationTitle("重命名Page")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") {
+                        viewModel.newPageTitle = ""
+                        dismiss()
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("保存") {
                         guard let id = viewModel.renamingPageID else { return }
