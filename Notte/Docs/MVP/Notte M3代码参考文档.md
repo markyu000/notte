@@ -1,7 +1,8 @@
 # Notte M3 代码参考文档
 
-> 本文档包含 M3（Pages）阶段所有 issue 的文件路径、代码内容与解释。  
+> 本文档包含 M3（Pages）阶段所有 issue 的文件路径、代码内容与解释。
 > M3 目标：Collection → Page 导航稳定，Page 增删改查、排序、复制全部成立，级联删除正确。
+> **本版本已根据 M2 实际落地代码对齐修订**，所有代码可直接编译。
 
 ---
 
@@ -13,31 +14,214 @@ feature/m3-page-module
 
 ## 目录
 
-1. [M3-01 PageRepositoryProtocol 升级](#m3-01-pagerepositoryprotocol-升级)
-2. [M3-02 FetchPagesByCollectionUseCase](#m3-02-fetchpagesbycollectionusecase)
-3. [M3-03 CreatePageUseCase](#m3-03-createpageusecase)
-4. [M3-04 RenamePageUseCase](#m3-04-renamepageusecase)
-5. [M3-05 DeletePageUseCase（含级联删除）](#m3-05-deletepageusecase含级联删除)
-6. [M3-06 DuplicatePageUseCase](#m3-06-duplicatepageusecase)
-7. [M3-07 ReorderPagesUseCase](#m3-07-reorderpagesusecase)
-8. [M3-08 PageRepository 完整实现](#m3-08-pagerepository-完整实现)
-9. [M3-09 PageListViewModel](#m3-09-pagelistviewmodel)
-10. [M3-10 PageListScreen](#m3-10-pagelistscreen)
-11. [M3-11 PageRow](#m3-11-pagerow)
-12. [M3-12 PageEmptyState](#m3-12-pageemptystate)
-13. [M3-13 PageCreateSheet](#m3-13-pagecreatesheet)
-14. [M3-14 PageRenameSheet](#m3-14-pagerenaamesheet)
-15. [M3-15 PageDeleteDialog](#m3-15-pagedeletedialog)
-16. [M3-16 PageContextMenu](#m3-16-pagecontextmenu)
-17. [M3-17 RootView 更新（接入 PageListScreen）](#m3-17-rootview-更新接入-pagelistscreen)
-18. [M3-18 PageListScreen 导航桩（进入 NodeEditor）](#m3-18-pagelistscreen-导航桩进入-nodeeditor)
-19. [M3-19~23 单元测试](#m3-1923-单元测试)
+1. [M3-00a 前置修复（拼写错误 + AppRoute 更新）](#m3-00a-前置修复拼写错误--approute-更新)
+2. [M3-00b SortIndexNormalizer 泛型化](#m3-00b-sortindexnormalizer-泛型化)
+3. [M3-01 PageRepositoryProtocol（已满足）](#m3-01-pagerepositoryprotocol已满足)
+4. [M3-02 FetchPagesByCollectionUseCase](#m3-02-fetchpagesbycollectionusecase)
+5. [M3-03 CreatePageUseCase](#m3-03-createpageusecase)
+6. [M3-04 RenamePageUseCase](#m3-04-renamepageusecase)
+7. [M3-05 DeletePageUseCase（含级联删除）](#m3-05-deletepageusecase含级联删除)
+8. [M3-06 DuplicatePageUseCase](#m3-06-duplicatepageusecase)
+9. [M3-07 ReorderPagesUseCase](#m3-07-reorderpagesusecase)
+10. [M3-08 PageRepository 完整实现](#m3-08-pagerepository-完整实现)
+11. [M3-09 PageListViewModel](#m3-09-pagelistviewmodel)
+12. [M3-10 PageListScreen](#m3-10-pagelistscreen)
+13. [M3-11 PageRow](#m3-11-pagerow)
+14. [M3-12 PageEmptyState](#m3-12-pageemptystate)
+15. [M3-13 PageCreateSheet](#m3-13-pagecreatesheet)
+16. [M3-14 PageRenameSheet](#m3-14-pagerenaamesheet)
+17. [M3-15 PageContextMenu](#m3-15-pagecontextmenu)
+18. [M3-16 RootView 更新（接入 PageListScreen）](#m3-16-rootview-更新接入-pagelistscreen)
+19. [M3-17~21 单元测试](#m3-1721-单元测试)
 
 ---
 
-## M3-01 PageRepositoryProtocol 升级
+## M3-00a 前置修复（拼写错误 + AppRoute 更新）
 
-**文件：** `Domain/Protocols/PageRepositoryProtocol.swift`（在 M1 骨架基础上更新）
+### 1. 修正 `DependencyContainer` 拼写错误
+
+**文件：** `App/DependencyContainer.swift`
+
+```swift
+import Combine
+import SwiftData
+
+@MainActor
+class DependencyContainer: ObservableObject {
+    let collectionRepository: CollectionRepositoryProtocol   // 修正：colleciton → collection
+    let pageRepository: PageRepositoryProtocol
+    let nodeRepository: NodeRepositoryProtocol
+    let blockRepository: BlockRepositoryProtocol
+
+    init(modelContainer: ModelContainer) {
+        let context = ModelContext(modelContainer)
+        self.collectionRepository = CollectionRepository(context: context)
+        self.pageRepository = PageRepository(context: context)
+        self.nodeRepository = NodeRepository(context: context)
+        self.blockRepository = BlockRepository(context: context)
+    }
+}
+```
+
+### 2. 修正 `RootView` 拼写错误 + 更新 AppRoute
+
+**文件：** `App/AppRouter.swift`
+
+```swift
+import Foundation
+import Combine
+
+enum AppRoute: Hashable {
+    case pageList(collectionID: UUID, collectionTitle: String)  // 新增 collectionTitle
+    case nodeEditor(pageID: UUID)
+}
+
+@MainActor
+class AppRouter: ObservableObject {
+    @Published var path: [AppRoute] = []
+
+    func navigate(to route: AppRoute) {
+        path.append(route)
+    }
+
+    func goBack() {
+        path.removeLast()
+    }
+
+    func goRoot() {
+        path.removeAll()
+    }
+}
+```
+
+**文件：** `App/RootView.swift`
+
+```swift
+import Foundation
+import SwiftUI
+
+struct RootView: View {
+    @StateObject private var router = AppRouter()
+    @EnvironmentObject private var dependencyContainer: DependencyContainer   // 修正：Countainer → Container
+
+    var body: some View {
+        NavigationStack(path: $router.path) {
+            CollectionListScreen(
+                repository: dependencyContainer.collectionRepository   // 修正：colleciton → collection
+            )
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+                case .pageList(let collectionID, let collectionTitle):
+                    Text("Page List 占位 \(collectionID) \(collectionTitle)")   // M3-16 替换
+                case .nodeEditor(let pageID):
+                    Text("Node Editor 占位 \(pageID)")   // M4 替换
+                }
+            }
+        }
+        .environmentObject(router)
+    }
+}
+```
+
+### 3. 更新 `CollectionListScreen` navigate 调用
+
+**文件：** `Features/Collections/Views/CollectionListScreen.swift`（只改 navigate 调用处）
+
+```swift
+// 将原来的：
+router.navigate(to: .pageList(collectionID: collection.id))
+
+// 改为：
+router.navigate(to: .pageList(collectionID: collection.id, collectionTitle: collection.title))
+```
+
+**Git commit message：**
+
+```
+fix: correct typos in DependencyContainer/RootView and add collectionTitle to AppRoute
+```
+
+**解释：**
+
+- `DependencyContainer` 中 `collecitonRepository` 和 `RootView` 中 `dependencyCountainer` 均为拼写错误，M3 接入前统一修正，避免整个 Pages 模块都带着错误名编译。
+- `AppRoute.pageList` 新增 `collectionTitle: String` 关联值。`PageListScreen` 需要展示 Collection 标题作为 `navigationTitle`，在路由关联值中携带是最简洁的方案，不需要在导航目标中再发起异步查询。
+- `CollectionListScreen` 中 `router.navigate` 的调用同步更新，传入 `collection.title`，View 层已经持有该值，无额外开销。
+
+---
+
+## M3-00b SortIndexNormalizer 泛型化
+
+**文件（新建）：** `Shared/Utilities/SortIndexable.swift`
+
+```swift
+import Foundation
+
+protocol SortIndexable {
+    var sortIndex: Double { get set }
+    var updatedAt: Date { get set }
+}
+```
+
+**文件：** `Domain/Entities/Collection.swift`（末尾追加）
+
+```swift
+extension Collection: SortIndexable {}
+```
+
+**文件：** `Domain/Entities/Page.swift`（末尾追加）
+
+```swift
+extension Page: SortIndexable {}
+```
+
+**文件：** `Shared/Utilities/SortIndexNormalizer.swift`（全量替换）
+
+```swift
+import Foundation
+
+struct SortIndexNormalizer {
+    static func normalizeIfNeeded<T: SortIndexable>(
+        _ items: [T],
+        update: (T) async throws -> Void
+    ) async throws {
+        let sorted = items.sorted { $0.sortIndex < $1.sortIndex }
+
+        let needsNorm = zip(sorted, sorted.dropFirst()).contains { a, b in
+            SortIndexPolicy.needsNormalization(before: a.sortIndex, after: b.sortIndex)
+        }
+
+        guard needsNorm else { return }
+
+        let newIndexes = SortIndexPolicy.normalize(count: sorted.count)
+        for (item, newIndex) in zip(sorted, newIndexes) {
+            var updated = item
+            updated.sortIndex = newIndex
+            updated.updatedAt = Date()
+            try await update(updated)
+        }
+    }
+}
+```
+
+**Git commit message：**
+
+```
+refactor: generalize SortIndexNormalizer to support any SortIndexable entity
+```
+
+**解释：**
+
+- 原 `SortIndexNormalizer` 写死了 `[Collection]` 类型，`ReorderPagesUseCase` 无法复用。抽出 `SortIndexable` 协议后，`Collection` 和 `Page`（以及未来的 `Node`）都可以共用同一套归一化逻辑。
+- `Collection` 和 `Page` 两个 struct 均已具备 `sortIndex: Double` 和 `updatedAt: Date` 属性，只需在文件末尾追加 `extension X: SortIndexable {}` 即可，不改动原有定义。
+- `ReorderCollectionsUseCase` 中现有的 `SortIndexNormalizer.normalizeIfNeeded(latest) { ... }` 调用签名不变，Swift 可通过类型推断找到泛型版本，不需要修改调用方。
+
+---
+
+## M3-01 PageRepositoryProtocol（已满足）
+
+**文件：** `Domain/Protocols/PageRepositoryProtocol.swift`
+
+> 当前代码已经是 `async throws` 签名，与 M3 所需完全一致，**无需修改**。
 
 ```swift
 import Foundation
@@ -51,18 +235,9 @@ protocol PageRepositoryProtocol {
 }
 ```
 
-**Git commit message：**
-
-```
-feat: upgrade PageRepositoryProtocol to async throws
-```
-
 **解释：**
 
-- M1 阶段的 `PageRepositoryProtocol` 方法签名是同步 `throws`，作为骨架占位。M3 开始真正实现 Page 模块，将协议升级为 `async throws`，与 M2 中 `CollectionRepositoryProtocol` 的升级方式完全对称。
-- `fetchAll(in collectionID:)` 带 `collectionID` 参数，确保每次查询只返回属于当前 Collection 的 Page，不在 UseCase 层做全量过滤。
-- `NodeRepositoryProtocol` 和 `BlockRepositoryProtocol` 在 M4 用到时再同步升级，M3 不动。
-- `PageRepository` 的骨架实现（M1 已建）需同步将方法签名改为 `async throws`，详见 M3-08。
+- M1 阶段已升级为 `async throws`，与 `CollectionRepositoryProtocol` 对称。M3 直接使用，无需变更。
 
 ---
 
@@ -91,9 +266,8 @@ feat: add FetchPagesByCollectionUseCase
 
 **解释：**
 
-- 与 `FetchCollectionsUseCase` 结构对称，只是没有 Pin 分组逻辑——Page 不支持固定，只按 `sortIndex` 升序排列。
-- 排序逻辑放在 UseCase 层而不是 ViewModel 的计算属性中，确保所有调用方拿到的顺序一致。
-- `repository.fetchAll(in: collectionID)` 由数据库层做 `collectionID` 过滤，不在内存中全量加载再筛选，保持 Repository 职责清晰。
+- 与 `FetchCollectionsUseCase` 对称，Page 不支持 Pin，只按 `sortIndex` 升序排列。
+- `repository.fetchAll(in: collectionID)` 在数据库层完成 `collectionID` 过滤，UseCase 只做排序。
 
 ---
 
@@ -107,23 +281,18 @@ import Foundation
 struct CreatePageUseCase {
     let repository: PageRepositoryProtocol
 
+    @discardableResult
     func execute(title: String, in collectionID: UUID) async throws -> Page {
-        let trimmed = title.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else {
-            throw AppError.validationFailure("页面名称不能为空")
-        }
-
         let existing = try await repository.fetchAll(in: collectionID)
-        let lastIndex = existing.map(\.sortIndex).max()
-        let newSortIndex = SortIndexPolicy.indexAfter(last: lastIndex)
+        let maxIndex = existing.map(\.sortIndex).max() ?? 0
 
         let page = Page(
             id: UUID(),
             collectionID: collectionID,
-            title: trimmed,
+            title: title,
             createdAt: Date(),
             updatedAt: Date(),
-            sortIndex: newSortIndex,
+            sortIndex: maxIndex + 1000,
             isArchived: false
         )
         try await repository.create(page)
@@ -140,10 +309,9 @@ feat: add CreatePageUseCase
 
 **解释：**
 
-- 与 `CreateCollectionUseCase` 的实现思路完全一致，校验 title 非空后用 `SortIndexPolicy.indexAfter(last:)` 计算新 `sortIndex`，将 Page 排在已有条目末尾。
-- `SortIndexPolicy` 是 M1 已定义的静态工具，这里直接复用，不重复实现插入逻辑。
-- `collectionID` 作为参数传入，UseCase 不需要自己查询 Collection，职责边界清晰。
-- 返回新建的 `Page`，ViewModel 可以直接用于更新本地状态或跳转。
+- 与 `CreateCollectionUseCase` 实现模式完全一致：`max() ?? 0` + `+ 1000` 确定新条目位置，不通过 `SortIndexPolicy.indexAfter` 中转。
+- 空标题校验由 `PageListViewModel.createPage()` 的 `guard` 语句承担（与 Collection 一致），UseCase 层不重复校验。
+- `@discardableResult` 与 `CreateCollectionUseCase` 保持一致，调用方可忽略返回值。
 
 ---
 
@@ -158,14 +326,10 @@ struct RenamePageUseCase {
     let repository: PageRepositoryProtocol
 
     func execute(id: UUID, newTitle: String) async throws {
-        let trimmed = newTitle.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else {
-            throw AppError.validationFailure("页面名称不能为空")
-        }
         guard var page = try await repository.fetch(by: id) else {
-            throw AppError.repositoryError(RepositoryError.notFound)
+            throw AppError.repositoryError(.notFound)
         }
-        page.title = trimmed
+        page.title = newTitle
         page.updatedAt = Date()
         try await repository.update(page)
     }
@@ -180,10 +344,9 @@ feat: add RenamePageUseCase
 
 **解释：**
 
-- 与 `RenameCollectionUseCase` 结构对称：校验 → fetch → 修改 → update。
-- `page.updatedAt = Date()` 确保每次重命名都更新时间戳，`PageRow` 可以用它显示"最近修改"。
-- `guard var page` 而不是 `guard let`，因为需要在后面修改 `page` 的属性（值类型 `Page` 必须用 `var` 才能修改）。
-- `AppError.repositoryError(RepositoryError.notFound)` 而不是直接抛 `RepositoryError`，让上层 ViewModel 统一处理 `AppError` 类型。
+- 与 `RenameCollectionUseCase` 结构完全一致：fetch → 修改 → update。
+- 空标题校验由 ViewModel 的 `guard` 承担，UseCase 不重复。
+- `guard var page`：`Page` 是值类型，需要 `var` 才能修改属性。
 
 ---
 
@@ -215,10 +378,9 @@ feat: add DeletePageUseCase with cascade node deletion
 
 **解释：**
 
-- `DeletePageUseCase` 依赖两个 Repository：`pageRepository` 和 `nodeRepository`。UseCase 层负责编排跨 Repository 的操作，Repository 层各自只做单表操作。
-- `nodeRepository.deleteAll(in: pageID)` 使用 M1 在 `NodeRepositoryProtocol` 上定义的 `deleteAll` 方法，该方法在 M1 骨架中已预留，M4 会提供完整实现。M3 阶段 Node 表为空，调用不会造成问题，但调用链已经接好，M4 接入编辑器后自动生效。
-- 删除顺序必须先删 Node，再删 Page。反向操作在部分数据库引擎中可能触发外键约束问题，保持顺序是正确的实践。
-- 此 UseCase 不处理 Block 的级联删除，Block 的清理由 `NodeRepository.deleteAll` 内部处理（M4 实现时完成），UseCase 层不需要感知。
+- UseCase 编排跨 Repository 操作，两个 Repository 各自只做单表操作。
+- `nodeRepository.deleteAll(in: pageID)` 在 `NodeRepositoryProtocol` 中已预留，M3 阶段 Node 表为空，调用无副作用；M4 接入编辑器后自动生效。
+- 删除顺序必须先删 Node，再删 Page，避免外键约束问题。
 
 ---
 
@@ -232,14 +394,14 @@ import Foundation
 struct DuplicatePageUseCase {
     let repository: PageRepositoryProtocol
 
+    @discardableResult
     func execute(pageID: UUID) async throws -> Page {
         guard let original = try await repository.fetch(by: pageID) else {
-            throw AppError.repositoryError(RepositoryError.notFound)
+            throw AppError.repositoryError(.notFound)
         }
 
         let existing = try await repository.fetchAll(in: original.collectionID)
-        let lastIndex = existing.map(\.sortIndex).max()
-        let newSortIndex = SortIndexPolicy.indexAfter(last: lastIndex)
+        let maxIndex = existing.map(\.sortIndex).max() ?? 0
 
         let duplicate = Page(
             id: UUID(),
@@ -247,7 +409,7 @@ struct DuplicatePageUseCase {
             title: "\(original.title) 副本",
             createdAt: Date(),
             updatedAt: Date(),
-            sortIndex: newSortIndex,
+            sortIndex: maxIndex + 1000,
             isArchived: false
         )
         try await repository.create(duplicate)
@@ -264,10 +426,9 @@ feat: add DuplicatePageUseCase
 
 **解释：**
 
-- M3 阶段 `DuplicatePageUseCase` 只复制 Page 元数据（title、collectionID），不深拷贝 Node 和 Block。Node 的深拷贝在 M4 的 Node 编辑器稳定后补充，避免 M3 范围过重。
-- 副本的 title 格式为 `"原标题 副本"`，是 Apple 系 App 的惯例命名方式。
-- 副本分配新的 UUID 和新的 `sortIndex`，排在当前 Collection 所有 Page 之后。
-- `createdAt` 和 `updatedAt` 均设为 `Date()`，副本是全新的条目，不继承原 Page 的时间戳。
+- M3 阶段只复制 Page 元数据，不深拷贝 Node/Block（M4 补充）。
+- `maxIndex + 1000` 与 `CreatePageUseCase` 保持完全一致的 sortIndex 计算方式。
+- 副本 title 格式为 `"原标题 副本"`，与 Apple 系 App 惯例一致。
 
 ---
 
@@ -282,45 +443,49 @@ struct ReorderPagesUseCase {
     let repository: PageRepositoryProtocol
 
     func execute(collectionID: UUID, moving id: UUID, after targetID: UUID?) async throws {
-        var pages = try await repository.fetchAll(in: collectionID)
-        pages.sort { $0.sortIndex < $1.sortIndex }
+        let all = try await repository.fetchAll(in: collectionID)
+            .sorted { $0.sortIndex < $1.sortIndex }
 
-        guard let movingIndex = pages.firstIndex(where: { $0.id == id }) else {
-            throw AppError.repositoryError(RepositoryError.notFound)
+        let firstSortIndex = all.first?.sortIndex
+
+        let targetIndex = targetID.flatMap { tid in
+            all.firstIndex { $0.id == tid }
         }
 
-        let lower: Double?
-        let upper: Double?
-
-        if let targetID {
-            guard let targetIndex = pages.firstIndex(where: { $0.id == targetID }) else {
-                throw AppError.repositoryError(RepositoryError.notFound)
-            }
-            lower = pages[targetIndex].sortIndex
-            upper = targetIndex + 1 < pages.count && pages[targetIndex + 1].id != id
-                ? pages[targetIndex + 1].sortIndex
-                : nil
-        } else {
-            lower = nil
-            upper = pages.first?.sortIndex
+        let lower: Double? = targetIndex.map { all[$0].sortIndex }
+        let upper: Double? = targetIndex.flatMap { idx in
+            all.indices.contains(idx + 1) ? all[idx + 1].sortIndex : nil
         }
 
-        let newIndex = SortIndexPolicy.indexBetween(before: lower, after: upper)
-
-        var moving = pages[movingIndex]
-        moving.sortIndex = newIndex
-        moving.updatedAt = Date()
-        try await repository.update(moving)
-
-        await SortIndexNormalizer.normalizeIfNeeded(
-            entities: try await repository.fetchAll(in: collectionID),
-            sortIndexKeyPath: \.sortIndex,
-            update: { page in
-                var p = page
-                p.updatedAt = Date()
-                try await repository.update(p)
+        let newIndex: Double!
+        switch (lower, upper) {
+        case (nil, nil):
+            if let firstSortIndex {
+                newIndex = SortIndexPolicy.indexBetween(before: 0, after: firstSortIndex)
+            } else {
+                newIndex = SortIndexPolicy.initialIndex()
             }
-        )
+        case (nil, let u?):
+            newIndex = SortIndexPolicy.indexBetween(before: 0, after: u)
+        case (let l?, nil):
+            newIndex = SortIndexPolicy.indexAfter(last: l)
+        case (let l?, let u?):
+            newIndex = SortIndexPolicy.indexBetween(before: l, after: u)
+        }
+
+        guard var page = try await repository.fetch(by: id) else {
+            throw AppError.repositoryError(.notFound)
+        }
+        page.sortIndex = newIndex
+        page.updatedAt = Date()
+        try await repository.update(page)
+
+        Task.detached {
+            let latest = try await repository.fetchAll(in: collectionID)
+            try await SortIndexNormalizer.normalizeIfNeeded(latest) { updated in
+                try await repository.update(updated)
+            }
+        }
     }
 }
 ```
@@ -333,23 +498,21 @@ feat: add ReorderPagesUseCase
 
 **解释：**
 
-- 与 `ReorderCollectionsUseCase` 结构完全对称，只是增加了 `collectionID` 参数，因为 Page 查询需要按 `collectionID` 过滤。
-- `targetID == nil` 表示移动到最前面，此时 `lower = nil`，`upper` 取当前第一条的 `sortIndex`，由 `SortIndexPolicy.indexBetween` 处理 `lower == nil` 的边界情况。
-- `SortIndexNormalizer.normalizeIfNeeded` 在排序后检查间隔是否过小，必要时重新归一化，复用 M2 已实现的工具，不重复实现。
-- 计算新 index 时要排除 moving 条目自身，防止 upper 取到自己的旧值（通过 `pages[targetIndex + 1].id != id` 判断）。
+- 与 `ReorderCollectionsUseCase` 逻辑完全对称，唯一差异是增加 `collectionID` 参数，所有 `repository.fetchAll()` 改为 `repository.fetchAll(in: collectionID)`。
+- `SortIndexPolicy.indexBetween(before:after:)` 接受 `Double`（非可选），因此用 `switch (lower, upper)` 分支处理所有 nil 组合，与现有 Collection 实现保持一致。
+- `Task.detached` 负责后台归一化，不阻塞当前操作完成；`SortIndexNormalizer` 升级为泛型（M3-00b）后可直接接受 `[Page]`。
 
 ---
 
 ## M3-08 PageRepository 完整实现
 
-**文件：** `Data/Repositories/PageRepository.swift`（在 M1 骨架基础上更新）
+**文件：** `Data/Repositories/PageRepository.swift`（在 M1 骨架基础上全量替换）
 
 ```swift
 import Foundation
 import SwiftData
 
 class PageRepository: PageRepositoryProtocol {
-
     let context: ModelContext
 
     init(context: ModelContext) {
@@ -361,14 +524,23 @@ class PageRepository: PageRepositoryProtocol {
             predicate: #Predicate { $0.collectionID == collectionID },
             sortBy: [SortDescriptor(\.sortIndex)]
         )
-        return try context.fetch(descriptor).map { $0.toDomain() }
+        do {
+            let models = try context.fetch(descriptor)
+            return models.map { $0.toDomain() }
+        } catch {
+            throw RepositoryError.saveFailed(error)
+        }
     }
 
     func fetch(by id: UUID) async throws -> Page? {
         let descriptor = FetchDescriptor<PageModel>(
             predicate: #Predicate { $0.id == id }
         )
-        return try context.fetch(descriptor).first?.toDomain()
+        do {
+            return try context.fetch(descriptor).first?.toDomain()
+        } catch {
+            throw RepositoryError.saveFailed(error)
+        }
     }
 
     func create(_ page: Page) async throws {
@@ -390,8 +562,9 @@ class PageRepository: PageRepositoryProtocol {
     }
 
     func update(_ page: Page) async throws {
+        let id = page.id
         let descriptor = FetchDescriptor<PageModel>(
-            predicate: #Predicate { $0.id == page.id }
+            predicate: #Predicate { $0.id == id }
         )
         guard let model = try context.fetch(descriptor).first else {
             throw RepositoryError.notFound
@@ -432,10 +605,10 @@ feat: implement PageRepository CRUD
 
 **解释：**
 
-- 与 `CollectionRepository` 的实现模式完全一致，`FetchDescriptor` + `#Predicate` + `context.save()`，只是把 `CollectionModel` 换成 `PageModel`。
-- `fetchAll(in:)` 的 `FetchDescriptor` 在数据库层做 `collectionID` 过滤，并附带 `sortBy: [SortDescriptor(\.sortIndex)]` 让 SwiftData 在查询时直接排好序，减少内存中的排序操作。
-- `update` 里没有修改 `collectionID`，Page 一旦创建就不会换 Collection（MVP 阶段不支持跨 Collection 移动 Page）。
-- `delete` 只删除 `PageModel` 本身，Node 的清理由 `DeletePageUseCase` 在调用 `pageRepository.delete` 之前通过 `nodeRepository.deleteAll(in:)` 处理。
+- 与 `CollectionRepository` 模式完全一致：`FetchDescriptor` + `do-catch` + `context.save()`。
+- `fetchAll(in:)` 在 SwiftData 层同时做 predicate 过滤和 sortIndex 排序，减少内存操作。
+- `update` 中提取 `let id = page.id` 再传入 `#Predicate`，与 `CollectionRepository.update` 的写法保持一致（SwiftData `#Predicate` 对属性访问路径有约束，使用局部常量更可靠）。
+- `update` 不修改 `collectionID`，MVP 阶段不支持跨 Collection 移动 Page。
 
 ---
 
@@ -465,9 +638,6 @@ class PageListViewModel: ObservableObject {
     // MARK: - 重命名状态
     @Published var renamingPageID: UUID?
     @Published var renameTitle: String = ""
-
-    // MARK: - 删除确认状态
-    @Published var deletingPageID: UUID?
 
     // MARK: - UseCases
     private let fetchUseCase: FetchPagesByCollectionUseCase
@@ -534,7 +704,6 @@ class PageListViewModel: ObservableObject {
     func deletePage(id: UUID) async {
         do {
             try await deleteUseCase.execute(pageID: id)
-            deletingPageID = nil
             await loadPages()
         } catch {
             self.error = error as? AppError
@@ -573,10 +742,9 @@ feat: add PageListViewModel with full state management
 
 **解释：**
 
-- `collectionTitle` 也作为参数传入，用于 `PageListScreen` 的 `.navigationTitle`，ViewModel 统一持有所有需要展示的数据，View 不需要自己向上查询 Collection。
-- `init` 接受 `pageRepository` 和 `nodeRepository` 两个依赖，因为 `DeletePageUseCase` 需要两者。调用方（`PageListScreen`）从 `DependencyContainer` 分别取出传入。
-- `deletingPageID` 状态用于控制删除确认 Alert 的显示，与 M2 中 `renamingCollectionID` 的模式一致：非 nil 时显示 Alert，操作完成或取消后置回 nil。
-- 所有 action 执行成功后统一调用 `await loadPages()` 刷新，不手动修改内存数组，保持数据源唯一（数据库是唯一真相）。
+- 与 `CollectionListViewModel` 完全对称：所有 action 执行成功后调用 `await loadPages()` 刷新，数据库是唯一真相。
+- 删除确认状态（`pageToDelete`）由 `PageListScreen` 用 `@State` 持有，与 `CollectionListScreen` 的处理方式一致，ViewModel 不需要感知。`deletePage(id:)` 只负责执行删除，不管理弹窗状态。
+- `collectionTitle` 由调用方（`RootView`）从 `AppRoute` 关联值中取出传入，ViewModel 持有后暴露给 View 用于 `navigationTitle`。
 
 ---
 
@@ -588,10 +756,10 @@ feat: add PageListViewModel with full state management
 import SwiftUI
 
 struct PageListScreen: View {
-
     @StateObject private var viewModel: PageListViewModel
     @EnvironmentObject private var router: AppRouter
     @State private var editMode: EditMode = .inactive
+    @State private var pageToDelete: Page?
 
     init(
         collectionID: UUID,
@@ -608,12 +776,35 @@ struct PageListScreen: View {
             )
         )
     }
-
+    
     var body: some View {
+        contentView
+            .navigationTitle(viewModel.collectionTitle)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar { toolbarContent }
+            .environment(\.editMode, $editMode)
+            .sheet(isPresented: $viewModel.isShowingCreateSheet) {
+                PageCreateSheet(viewModel: viewModel)
+            }
+            .sheet(
+                isPresented: Binding(
+                    get: { viewModel.renamingPageID != nil },
+                    set: { if !$0 { viewModel.renamingPageID = nil } }
+                )
+            ) {
+                PageRenameSheet(viewModel: viewModel)
+            }
+            .modifier(PageDeleteAlertModifier(pageToDelete: $pageToDelete, viewModel: viewModel))
+            .modifier(PageErrorAlertModifier(viewModel: viewModel))
+            .task {
+                await viewModel.loadPages()
+            }
+    }
+
+    private var contentView: some View {
         Group {
             if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                loadingView
             } else if viewModel.pages.isEmpty {
                 PageEmptyState {
                     viewModel.isShowingCreateSheet = true
@@ -622,48 +813,22 @@ struct PageListScreen: View {
                 pageList
             }
         }
-        .navigationTitle(viewModel.collectionTitle)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    viewModel.isShowingCreateSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-            ToolbarItem(placement: .navigationBarLeading) {
-                EditButton()
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                viewModel.isShowingCreateSheet = true
+            } label: {
+                Image(systemName: "plus")
+                    .foregroundStyle(ColorTokens.accent)
             }
         }
-        .environment(\.editMode, $editMode)
-        .sheet(isPresented: $viewModel.isShowingCreateSheet) {
-            PageCreateSheet(viewModel: viewModel)
-        }
-        .sheet(isPresented: Binding(
-            get: { viewModel.renamingPageID != nil },
-            set: { if !$0 { viewModel.renamingPageID = nil } }
-        )) {
-            PageRenameSheet(viewModel: viewModel)
-        }
-        .alert("删除页面", isPresented: Binding(
-            get: { viewModel.deletingPageID != nil },
-            set: { if !$0 { viewModel.deletingPageID = nil } }
-        ), presenting: viewModel.deletingPageID) { pageID in
-            PageDeleteDialog(pageID: pageID, viewModel: viewModel)
-        } message: { _ in
-            Text("此操作将删除页面及其全部内容，无法恢复。")
-        }
-        .alert("出错了", isPresented: Binding(
-            get: { viewModel.error != nil },
-            set: { if !$0 { viewModel.error = nil } }
-        ), presenting: viewModel.error) { _ in
-            Button("好", role: .cancel) { viewModel.error = nil }
-        } message: { error in
-            Text(error.errorDescription ?? "未知错误")
-        }
-        .task {
-            await viewModel.loadPages()
+        ToolbarItem(placement: .topBarLeading) {
+            EditButton()
+                .tint(ColorTokens.accent)
+                .disabled(viewModel.pages.isEmpty)
         }
     }
 
@@ -678,7 +843,7 @@ struct PageListScreen: View {
                     }
                     .contextMenu {
                         PageContextMenu(
-                            page: page,
+                            page: page, 
                             onRename: {
                                 viewModel.renamingPageID = page.id
                                 viewModel.renameTitle = page.title
@@ -687,16 +852,23 @@ struct PageListScreen: View {
                                 Task { await viewModel.duplicatePage(id: page.id) }
                             },
                             onDelete: {
-                                viewModel.deletingPageID = page.id
+                                pageToDelete = page
                             }
                         )
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
-                            viewModel.deletingPageID = page.id
+                            pageToDelete = page
                         } label: {
                             Label("删除", systemImage: "trash")
                         }
+                        Button {
+                            viewModel.renamingPageID = page.id
+                            viewModel.renameTitle = page.title
+                        } label: {
+                            Label("重命名", systemImage: "pencil")
+                        }
+                        .tint(ColorTokens.accent)
                     }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -705,8 +877,8 @@ struct PageListScreen: View {
                 guard let sourceIndex = from.first else { return }
                 let movingID = viewModel.pages[sourceIndex].id
                 let targetID: UUID? = to > 0
-                    ? viewModel.pages[min(to - 1, viewModel.pages.count - 1)].id
-                    : nil
+                ? viewModel.pages[min(to - 1, viewModel.pages.count - 1)].id
+                : nil
                 Task {
                     await viewModel.reorderPage(moving: movingID, after: targetID)
                 }
@@ -715,6 +887,52 @@ struct PageListScreen: View {
         .listStyle(.plain)
         .background(ColorTokens.backgroundPrimary)
     }
+    
+    private var loadingView: some View {
+        ProgressView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Alert Modifiers
+
+private struct PageDeleteAlertModifier: ViewModifier {
+    @Binding var pageToDelete: Page?
+    let viewModel: PageListViewModel
+
+    func body(content: Content) -> some View {
+        content.alert("确认删除", isPresented: Binding(
+            get: { pageToDelete != nil },
+            set: { if !$0 { pageToDelete = nil } }
+        ), presenting: pageToDelete) { page in
+            Button("取消", role: .cancel) {
+                pageToDelete = nil
+            }
+            Button("删除", role: .destructive) {
+                Task {
+                    await viewModel.deletePage(id: page.id)
+                    pageToDelete = nil
+                }
+            }
+        } message: { page in
+            Text("删除「\(page.title)」将同时删除其全部内容，此操作无法撤销。")
+        }
+    }
+}
+
+private struct PageErrorAlertModifier: ViewModifier {
+    @ObservedObject var viewModel: PageListViewModel
+
+    func body(content: Content) -> some View {
+        content.alert("出错了", isPresented: Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        ), presenting: viewModel.error) { _ in
+            Button("好", role: .cancel) { viewModel.error = nil }
+        } message: { error in
+            Text(error.errorDescription ?? "未知错误")
+        }
+    }
 }
 
 #Preview {
@@ -722,6 +940,7 @@ struct PageListScreen: View {
         Text("PageListScreen Preview")
     }
 }
+
 ```
 
 **Git commit message：**
@@ -732,16 +951,17 @@ feat: build PageListScreen
 
 **解释：**
 
-- 结构与 `CollectionListScreen` 高度对称，三态切换（loading / empty / list）、toolbar、EditMode、Sheet、Alert 的组织方式完全一致，便于维护。
-- 删除操作走 `viewModel.deletingPageID = page.id` 而不是直接执行，先显示确认 Alert，保护用户不误删。这与 Collection 删除直接执行的做法不同，因为删除 Page 涉及级联删除所有内容，破坏性更强，需要二次确认。
-- `.swipeActions` 中删除同样走 `deletingPageID` 触发 Alert，不绕过二次确认。
-- `router.navigate(to: .nodeEditor(pageID: page.id))` 是 M3 到 M4 的导航接口，M3 阶段 `.nodeEditor` 路由指向一个占位 View，M4 替换为真正的 NodeEditor。
+- **不包含 NavigationStack 包装**：`PageListScreen` 是从 `RootView` 外层 `NavigationStack` push 进来的子页，自身不需要再包一层，与 `CollectionListScreen`（根视图，有自己的 NavigationStack）不同。
+- **删除状态用 `@State private var pageToDelete: Page?`**，而非 ViewModel 的 published 属性，与 `CollectionListScreen` 的 `collectionToDelete` 处理方式完全一致。持有完整 `Page` 值类型比 `UUID?` 更方便在 `.alert(presenting:)` 的 message 里显示标题。
+- **Toolbar placement 使用 `.topBarTrailing` / `.topBarLeading`**，与 `CollectionListScreen` 实际代码保持一致。
+- **swipeActions 补充重命名按钮**，与 `CollectionListScreen` 的 swipe 操作对称。
+- 删除路径（swipe / contextMenu / alert）统一触发 `pageToDelete = page`，不绕过确认弹窗。
 
 ---
 
 ## M3-11 PageRow
 
-**文件：** `Features/Pages/Views/PageRow.swift`
+**文件：** `Features/Pages/Components/PageRow.swift`
 
 ```swift
 import SwiftUI
@@ -796,17 +1016,15 @@ feat: build PageRow component
 
 **解释：**
 
-- `PageRow` 是纯展示组件，只接受 `Page` 值类型，不持有 ViewModel，可独立复用和 Preview。
-- 副标题显示 `updatedAt`，使用 Swift 5.5 引入的 `Date.formatted(date:time:)` API，格式简洁（如"2026年4月4日"），不写自定义 `DateFormatter`。
-- `Image(systemName: "doc.text")` 用 SF Symbol 作为 Page 的图标，`ColorTokens.accent` 上色，与整体配色一致。
-- `lineLimit(1)` 防止长标题撑开行高，超出部分用省略号截断。
-- 所有间距引用 `SpacingTokens`，不写魔法数字。
+- 纯展示组件，只接受 `Page` 值类型，不持有 ViewModel，可独立 Preview。
+- 副标题显示 `updatedAt`，使用 `Date.formatted(date:time:)` API，无需自定义 `DateFormatter`。
+- 所有间距和颜色引用 Token，不写魔法数字。
 
 ---
 
 ## M3-12 PageEmptyState
 
-**文件：** `Features/Pages/Views/PageEmptyState.swift`
+**文件：** `Features/Pages/Components/PageEmptyState.swift`
 
 ```swift
 import SwiftUI
@@ -863,9 +1081,8 @@ feat: build PageEmptyState component
 
 **解释：**
 
-- 与 `CollectionEmptyState` 结构完全对称，只更换了文案和图标（`doc.badge.plus`）。
-- `onCreateTapped: () -> Void` 回调设计保持组件职责单一，不持有 ViewModel。
-- 两个 `Spacer()` 上下夹住内容，使其在屏幕垂直方向居中。
+- 与 `CollectionEmptyState` 结构完全对称，只更换文案和图标。
+- 回调设计保持组件职责单一，不持有 ViewModel。
 
 ---
 
@@ -897,17 +1114,18 @@ struct PageCreateSheet: View {
             .navigationTitle("新建页面")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("取消") {
                         viewModel.newPageTitle = ""
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("创建") {
                         Task { await viewModel.createPage() }
                     }
                     .disabled(viewModel.newPageTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .tint(ColorTokens.accent)
                 }
             }
             .onAppear {
@@ -927,10 +1145,9 @@ feat: build PageCreateSheet
 
 **解释：**
 
-- 与 `CollectionCreateSheet` 结构完全一致，将绑定字段改为 `viewModel.newPageTitle`，操作方法改为 `viewModel.createPage()`。
-- `@ObservedObject` 而不是 `@StateObject`，Sheet 不持有 ViewModel 生命周期，由 `PageListScreen` 统一管理。
-- `.presentationDetents([.height(220)])` 以小面板形式弹出，符合"轻量创建"的交互意图，与 Collection 创建体验一致。
-- 创建成功后 `createPage()` 内部会将 `isShowingCreateSheet` 置为 false，Sheet 自动关闭；取消时手动 `dismiss()` 并清空标题。
+- 与 `CollectionCreateSheet` 结构完全一致，Toolbar placement 使用 `.topBarLeading` / `.topBarTrailing`，确认按钮添加 `.tint(ColorTokens.accent)`。
+- `@ObservedObject`：Sheet 不持有 ViewModel 生命周期，由 `PageListScreen` 统一管理。
+- 创建成功后 `createPage()` 内部将 `isShowingCreateSheet` 置 false，Sheet 自动关闭。
 
 ---
 
@@ -976,6 +1193,7 @@ struct PageRenameSheet: View {
                         Task { await viewModel.renamePage(id: id) }
                     }
                     .disabled(viewModel.renameTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .tint(ColorTokens.accent)
                 }
             }
             .onAppear {
@@ -995,54 +1213,15 @@ feat: build PageRenameSheet
 
 **解释：**
 
-- 与 `CollectionRenameSheet` 结构完全一致，`renamingCollectionID` → `renamingPageID`，`renameCollection` → `renamePage`。
-- 取消时同时清空 `renamingPageID` 和 `renameTitle`，保证 ViewModel 状态干净，下次打开不残留旧值。
+- 与 `CollectionRenameSheet` 结构完全一致。
+- 取消时同时清空 `renamingPageID` 和 `renameTitle`，保证 ViewModel 状态干净。
 - `renamingPageID` 置 nil 会触发 `PageListScreen` 中控制 Sheet 开关的 `Binding.set`，Sheet 自动关闭。
 
 ---
 
-## M3-15 PageDeleteDialog
+## M3-15 PageContextMenu
 
-**文件：** `Features/Pages/Views/PageDeleteDialog.swift`
-
-```swift
-import SwiftUI
-
-struct PageDeleteDialog: View {
-
-    let pageID: UUID
-    @ObservedObject var viewModel: PageListViewModel
-
-    var body: some View {
-        Group {
-            Button("删除", role: .destructive) {
-                Task { await viewModel.deletePage(id: pageID) }
-            }
-            Button("取消", role: .cancel) {
-                viewModel.deletingPageID = nil
-            }
-        }
-    }
-}
-```
-
-**Git commit message：**
-
-```
-feat: build PageDeleteDialog
-```
-
-**解释：**
-
-- 与 `CollectionDeleteDialog` 结构对称，只提供 Alert 的按钮内容，被嵌入 `PageListScreen` 的 `.alert` 修饰器中。
-- 删除 Page 有级联风险（所有 Node 一并删除），破坏性更强，因此在 `PageListScreen` 的 `.alert` 里额外附加了 `message: "此操作将删除页面及其全部内容，无法恢复。"` 的提示文案，对用户更加透明。
-- 取消按钮在这里手动将 `viewModel.deletingPageID = nil` 置空（而不仅仅依赖 Alert 消失后的 Binding set 回调），确保状态在所有路径下都正确清理。
-
----
-
-## M3-16 PageContextMenu
-
-**文件：** `Features/Pages/Views/PageContextMenu.swift`
+**文件：** `Features/Pages/Components/PageContextMenu.swift`
 
 ```swift
 import SwiftUI
@@ -1081,22 +1260,21 @@ feat: build PageContextMenu
 
 **解释：**
 
-- 与 `CollectionContextMenu` 结构一致，通过闭包接收回调，不持有 ViewModel，职责单一，可复用。
-- Page 不支持 Pin，所以没有固定按钮；替换为"复制页面"，对应 `DuplicatePageUseCase`。
-- `Divider()` 将破坏性操作（删除）与普通操作（重命名、复制）视觉隔开。
-- 删除回调 `onDelete` 在调用方（`PageListScreen`）被实现为设置 `viewModel.deletingPageID = page.id`，弹出确认 Alert，不直接执行删除。
+- 与 `CollectionContextMenu` 结构一致，通过闭包接收回调，不持有 ViewModel。
+- Page 不支持 Pin，以"复制页面"替代固定操作。
+- `onDelete` 在调用方 (`PageListScreen`) 实现为设置 `pageToDelete = page`，触发确认 Alert，不直接执行删除。
 
 ---
 
-## M3-17 RootView 更新（接入 PageListScreen）
+## M3-16 RootView 更新（接入 PageListScreen）
 
-**文件：** `App/RootView.swift`（在 M2-20 基础上更新 `.pageList` 路由目标）
+**文件：** `App/RootView.swift`（在 M3-00a 基础上更新 `.pageList` 路由目标）
 
 ```swift
+import Foundation
 import SwiftUI
 
 struct RootView: View {
-
     @StateObject private var router = AppRouter()
     @EnvironmentObject private var dependencyContainer: DependencyContainer
 
@@ -1107,10 +1285,10 @@ struct RootView: View {
             )
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
-                case .pageList(let collectionID):
+                case .pageList(let collectionID, let collectionTitle):
                     PageListScreen(
                         collectionID: collectionID,
-                        collectionTitle: dependencyContainer.collectionTitle(for: collectionID),
+                        collectionTitle: collectionTitle,
                         pageRepository: dependencyContainer.pageRepository,
                         nodeRepository: dependencyContainer.nodeRepository
                     )
@@ -1130,49 +1308,15 @@ struct RootView: View {
 feat: wire CollectionListScreen to PageListScreen via router
 ```
 
-**补充：** `DependencyContainer` 需要新增 `pageRepository`、`nodeRepository` 属性，以及用于查询 Collection title 的辅助方法 `collectionTitle(for:)`：
-
-```swift
-// App/DependencyContainer.swift（在 M1 基础上补充）
-
-extension DependencyContainer {
-    var pageRepository: PageRepositoryProtocol {
-        PageRepository(context: modelContext)
-    }
-
-    var nodeRepository: NodeRepositoryProtocol {
-        NodeRepository(context: modelContext)
-    }
-
-    func collectionTitle(for collectionID: UUID) -> String {
-        let repo = CollectionRepository(context: modelContext)
-        // 同步读取，仅用于导航标题，容忍不存在时返回空串
-        return (try? await repo.fetch(by: collectionID))?.title ?? ""
-    }
-}
-```
-
-> **注意：** `collectionTitle(for:)` 这里给出的是简化实现，实际上由于 SwiftData 的 `fetch` 是同步操作包在 `async` 函数里，可以在 `.navigationDestination` 的 View 构造阶段直接传入从 router path 里携带的 title（推荐做法是在 `AppRoute.pageList` 枚举的关联值中同时携带 `collectionTitle: String`）。具体取舍可根据 `AppRoute` 的定义决定，文档此处以传参最简方式示意。
-
-**Git commit message（DependencyContainer）：**
-
-```
-feat: add pageRepository and nodeRepository to DependencyContainer
-```
-
 **解释：**
 
-- M2 的 `RootView` 中 `.pageList` 路由指向 `Text("Page List 占位 \(collectionID)")`，M3 将其替换为真正的 `PageListScreen`。
-- `dependencyContainer.pageRepository` 和 `dependencyContainer.nodeRepository` 由 `DependencyContainer` 统一提供，`PageListScreen` 和 `PageListViewModel` 不感知容器存在。
-- `.nodeEditor` 路由的占位 Text 在 M4 替换，此 issue 只动 `.pageList` 分支。
+- `DependencyContainer` 在 M1 阶段已包含 `pageRepository` 和 `nodeRepository` 属性，M3 直接使用，无需新增扩展。
+- `collectionTitle` 从 `AppRoute.pageList` 关联值中解构取出，直接传给 `PageListScreen`，不需要在导航目标中再发起 Repository 查询。
+- `.nodeEditor` 路由继续保持占位 Text，M4 接入 NodeEditor 时只改这一处，不需要修改 `PageListScreen`。
 
----
+> **M3-17 导航桩说明（与 M3-16 合并）：** `PageListScreen` 中点击 `PageRow` 会调用 `router.navigate(to: .nodeEditor(pageID: page.id))`，页面 push 到占位视图。M4 替换 `RootView` 的 `.nodeEditor` case 即可，无需修改 `PageListScreen`。
 
-## M3-18 PageListScreen 导航桩（进入 NodeEditor）
-
-> 此 issue 在 M3-17 中已经一并完成：`RootView` 的 `.nodeEditor` 路由仍指向占位 `Text`，`PageListScreen` 中点击 `PageRow` 会调用 `router.navigate(to: .nodeEditor(pageID: page.id))`，页面会 push 到占位视图。M4 接入 NodeEditor 时直接替换 `RootView` 的 `.nodeEditor` case 即可，无需修改 `PageListScreen`。
-
-**Git commit message：**
+**Git commit message（导航桩）：**
 
 ```
 feat: add nodeEditor navigation stub in PageListScreen
@@ -1180,15 +1324,16 @@ feat: add nodeEditor navigation stub in PageListScreen
 
 ---
 
-## M3-19~23 单元测试
+## M3-17~21 单元测试
 
-### `Tests/UnitTests/Mocks/MockPageRepository.swift`
+### `NotteTests/UnitTests/Mocks/MockPageRepository.swift`
 
 ```swift
 import Foundation
 @testable import Notte
 
-actor MockPageRepository: PageRepositoryProtocol {
+@MainActor
+class MockPageRepository: PageRepositoryProtocol {
 
     var storedPages: [Page] = []
     var shouldThrowOnCreate = false
@@ -1224,13 +1369,14 @@ actor MockPageRepository: PageRepositoryProtocol {
 
 ---
 
-### `Tests/UnitTests/Mocks/MockNodeRepository.swift`
+### `NotteTests/UnitTests/Mocks/MockNodeRepository.swift`
 
 ```swift
 import Foundation
 @testable import Notte
 
-actor MockNodeRepository: NodeRepositoryProtocol {
+@MainActor
+class MockNodeRepository: NodeRepositoryProtocol {
 
     var storedNodes: [Node] = []
 
@@ -1268,7 +1414,7 @@ actor MockNodeRepository: NodeRepositoryProtocol {
 
 ---
 
-### `Tests/UnitTests/PageRepositoryTests.swift`
+### `NotteTests/UnitTests/PageRepositoryTests.swift`
 
 ```swift
 import XCTest
@@ -1332,7 +1478,7 @@ final class PageRepositoryTests: XCTestCase {
         XCTAssertTrue(result.isEmpty)
     }
 
-    func test_delete_nonExistentID_throwsNotFound() async {
+    func test_delete_nonExistentID_throwsNotFound() async throws {
         do {
             try await repository.delete(by: UUID())
             XCTFail("应该抛出错误")
@@ -1365,12 +1511,13 @@ test: add PageRepository unit tests
 
 ---
 
-### `Tests/UnitTests/CreatePageUseCaseTests.swift`
+### `NotteTests/UnitTests/CreatePageUseCaseTests.swift`
 
 ```swift
 import XCTest
 @testable import Notte
 
+@MainActor
 final class CreatePageUseCaseTests: XCTestCase {
 
     var repository: MockPageRepository!
@@ -1394,14 +1541,15 @@ final class CreatePageUseCaseTests: XCTestCase {
         XCTAssertGreaterThan(second.sortIndex, first.sortIndex)
     }
 
-    func test_execute_withEmptyTitle_throwsValidationFailure() async {
+    func test_execute_whenRepositoryThrows_propagatesError() async {
+        repository.shouldThrowOnCreate = true
         do {
-            _ = try await useCase.execute(title: "   ", in: collectionID)
-            XCTFail("应该抛出 validationFailure")
-        } catch let error as AppError {
-            if case .validationFailure = error { } else {
-                XCTFail("错误类型不符")
-            }
+            _ = try await useCase.execute(title: "失败测试", in: collectionID)
+            XCTFail("应该抛出错误")
+        } catch is RepositoryError {
+            // 正确抛出了 RepositoryError
+        } catch {
+            XCTFail("抛出了非预期的错误类型：\(error)")
         }
     }
 }
@@ -1415,12 +1563,13 @@ test: add CreatePageUseCase unit tests
 
 ---
 
-### `Tests/UnitTests/DeletePageUseCaseTests.swift`
+### `NotteTests/UnitTests/DeletePageUseCaseTests.swift`
 
 ```swift
 import XCTest
 @testable import Notte
 
+@MainActor
 final class DeletePageUseCaseTests: XCTestCase {
 
     var pageRepository: MockPageRepository!
@@ -1480,12 +1629,13 @@ test: add DeletePageUseCase cascade deletion test
 
 ---
 
-### `Tests/UnitTests/ReorderPagesUseCaseTests.swift`
+### `NotteTests/UnitTests/ReorderPagesUseCaseTests.swift`
 
 ```swift
 import XCTest
 @testable import Notte
 
+@MainActor
 final class ReorderPagesUseCaseTests: XCTestCase {
 
     var repository: MockPageRepository!
@@ -1548,64 +1698,21 @@ final class ReorderPagesUseCaseTests: XCTestCase {
 test: add ReorderPagesUseCase unit tests
 ```
 
-**解释（测试整体）：**
-
-- 所有测试均使用 `MockPageRepository` 和 `MockNodeRepository`（均声明为 `actor`），完全不依赖 SwiftData，保证测试速度快且无 I/O 副作用。
-- `DeletePageUseCaseTests` 重点验证级联删除：Page 被删后，对应 Node 也应从 `nodeRepository` 中消失，这是 M3 验收的核心条件之一。
-- Mock 放在 `Tests/UnitTests/Mocks/` 与 M2 的 `MockCollectionRepository` 并列，M4 会继续在此目录添加 `MockBlockRepository`。
-- `PageRepositoryTests` 额外验证了 `fetchAll(in:)` 的 `collectionID` 过滤逻辑，确保不同 Collection 的 Page 互不干扰。
-
 ---
 
-## 目录结构速览
+## 修订说明
 
-M3 新增与修改的文件一览：
+本文档相对原版做了以下修正，均以 M2 实际落地代码为准：
 
-```
-Notte/
-├── App/
-│   ├── RootView.swift                                  ← 更新：接入 PageListScreen
-│   └── DependencyContainer.swift                      ← 更新：新增 pageRepository、nodeRepository
-│
-├── Features/
-│   └── Pages/                                         ← 新增整个模块
-│       ├── UseCases/
-│       │   ├── FetchPagesByCollectionUseCase.swift
-│       │   ├── CreatePageUseCase.swift
-│       │   ├── RenamePageUseCase.swift
-│       │   ├── DeletePageUseCase.swift
-│       │   ├── DuplicatePageUseCase.swift
-│       │   └── ReorderPagesUseCase.swift
-│       ├── ViewModels/
-│       │   └── PageListViewModel.swift
-│       └── Views/
-│           ├── PageListScreen.swift
-│           ├── PageRow.swift
-│           ├── PageEmptyState.swift
-│           ├── PageCreateSheet.swift
-│           ├── PageRenameSheet.swift
-│           ├── PageDeleteDialog.swift
-│           └── PageContextMenu.swift
-│
-├── Domain/
-│   └── Protocols/
-│       └── PageRepositoryProtocol.swift               ← 更新：方法签名改为 async throws
-│
-└── Data/
-    └── Repositories/
-        └── PageRepository.swift                       ← 更新：骨架 → 完整实现，async throws
-
-Tests/
-└── UnitTests/
-    ├── PageRepositoryTests.swift
-    ├── CreatePageUseCaseTests.swift
-    ├── DeletePageUseCaseTests.swift
-    ├── ReorderPagesUseCaseTests.swift
-    └── Mocks/
-        ├── MockPageRepository.swift
-        └── MockNodeRepository.swift
-```
-
----
-
-> M3 Pages 全部完成。验收条件：从 Collection 正常进入 Page 列表，Page 增删改查、复制、排序全部成立，排序结果重启后保留，删除 Page 时关联 Node 同步清理，空状态清晰引导创建，单元测试全部通过。
+| # | 原文档问题 | 修正内容 |
+|---|---|---|
+| 1 | `SortIndexNormalizer` 为 Collection 专用，`ReorderPagesUseCase` 调用会编译报错 | 新增 M3-00b：引入 `SortIndexable` 协议，泛型化 `SortIndexNormalizer` |
+| 2 | `ReorderPagesUseCase` 直接传 `Double?` 给 `SortIndexPolicy.indexBetween`，签名不匹配 | 改为与 `ReorderCollectionsUseCase` 相同的 `switch (lower, upper)` 分支处理 |
+| 3 | `AppRoute.pageList` 只有 `collectionID`，PageListScreen 无法获取标题 | 新增 M3-00a：`AppRoute.pageList` 增加 `collectionTitle` 关联值 |
+| 4 | `DependencyContainer`/`RootView` 存在拼写错误 | 新增 M3-00a 统一修正 |
+| 5 | `CreatePageUseCase`/`DuplicatePageUseCase` 使用了不存在的 `SortIndexPolicy.indexAfter(last: Double?)` | 改为 `max() ?? 0 + 1000`，与 `CreateCollectionUseCase` 实际代码一致 |
+| 6 | UseCase 层做标题空值校验，与现有 Collection UseCase 风格不符 | 移除 UseCase 层校验，由 ViewModel 的 `guard` 承担（与现有代码一致） |
+| 7 | `PageListViewModel` 有 `deletingPageID`，与 Collection 实现模式不符 | 移除，改为 `PageListScreen` 的 `@State pageToDelete: Page?` |
+| 8 | Mock 类使用 `actor` 关键字，与现有 `MockCollectionRepository` 不一致 | 改为 `@MainActor class` |
+| 9 | `PageCreateSheet`/`PageRenameSheet` 使用 `.navigationBarTrailing` | 改为 `.topBarTrailing`/`.topBarLeading`，与现有 Sheet 代码一致 |
+| 10 | `DependencyContainer` 中 `pageRepository`/`nodeRepository` 被写成扩展方法 | 移除，M1 已作为属性存在，M3-17 直接使用 |

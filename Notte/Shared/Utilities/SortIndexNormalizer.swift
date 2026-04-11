@@ -8,22 +8,21 @@
 import Foundation
 
 struct SortIndexNormalizer {
-    static func normalizeIfNeeded(
-        _ collections: [Collection],
-        update: (Collection) async throws -> Void
+    static func normalizeIfNeeded<T: SortIndexable>(
+        _ items: [T],
+        update: (T) async throws -> Void
     ) async throws {
-        let sorted = collections.sorted { $0.sortIndex < $1.sortIndex }
+        let sorted = items.sorted { $0.sortIndex < $1.sortIndex }
 
         let needsNorm = zip(sorted, sorted.dropFirst()).contains { a, b in
-            SortIndexPolicy
-                .needsNormalization(before: a.sortIndex, after: b.sortIndex)
+            SortIndexPolicy.needsNormalization(before: a.sortIndex, after: b.sortIndex)
         }
 
         guard needsNorm else { return }
 
         let newIndexes = SortIndexPolicy.normalize(count: sorted.count)
-        for (collection, newIndex) in zip(sorted, newIndexes) {
-            var updated = collection
+        for (item, newIndex) in zip(sorted, newIndexes) {
+            var updated = item
             updated.sortIndex = newIndex
             updated.updatedAt = Date()
             try await update(updated)

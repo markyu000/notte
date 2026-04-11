@@ -11,11 +11,19 @@ import XCTest
 @MainActor
 final class DeleteCollectionUseCaseTests: XCTestCase {
     var repository: MockCollectionRepository!
+    var pageRepository: MockPageRepository!
+    var nodeRepository: MockNodeRepository!
     var useCase: DeleteCollectionUseCase!
 
     override func setUp() {
         repository = MockCollectionRepository()
-        useCase = DeleteCollectionUseCase(repository: repository)
+        pageRepository = MockPageRepository()
+        nodeRepository = MockNodeRepository()
+        useCase = DeleteCollectionUseCase(
+            repository: repository,
+            pageRepository: pageRepository,
+            nodeRepository: nodeRepository
+        )
     }
 
     func test_execute_withValidID_removesCollection() async throws {

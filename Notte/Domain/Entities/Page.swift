@@ -16,3 +16,5 @@ struct Page: Identifiable, Hashable {
     var sortIndex: Double
     var isArchived: Bool
 }
+
+extension Page: SortIndexable {}

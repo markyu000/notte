@@ -9,9 +9,11 @@ import Foundation
 
 struct CreateCollectionUseCase {
     let repository: CollectionRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     @discardableResult
     func execute(title: String) async throws -> Collection {
+        logger.debug("开始创建 Collection, title=\(title)", function: #function)
         let all = try await repository.fetchAll()
         let maxIndex = all.map(\.sortIndex).max() ?? 0
         let entity = Collection(
@@ -23,6 +25,7 @@ struct CreateCollectionUseCase {
             isPinned: false,
         )
         try await repository.create(entity)
+        logger.info("Collection 创建成功, id=\(entity.id), title=\(title)", function: #function)
         return entity
     }
 }
