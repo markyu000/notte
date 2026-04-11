@@ -9,9 +9,11 @@ import Foundation
 
 struct CreatePageUseCase {
     let repository: PageRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     @discardableResult
     func execute(title: String, in collectionID: UUID) async throws -> Page {
+        logger.debug("开始创建 Page, title=\(title), collectionID=\(collectionID)", function: #function)
         let existing = try await repository.fetchAll(in: collectionID)
         let maxIndex = existing.map(\.sortIndex).max() ?? 0
 
@@ -25,6 +27,7 @@ struct CreatePageUseCase {
             isArchived: false
         )
         try await repository.create(page)
+        logger.info("Page 创建成功, id=\(page.id), title=\(title)", function: #function)
         return page
     }
 }

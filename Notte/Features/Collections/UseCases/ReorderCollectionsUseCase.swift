@@ -9,8 +9,10 @@ import Foundation
 
 struct ReorderCollectionsUseCase {
     let repository: CollectionRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     func execute(moving id: UUID, after targetID: UUID?) async throws {
+        logger.debug("重排 Collection, id=\(id), after=\(String(describing: targetID))", function: #function)
         let all = try await repository.fetchAll()
             .sorted { $0.sortIndex < $1.sortIndex }
 
@@ -49,6 +51,7 @@ struct ReorderCollectionsUseCase {
         collection.sortIndex = newIndex
         collection.updatedAt = Date()
         try await repository.update(collection)
+        logger.info("Collection 重排成功, id=\(id), newIndex=\(newIndex!)", function: #function)
 
         Task.detached {
             let latest = try await repository.fetchAll()

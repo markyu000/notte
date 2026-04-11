@@ -9,10 +9,13 @@ import Foundation
 
 struct DuplicatePageUseCase {
     let repository: PageRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     @discardableResult
     func execute(pageID: UUID) async throws -> Page {
+        logger.debug("开始复制 Page, id=\(pageID)", function: #function)
         guard let original = try await repository.fetch(by: pageID) else {
+            logger.error("Page 未找到, id=\(pageID)", function: #function)
             throw AppError.repositoryError(.notFound)
         }
 
@@ -29,6 +32,7 @@ struct DuplicatePageUseCase {
             isArchived: false
         )
         try await repository.create(duplicate)
+        logger.info("Page 复制成功, newId=\(duplicate.id), title=\(duplicate.title)", function: #function)
         return duplicate
     }
 }

@@ -9,8 +9,10 @@ import Foundation
 
 struct ReorderPagesUseCase {
     let repository: PageRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     func execute(collectionID: UUID, moving id: UUID, after targetID: UUID?) async throws {
+        logger.debug("重排 Page, id=\(id), after=\(String(describing: targetID))", function: #function)
         let all = try await repository.fetchAll(in: collectionID)
             .sorted { $0.sortIndex < $1.sortIndex }
 
@@ -47,6 +49,7 @@ struct ReorderPagesUseCase {
         page.sortIndex = newIndex
         page.updatedAt = Date()
         try await repository.update(page)
+        logger.info("Page 重排成功, id=\(id), newIndex=\(newIndex!)", function: #function)
 
         Task.detached {
             let latest = try await repository.fetchAll(in: collectionID)
