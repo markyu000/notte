@@ -16,26 +16,69 @@ class BlockRepository: BlockRepositoryProtocol {
     }
 
     func fetchAll(in nodeID: UUID) async throws -> [Block] {
-        throw RepositoryError.notImplemented
+        let descriptor = FetchDescriptor<BlockModel>(
+            predicate: #Predicate { $0.nodeID == nodeID },
+            sortBy: [SortDescriptor(\.sortIndex)]
+        )
+        let models = try context.fetch(descriptor)
+        return models.map { $0.toDomain() }
     }
 
     func fetch(by id: UUID) async throws -> Block? {
-        throw RepositoryError.notImplemented
+        let descriptor = FetchDescriptor<BlockModel>(
+            predicate: #Predicate { $0.id == id }
+        )
+        return try context.fetch(descriptor).first.map { $0.toDomain() }
     }
 
     func create(_ block: Block) async throws {
-        throw RepositoryError.notImplemented
+        let model = BlockModel(
+            id: block.id,
+            nodeID: block.nodeID,
+            type: block.type.rawValue,
+            content: block.content,
+            sortIndex: block.sortIndex,
+            createdAt: block.createdAt,
+            updatedAt: block.updatedAt
+        )
+        context.insert(model)
+        try context.save()
     }
 
     func update(_ block: Block) async throws {
-        throw RepositoryError.notImplemented
+        let descriptor = FetchDescriptor<BlockModel>(
+            predicate: #Predicate { $0.id == block.id }
+        )
+        guard let model = try context.fetch(descriptor).first else {
+            throw RepositoryError.notFound
+        }
+        model.nodeID = block.nodeID
+        model.type = block.type.rawValue
+        model.content = block.content
+        model.sortIndex = block.sortIndex
+        model.updatedAt = block.updatedAt
+        try context.save()
     }
 
     func delete(by id: UUID) async throws {
-        throw RepositoryError.notImplemented
+        let descriptor = FetchDescriptor<BlockModel>(
+            predicate: #Predicate { $0.id == id }
+        )
+        guard let model = try context.fetch(descriptor).first else {
+            throw RepositoryError.notFound
+        }
+        context.delete(model)
+        try context.save()
     }
 
     func deleteAll(in nodeID: UUID) async throws {
-        throw RepositoryError.notImplemented
+        let descriptor = FetchDescriptor<BlockModel>(
+            predicate: #Predicate { $0.nodeID == nodeID }
+        )
+        let models = try context.fetch(descriptor)
+        for model in models {
+            context.delete(model)
+        }
+        try context.save()
     }
 }
