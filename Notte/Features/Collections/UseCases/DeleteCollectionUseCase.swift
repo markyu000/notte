@@ -17,7 +17,7 @@ struct DeleteCollectionUseCase {
         let pages = try await pageRepository.fetchAll(in: id)
         // 2. 逐 Page 删除其关联 Node
         for page in pages {
-            try await nodeRepository.deleteAll(in: page.id)
+            try? await nodeRepository.deleteAll(in: page.id)
         }
         // 3. 删除所有 Page
         for page in pages {
