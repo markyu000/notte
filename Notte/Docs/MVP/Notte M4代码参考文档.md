@@ -709,10 +709,12 @@ struct NodeMutationService {
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
     let queryService: NodeQueryService
+    private let logger = ConsoleLogger()
 
     // MARK: - 插入
 
     func insertAfter(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始在节点后插入, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let current = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -740,10 +742,12 @@ struct NodeMutationService {
             createdAt: Date(), updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
+        logger.info("节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 
     func insertChild(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始插入子节点, parentNodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let parentNode = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -768,6 +772,7 @@ struct NodeMutationService {
             createdAt: Date(), updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
+        logger.info("子节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 }
@@ -795,6 +800,7 @@ feat: implement NodeMutationService insertAfter and insertChild
 ```swift
 extension NodeMutationService {
     func delete(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("开始删除节点, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         let descendants = queryService.descendants(of: nodeID, in: nodes)
         let allIDs = [nodeID] + descendants.map(\.id)
@@ -802,6 +808,7 @@ extension NodeMutationService {
             try await blockRepository.deleteAll(in: id)
             try await nodeRepository.delete(by: id)
         }
+        logger.info("节点删除成功, nodeID=\(nodeID), 共 \(allIDs.count) 个", function: #function)
     }
 }
 ```
@@ -828,6 +835,7 @@ feat: implement NodeMutationService.delete with cascade
 ```swift
 extension NodeMutationService {
     func moveUp(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("上移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -843,9 +851,11 @@ extension NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedPrev)
+        logger.info("节点上移成功, nodeID=\(nodeID)", function: #function)
     }
 
     func moveDown(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("下移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -861,6 +871,7 @@ extension NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedNext)
+        logger.info("节点下移成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -887,6 +898,7 @@ feat: implement NodeMutationService moveUp and moveDown
 ```swift
 extension NodeMutationService {
     func indent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -911,9 +923,11 @@ extension NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
     func outdent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("反缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -941,6 +955,7 @@ extension NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -967,21 +982,25 @@ feat: implement NodeMutationService indent and outdent
 ```swift
 extension NodeMutationService {
     func toggleCollapse(nodeID: UUID) async throws {
+        logger.debug("切换折叠状态, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.isCollapsed.toggle()
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("折叠状态更新成功, nodeID=\(nodeID)", function: #function)
     }
 
     func updateTitle(nodeID: UUID, title: String) async throws {
+        logger.debug("更新节点标题, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.title = title
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("节点标题更新成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -1008,10 +1027,12 @@ struct NodeMutationService {
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
     let queryService: NodeQueryService
+    private let logger = ConsoleLogger()
 
     // MARK: - 插入
 
     func insertAfter(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始在节点后插入, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let current = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1049,10 +1070,12 @@ struct NodeMutationService {
         )
         try await blockRepository.create(emptyBlock)
 
+        logger.info("节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 
     func insertChild(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始插入子节点, parentNodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let parentNode = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1086,12 +1109,14 @@ struct NodeMutationService {
         )
         try await blockRepository.create(emptyBlock)
 
+        logger.info("子节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 
     // MARK: - 删除
 
     func delete(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("开始删除节点, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         // 1. 找到全部子孙节点 id（不含自身）
         let descendants = queryService.descendants(of: nodeID, in: nodes)
@@ -1101,11 +1126,13 @@ struct NodeMutationService {
             try await blockRepository.deleteAll(in: id)
             try await nodeRepository.delete(by: id)
         }
+        logger.info("节点删除成功, nodeID=\(nodeID), 共 \(allIDs.count) 个", function: #function)
     }
 
     // MARK: - 移动
 
     func moveUp(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("上移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1121,9 +1148,11 @@ struct NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedPrev)
+        logger.info("节点上移成功, nodeID=\(nodeID)", function: #function)
     }
 
     func moveDown(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("下移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1139,11 +1168,13 @@ struct NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedNext)
+        logger.info("节点下移成功, nodeID=\(nodeID)", function: #function)
     }
 
     // MARK: - 缩进 / 反缩进
 
     func indent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1172,9 +1203,11 @@ struct NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
     func outdent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("反缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1209,28 +1242,33 @@ struct NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
     // MARK: - 折叠
 
     func toggleCollapse(nodeID: UUID) async throws {
+        logger.debug("切换折叠状态, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.isCollapsed.toggle()
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("折叠状态更新成功, nodeID=\(nodeID)", function: #function)
     }
 
     // MARK: - 标题
 
     func updateTitle(nodeID: UUID, title: String) async throws {
+        logger.debug("更新节点标题, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.title = title
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("节点标题更新成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -1264,8 +1302,10 @@ import Foundation
 struct BlockEditingService {
 
     let blockRepository: BlockRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     func addBlock(nodeID: UUID, type: BlockType) async throws -> Block {
+        logger.debug("开始添加 Block, nodeID=\(nodeID), type=\(type)", function: #function)
         let existing = try await blockRepository.fetchAll(in: nodeID)
         let lastIndex = existing.map(\.sortIndex).max()
         let newSortIndex = lastIndex.map { SortIndexPolicy.indexAfter(last: $0) }
@@ -1277,20 +1317,25 @@ struct BlockEditingService {
             createdAt: Date(), updatedAt: Date()
         )
         try await blockRepository.create(block)
+        logger.info("Block 添加成功, id=\(block.id)", function: #function)
         return block
     }
 
     func deleteBlock(blockID: UUID) async throws {
+        logger.debug("开始删除 Block, blockID=\(blockID)", function: #function)
         try await blockRepository.delete(by: blockID)
+        logger.info("Block 删除成功, blockID=\(blockID)", function: #function)
     }
 
     func updateContent(blockID: UUID, content: String) async throws {
+        logger.debug("更新 Block 内容, blockID=\(blockID)", function: #function)
         guard var block = try await blockRepository.fetch(by: blockID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         block.content = content
         block.updatedAt = Date()
         try await blockRepository.update(block)
+        logger.info("Block 内容更新成功, blockID=\(blockID)", function: #function)
     }
 }
 ```
@@ -1316,12 +1361,14 @@ feat: implement BlockEditingService addBlock, deleteBlock, updateContent
 ```swift
 extension BlockEditingService {
     func reorderBlock(blockID: UUID, newSortIndex: Double) async throws {
+        logger.debug("调整 Block 排序, blockID=\(blockID), newSortIndex=\(newSortIndex)", function: #function)
         guard var block = try await blockRepository.fetch(by: blockID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         block.sortIndex = newSortIndex
         block.updatedAt = Date()
         try await blockRepository.update(block)
+        logger.info("Block 排序更新成功, blockID=\(blockID)", function: #function)
     }
 }
 ```
@@ -2084,7 +2131,7 @@ feat: build NodeTypeIndicator with depth-aware styling
 **文件：** `App/DependencyContainer.swift`（在 M3 基础上更新）
 
 ```swift
-import Foundation
+import Combine
 import SwiftData
 
 @MainActor
@@ -2095,11 +2142,12 @@ class DependencyContainer: ObservableObject {
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
 
-    init(modelContext: ModelContext) {
-        self.collectionRepository = CollectionRepository(context: modelContext)
-        self.pageRepository = PageRepository(context: modelContext)
-        self.nodeRepository = NodeRepository(context: modelContext)
-        self.blockRepository = BlockRepository(context: modelContext)
+    init(modelContainer: ModelContainer) {
+        let context = ModelContext(modelContainer)
+        self.collectionRepository = CollectionRepository(context: context)
+        self.pageRepository = PageRepository(context: context)
+        self.nodeRepository = NodeRepository(context: context)
+        self.blockRepository = BlockRepository(context: context)
     }
 
     // MARK: - ViewModel 工厂方法
@@ -2138,11 +2186,13 @@ feat: add NodeRepository and BlockRepository to DependencyContainer
 import Foundation
 
 struct DeletePageUseCase {
-    let pageRepository: PageRepositoryProtocol
+    let repository: PageRepositoryProtocol
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     func execute(pageID: UUID) async throws {
+        logger.debug("开始删除 Page（含级联）, id=\(pageID)", function: #function)
         // 1. 获取所有 Node
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         // 2. 逐 Node 删除其关联 Block
@@ -2152,7 +2202,8 @@ struct DeletePageUseCase {
         // 3. 删除所有 Node
         try await nodeRepository.deleteAll(in: pageID)
         // 4. 删除 Page 本身
-        try await pageRepository.delete(by: pageID)
+        try await repository.delete(by: pageID)
+        logger.info("Page 删除成功（含 \(nodes.count) 个 Node）, id=\(pageID)", function: #function)
     }
 }
 ```
@@ -2165,9 +2216,10 @@ feat: complete DeletePageUseCase with block cascade deletion
 
 **解释：**
 
-- M3 的 `DeletePageUseCase` 只做了 `nodeRepository.deleteAll(in: pageID)` → `pageRepository.delete(by: pageID)` 两步，依赖 `NodeRepository.deleteAll` 内部处理 Block 清理。M4 `BlockRepository` 完整实现后，在此处显式补全 Block 的级联删除，删除逻辑透明可审。
-- 删除顺序：Block → Node → Page，从最内层到最外层，确保不留孤儿数据。
-- 新增 `blockRepository` 依赖，`DependencyContainer` 在构建 `DeletePageUseCase` 时传入，与 M4-20 中已注册的 `blockRepository` 配套。
+- M3 的 `DeletePageUseCase` 对 `nodeRepository.deleteAll` 使用了 `try?`，因为彼时 `NodeRepository` 尚未完整实现。M4 `NodeRepository` 与 `BlockRepository` 均完整实现后，`try?` 改为 `try await`，错误可正确向上传播。
+- 在 M3 基础上新增 `blockRepository` 依赖，显式补全 Block 的级联删除：先逐 Node 删其关联 Block，再统一删 Node，最后删 Page 本身。删除顺序 Block → Node → Page，从最内层到最外层，确保不留孤儿数据。
+- `pageRepository` 属性名统一为 `repository`，与 Collection、Page 其他 UseCase 的命名保持一致。
+- 添加 `ConsoleLogger` 日志，与其他 UseCase 保持一致。
 
 ---
 
