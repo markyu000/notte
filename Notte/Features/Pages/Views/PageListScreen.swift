@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct PageListScreen: View {
     @StateObject private var viewModel: PageListViewModel
@@ -188,7 +189,25 @@ private struct PageErrorAlertModifier: ViewModifier {
 }
 
 #Preview {
+    let collectionID = UUID()
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    let context = ModelContext(container)
+    let pageRepo = PageRepository(context: context)
+    let nodeRepo = NodeRepository(context: context)
+
     NavigationStack {
-        Text("PageListScreen Preview")
+        PageListScreen(
+            collectionID: collectionID,
+            collectionTitle: "我的笔记",
+            pageRepository: pageRepo,
+            nodeRepository: nodeRepo
+        )
     }
+    .task {
+        let createUseCase = CreatePageUseCase(repository: pageRepo)
+        for i in 1...3 {
+            try! await createUseCase.execute(title: "Page \(i)", in: collectionID)
+        }
+    }
+    .environmentObject(AppRouter())
 }
