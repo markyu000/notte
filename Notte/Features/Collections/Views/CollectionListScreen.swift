@@ -181,7 +181,7 @@ struct CollectionListScreen: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(-20)
+        .listRowSpacing(-30)
         .background(ColorTokens.backgroundPrimary)
     }
     
