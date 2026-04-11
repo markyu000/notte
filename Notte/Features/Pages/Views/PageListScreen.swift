@@ -138,6 +138,7 @@ struct PageListScreen: View {
             }
         }
         .listStyle(.plain)
+        .listRowSpacing(-25)
         .background(ColorTokens.backgroundPrimary)
     }
     
