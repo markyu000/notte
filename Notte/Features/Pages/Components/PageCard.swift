@@ -13,7 +13,7 @@ struct PageCard: View {
     var body: some View {
         HStack(spacing: SpacingTokens.md) {
             Image(systemName: "doc.text")
-                .font(.system(size: 18))
+                .font(.system(size: 20))
                 .foregroundStyle(ColorTokens.accent)
                 .frame(width: 28)
 
