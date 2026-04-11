@@ -19,7 +19,7 @@ final class DeletePageUseCaseTests: XCTestCase {
         pageRepository = MockPageRepository()
         nodeRepository = MockNodeRepository()
         useCase = DeletePageUseCase(
-            pageRepository: pageRepository,
+            repository: pageRepository,
             nodeRepository: nodeRepository
         )
     }
