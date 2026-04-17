@@ -8,3 +8,4 @@ buildServer.json
 *.xcuserstate
 .vscode/*
 .build/*
+.claude/*
