@@ -200,3 +200,27 @@ extension NodeMutationService {
         logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
 }
+
+extension NodeMutationService {
+    func toggleCollapse(nodeID: UUID) async throws {
+        logger.debug("切换折叠状态, nodeID=\(nodeID)", function: #function)
+        guard var node = try await nodeRepository.fetch(by: nodeID) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        node.isCollapsed.toggle()
+        node.updatedAt = Date()
+        try await nodeRepository.update(node)
+        logger.info("折叠状态更新成功, nodeID=\(nodeID)", function: #function)
+    }
+
+    func updateTitle(nodeID: UUID, title: String) async throws {
+        logger.debug("更新节点标题, nodeID=\(nodeID)", function: #function)
+        guard var node = try await nodeRepository.fetch(by: nodeID) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        node.title = title
+        node.updatedAt = Date()
+        try await nodeRepository.update(node)
+        logger.info("节点标题更新成功, nodeID=\(nodeID)", function: #function)
+    }
+}
