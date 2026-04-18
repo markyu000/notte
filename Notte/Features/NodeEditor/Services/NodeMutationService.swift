@@ -95,3 +95,45 @@ extension NodeMutationService {
         logger.info("节点删除成功, nodeID=\(nodeID), 共 \(allIDs.count) 个", function: #function)
     }
 }
+
+extension NodeMutationService {
+    func moveUp(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("上移节点, nodeID=\(nodeID)", function: #function)
+        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        guard let node = nodes.first(where: { $0.id == nodeID }) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        guard let prev = queryService.previousSibling(of: nodeID, in: nodes) else { return }
+
+        var updatedNode = node
+        var updatedPrev = prev
+        updatedNode.sortIndex = prev.sortIndex
+        updatedPrev.sortIndex = node.sortIndex
+        updatedNode.updatedAt = Date()
+        updatedPrev.updatedAt = Date()
+
+        try await nodeRepository.update(updatedNode)
+        try await nodeRepository.update(updatedPrev)
+        logger.info("节点上移成功, nodeID=\(nodeID)", function: #function)
+    }
+
+    func moveDown(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("下移节点, nodeID=\(nodeID)", function: #function)
+        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        guard let node = nodes.first(where: { $0.id == nodeID }) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        guard let next = queryService.nextSibling(of: nodeID, in: nodes) else { return }
+
+        var updatedNode = node
+        var updatedNext = next
+        updatedNode.sortIndex = next.sortIndex
+        updatedNext.sortIndex = node.sortIndex
+        updatedNode.updatedAt = Date()
+        updatedNext.updatedAt = Date()
+
+        try await nodeRepository.update(updatedNode)
+        try await nodeRepository.update(updatedNext)
+        logger.info("节点下移成功, nodeID=\(nodeID)", function: #function)
+    }
+}
