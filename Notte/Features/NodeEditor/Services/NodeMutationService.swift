@@ -1,10 +1,3 @@
-//
-//  NodeMutationService.swift
-//  Notte
-//
-//  Created by 余哲源 on 2026/4/18.
-//
-
 import Foundation
 
 /// 负责执行 Node 结构变更操作。
@@ -33,20 +26,30 @@ struct NodeMutationService {
         }
 
         let newNode = Node(
-            id: UUID(), pageID: pageID,
+            id: UUID(),
+            pageID: pageID,
             parentNodeID: current.parentNodeID,
-            title: "", depth: current.depth,
-            sortIndex: newSortIndex, isCollapsed: false,
-            createdAt: Date(), updatedAt: Date()
+            title: "",
+            depth: current.depth,
+            sortIndex: newSortIndex,
+            isCollapsed: false,
+            createdAt: Date(),
+            updatedAt: Date()
         )
         try await nodeRepository.create(newNode)
 
+        // 自动为新节点创建一个空 text Block
         let emptyBlock = Block(
-            id: UUID(), nodeID: newNode.id, type: .text,
-            content: "", sortIndex: SortIndexPolicy.initialIndex(),
-            createdAt: Date(), updatedAt: Date()
+            id: UUID(),
+            nodeID: newNode.id,
+            type: .text,
+            content: "",
+            sortIndex: SortIndexPolicy.initialIndex(),
+            createdAt: Date(),
+            updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
+
         logger.info("节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
@@ -63,40 +66,51 @@ struct NodeMutationService {
             ?? SortIndexPolicy.initialIndex()
 
         let newNode = Node(
-            id: UUID(), pageID: pageID,
+            id: UUID(),
+            pageID: pageID,
             parentNodeID: nodeID,
-            title: "", depth: parentNode.depth + 1,
-            sortIndex: newSortIndex, isCollapsed: false,
-            createdAt: Date(), updatedAt: Date()
+            title: "",
+            depth: parentNode.depth + 1,
+            sortIndex: newSortIndex,
+            isCollapsed: false,
+            createdAt: Date(),
+            updatedAt: Date()
         )
         try await nodeRepository.create(newNode)
 
         let emptyBlock = Block(
-            id: UUID(), nodeID: newNode.id, type: .text,
-            content: "", sortIndex: SortIndexPolicy.initialIndex(),
-            createdAt: Date(), updatedAt: Date()
+            id: UUID(),
+            nodeID: newNode.id,
+            type: .text,
+            content: "",
+            sortIndex: SortIndexPolicy.initialIndex(),
+            createdAt: Date(),
+            updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
+
         logger.info("子节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
-}
 
-extension NodeMutationService {
+    // MARK: - 删除
+
     func delete(nodeID: UUID, in pageID: UUID) async throws {
         logger.debug("开始删除节点, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
+        // 1. 找到全部子孙节点 id（不含自身）
         let descendants = queryService.descendants(of: nodeID, in: nodes)
         let allIDs = [nodeID] + descendants.map(\.id)
+        // 2. 每个节点先删其 Block，再删节点本身
         for id in allIDs {
             try await blockRepository.deleteAll(in: id)
             try await nodeRepository.delete(by: id)
         }
         logger.info("节点删除成功, nodeID=\(nodeID), 共 \(allIDs.count) 个", function: #function)
     }
-}
 
-extension NodeMutationService {
+    // MARK: - 移动
+
     func moveUp(nodeID: UUID, in pageID: UUID) async throws {
         logger.debug("上移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
@@ -136,16 +150,19 @@ extension NodeMutationService {
         try await nodeRepository.update(updatedNext)
         logger.info("节点下移成功, nodeID=\(nodeID)", function: #function)
     }
-}
 
-extension NodeMutationService {
+    // MARK: - 缩进 / 反缩进
+
     func indent(nodeID: UUID, in pageID: UUID) async throws {
         logger.debug("缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
-        guard let newParent = queryService.previousSibling(of: nodeID, in: nodes) else { return }
+        guard let newParent = queryService.previousSibling(of: nodeID, in: nodes) else {
+            // 没有前一个同级节点，无法缩进
+            return
+        }
 
         let existingChildren = queryService.children(of: newParent.id, in: nodes)
         let lastIndex = existingChildren.map(\.sortIndex).max()
@@ -159,6 +176,7 @@ extension NodeMutationService {
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
 
+        // 批量更新所有子孙节点的 depth +1
         let descendants = queryService.descendants(of: nodeID, in: nodes)
         for var desc in descendants {
             desc.depth += 1
@@ -174,12 +192,18 @@ extension NodeMutationService {
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
-        guard let parentNode = queryService.parent(of: nodeID, in: nodes) else { return }
+        guard let parentNode = queryService.parent(of: nodeID, in: nodes) else {
+            // 已在根层，无法反缩进
+            return
+        }
 
         let nextOfParent = queryService.nextSibling(of: parentNode.id, in: nodes)
         let newSortIndex: Double
         if let next = nextOfParent {
-            newSortIndex = SortIndexPolicy.indexBetween(before: parentNode.sortIndex, after: next.sortIndex)
+            newSortIndex = SortIndexPolicy.indexBetween(
+                before: parentNode.sortIndex,
+                after: next.sortIndex
+            )
         } else {
             newSortIndex = SortIndexPolicy.indexAfter(last: parentNode.sortIndex)
         }
@@ -191,6 +215,7 @@ extension NodeMutationService {
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
 
+        // 批量更新所有子孙节点的 depth -1
         let descendants = queryService.descendants(of: nodeID, in: nodes)
         for var desc in descendants {
             desc.depth = max(0, desc.depth - 1)
@@ -199,9 +224,9 @@ extension NodeMutationService {
         }
         logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
-}
 
-extension NodeMutationService {
+    // MARK: - 折叠
+
     func toggleCollapse(nodeID: UUID) async throws {
         logger.debug("切换折叠状态, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
@@ -212,6 +237,8 @@ extension NodeMutationService {
         try await nodeRepository.update(node)
         logger.info("折叠状态更新成功, nodeID=\(nodeID)", function: #function)
     }
+
+    // MARK: - 标题
 
     func updateTitle(nodeID: UUID, title: String) async throws {
         logger.debug("更新节点标题, nodeID=\(nodeID)", function: #function)
