@@ -65,6 +65,17 @@ extension NodeQueryService {
 }
 
 extension NodeQueryService {
+    /// 找到目标节点的父节点
+    func parent(of nodeID: UUID, in nodes: [Node]) -> Node? {
+        guard let node = nodes.first(where: { $0.id == nodeID }),
+              let parentID = node.parentNodeID else {
+            return nil
+        }
+        return nodes.first { $0.id == parentID }
+    }
+}
+
+extension NodeQueryService {
     /// 找到目标节点的全部子孙节点（不含自身），BFS 广度优先
     func descendants(of nodeID: UUID, in nodes: [Node]) -> [Node] {
         var result: [Node] = []
