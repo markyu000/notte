@@ -81,3 +81,17 @@ struct NodeMutationService {
         return newNode
     }
 }
+
+extension NodeMutationService {
+    func delete(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("开始删除节点, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
+        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        let descendants = queryService.descendants(of: nodeID, in: nodes)
+        let allIDs = [nodeID] + descendants.map(\.id)
+        for id in allIDs {
+            try await blockRepository.deleteAll(in: id)
+            try await nodeRepository.delete(by: id)
+        }
+        logger.info("节点删除成功, nodeID=\(nodeID), 共 \(allIDs.count) 个", function: #function)
+    }
+}
