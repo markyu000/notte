@@ -46,8 +46,9 @@ class BlockRepository: BlockRepositoryProtocol {
     }
 
     func update(_ block: Block) async throws {
+        let blockID = block.id
         let descriptor = FetchDescriptor<BlockModel>(
-            predicate: #Predicate { $0.id == block.id }
+            predicate: #Predicate { $0.id == blockID }
         )
         guard let model = try context.fetch(descriptor).first else {
             throw RepositoryError.notFound

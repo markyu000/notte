@@ -48,8 +48,9 @@ class NodeRepository: NodeRepositoryProtocol {
     }
 
     func update(_ node: Node) async throws {
+        let nodeID = node.id
         let descriptor = FetchDescriptor<NodeModel>(
-            predicate: #Predicate { $0.id == node.id }
+            predicate: #Predicate { $0.id == nodeID }
         )
         guard let model = try context.fetch(descriptor).first else {
             throw RepositoryError.notFound
