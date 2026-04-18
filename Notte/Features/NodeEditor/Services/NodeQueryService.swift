@@ -52,3 +52,14 @@ struct NodeQueryService {
         return rootNodes
     }
 }
+
+extension NodeQueryService {
+    /// 找到目标节点在同级中的前一个兄弟节点（sortIndex 最大且小于自身的同级节点）
+    func previousSibling(of nodeID: UUID, in nodes: [Node]) -> Node? {
+        guard let node = nodes.first(where: { $0.id == nodeID }) else { return nil }
+        return nodes
+            .filter { $0.parentNodeID == node.parentNodeID && $0.sortIndex < node.sortIndex }
+            .sorted { $0.sortIndex < $1.sortIndex }
+            .last
+    }
+}
