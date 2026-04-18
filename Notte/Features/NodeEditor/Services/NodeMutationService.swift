@@ -137,3 +137,66 @@ extension NodeMutationService {
         logger.info("节点下移成功, nodeID=\(nodeID)", function: #function)
     }
 }
+
+extension NodeMutationService {
+    func indent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("缩进节点, nodeID=\(nodeID)", function: #function)
+        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        guard let node = nodes.first(where: { $0.id == nodeID }) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        guard let newParent = queryService.previousSibling(of: nodeID, in: nodes) else { return }
+
+        let existingChildren = queryService.children(of: newParent.id, in: nodes)
+        let lastIndex = existingChildren.map(\.sortIndex).max()
+        let newSortIndex = lastIndex.map { SortIndexPolicy.indexAfter(last: $0) }
+            ?? SortIndexPolicy.initialIndex()
+
+        var updatedNode = node
+        updatedNode.parentNodeID = newParent.id
+        updatedNode.depth = newParent.depth + 1
+        updatedNode.sortIndex = newSortIndex
+        updatedNode.updatedAt = Date()
+        try await nodeRepository.update(updatedNode)
+
+        let descendants = queryService.descendants(of: nodeID, in: nodes)
+        for var desc in descendants {
+            desc.depth += 1
+            desc.updatedAt = Date()
+            try await nodeRepository.update(desc)
+        }
+        logger.info("节点缩进成功, nodeID=\(nodeID)", function: #function)
+    }
+
+    func outdent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("反缩进节点, nodeID=\(nodeID)", function: #function)
+        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        guard let node = nodes.first(where: { $0.id == nodeID }) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        guard let parentNode = queryService.parent(of: nodeID, in: nodes) else { return }
+
+        let nextOfParent = queryService.nextSibling(of: parentNode.id, in: nodes)
+        let newSortIndex: Double
+        if let next = nextOfParent {
+            newSortIndex = SortIndexPolicy.indexBetween(before: parentNode.sortIndex, after: next.sortIndex)
+        } else {
+            newSortIndex = SortIndexPolicy.indexAfter(last: parentNode.sortIndex)
+        }
+
+        var updatedNode = node
+        updatedNode.parentNodeID = parentNode.parentNodeID
+        updatedNode.depth = max(0, node.depth - 1)
+        updatedNode.sortIndex = newSortIndex
+        updatedNode.updatedAt = Date()
+        try await nodeRepository.update(updatedNode)
+
+        let descendants = queryService.descendants(of: nodeID, in: nodes)
+        for var desc in descendants {
+            desc.depth = max(0, desc.depth - 1)
+            desc.updatedAt = Date()
+            try await nodeRepository.update(desc)
+        }
+        logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
+    }
+}
