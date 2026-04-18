@@ -63,3 +63,33 @@ extension NodeQueryService {
             .last
     }
 }
+
+extension NodeQueryService {
+    /// 找到目标节点的全部子孙节点（不含自身），BFS 广度优先
+    func descendants(of nodeID: UUID, in nodes: [Node]) -> [Node] {
+        var result: [Node] = []
+        var queue: [UUID] = [nodeID]
+        while !queue.isEmpty {
+            let current = queue.removeFirst()
+            let directChildren = nodes.filter { $0.parentNodeID == current }
+            result.append(contentsOf: directChildren)
+            queue.append(contentsOf: directChildren.map(\.id))
+        }
+        return result
+    }
+
+    /// 找到目标节点的所有直接子节点，按 sortIndex 排序
+    func children(of nodeID: UUID, in nodes: [Node]) -> [Node] {
+        nodes.filter { $0.parentNodeID == nodeID }
+             .sorted { $0.sortIndex < $1.sortIndex }
+    }
+
+    /// 找到目标节点在同级中的后一个兄弟节点
+    func nextSibling(of nodeID: UUID, in nodes: [Node]) -> Node? {
+        guard let node = nodes.first(where: { $0.id == nodeID }) else { return nil }
+        return nodes
+            .filter { $0.parentNodeID == node.parentNodeID && $0.sortIndex > node.sortIndex }
+            .sorted { $0.sortIndex < $1.sortIndex }
+            .first
+    }
+}
