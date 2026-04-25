@@ -49,18 +49,16 @@ class PageEditorViewModel: ObservableObject {
     // MARK: - 命令转发
 
     func send(_ command: NodeCommand) {
-        engine.dispatch(command)
         Task {
-            try? await Task.sleep(for: .milliseconds(100))
+            await engine.dispatch(command)
             visibleNodes = engine.editorNodes
             error = engine.error
         }
     }
 
     func send(_ command: BlockCommand) {
-        engine.dispatch(command)
         Task {
-            try? await Task.sleep(for: .milliseconds(100))
+            await engine.dispatch(command)
             visibleNodes = engine.editorNodes
             error = engine.error
         }
