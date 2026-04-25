@@ -13,8 +13,15 @@ struct NodeRowView: View {
     let onTitleChanged: (String) -> Void
     let onContentChanged: (UUID, String) -> Void
     let onCommand: (NodeCommand) -> Void
+    private let logger = ConsoleLogger()
+
+    private var debugLog: Void {
+        logger.debug("渲染节点「\(node.title)」，children 数量：\(node.children.count)", function: #function)
+    }
 
     var body: some View {
+        let _ = debugLog
+        
         HStack(alignment: .top, spacing: 0) {
             // 左侧缩进导轨
             NodeIndentationGuide(depth: node.depth)
@@ -23,7 +30,7 @@ struct NodeRowView: View {
                 HStack(spacing: 6) {
                     // 类型指示器
                     NodeTypeIndicator(depth: node.depth)
-
+                    
                     // 折叠控件（有子节点时显示）
                     if !node.children.isEmpty {
                         NodeCollapseControl(isCollapsed: node.isCollapsed) {
