@@ -25,7 +25,14 @@ struct NodeQueryService {
         for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
             let nodeBlocks = (blocksByNodeID[node.id] ?? [])
                 .sorted { $0.sortIndex < $1.sortIndex }
-                .map { EditorBlock(id: $0.id, type: $0.type, content: $0.content, sortIndex: $0.sortIndex) }
+                .map {
+                    EditorBlock(
+                        id: $0.id,
+                        type: $0.type,
+                        content: $0.content,
+                        sortIndex: $0.sortIndex
+                    )
+                }
             editorNodes[node.id] = EditorNode(
                 id: node.id,
                 parentID: node.parentNodeID,
@@ -51,14 +58,43 @@ struct NodeQueryService {
 
         return rootNodes
     }
+
+    /// 将树形结构展平为按视觉顺序排列的 EditorNode 列表（深度优先，前序遍历）
+    /// 已折叠节点的子树不出现在结果中
+    func visibleNodes(from roots: [EditorNode]) -> [EditorNode] {
+        var result: [EditorNode] = []
+        for root in roots {
+            flatten(node: root, into: &result)
+        }
+        return result
+    }
+
+    private func flatten(node: EditorNode, into result: inout [EditorNode]) {
+        var visible = node
+        visible.isVisible = true
+        result.append(visible)
+        if !node.isCollapsed {
+            for child in node.children.sorted(by: {
+                $0.sortIndex < $1.sortIndex
+            }) {
+                flatten(node: child, into: &result)
+            }
+        }
+    }
 }
 
 extension NodeQueryService {
     /// 找到目标节点在同级中的前一个兄弟节点（sortIndex 最大且小于自身的同级节点）
     func previousSibling(of nodeID: UUID, in nodes: [Node]) -> Node? {
-        guard let node = nodes.first(where: { $0.id == nodeID }) else { return nil }
-        return nodes
-            .filter { $0.parentNodeID == node.parentNodeID && $0.sortIndex < node.sortIndex }
+        guard let node = nodes.first(where: { $0.id == nodeID }) else {
+            return nil
+        }
+        return
+            nodes
+            .filter {
+                $0.parentNodeID == node.parentNodeID
+                    && $0.sortIndex < node.sortIndex
+            }
             .sorted { $0.sortIndex < $1.sortIndex }
             .last
     }
@@ -68,7 +104,8 @@ extension NodeQueryService {
     /// 找到目标节点的父节点
     func parent(of nodeID: UUID, in nodes: [Node]) -> Node? {
         guard let node = nodes.first(where: { $0.id == nodeID }),
-              let parentID = node.parentNodeID else {
+            let parentID = node.parentNodeID
+        else {
             return nil
         }
         return nodes.first { $0.id == parentID }
@@ -92,14 +129,20 @@ extension NodeQueryService {
     /// 找到目标节点的所有直接子节点，按 sortIndex 排序
     func children(of nodeID: UUID, in nodes: [Node]) -> [Node] {
         nodes.filter { $0.parentNodeID == nodeID }
-             .sorted { $0.sortIndex < $1.sortIndex }
+            .sorted { $0.sortIndex < $1.sortIndex }
     }
 
     /// 找到目标节点在同级中的后一个兄弟节点
     func nextSibling(of nodeID: UUID, in nodes: [Node]) -> Node? {
-        guard let node = nodes.first(where: { $0.id == nodeID }) else { return nil }
-        return nodes
-            .filter { $0.parentNodeID == node.parentNodeID && $0.sortIndex > node.sortIndex }
+        guard let node = nodes.first(where: { $0.id == nodeID }) else {
+            return nil
+        }
+        return
+            nodes
+            .filter {
+                $0.parentNodeID == node.parentNodeID
+                    && $0.sortIndex > node.sortIndex
+            }
             .sorted { $0.sortIndex < $1.sortIndex }
             .first
     }
