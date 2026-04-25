@@ -63,15 +63,65 @@ class NodePersistenceCoordinator {
             saveState = .saved
             return
         }
+
+        let blockUpdatesSnapshot = pendingBlockUpdates
+        let titleUpdatesSnapshot = pendingTitleUpdates
         saveState = .saving
-        for (blockID, content) in pendingBlockUpdates {
-            engine.dispatch(.updateContent(blockID: blockID, content: content))
+
+        do {
+            try await persist(blockUpdates: blockUpdatesSnapshot, titleUpdates: titleUpdatesSnapshot)
+            await engine.loadNodes()
+            clearPersistedSnapshots(
+                blockUpdates: blockUpdatesSnapshot,
+                titleUpdates: titleUpdatesSnapshot
+            )
+
+            if pendingBlockUpdates.isEmpty && pendingTitleUpdates.isEmpty {
+                saveState = .saved
+            } else {
+                saveState = .unsaved
+            }
+        } catch {
+            engine.error = .repositoryError(error as? RepositoryError ?? RepositoryError.saveFailed(error))
+            saveState = .unsaved
         }
-        for (nodeID, title) in pendingTitleUpdates {
-            engine.dispatch(.updateTitle(nodeID: nodeID, title: title))
+    }
+}
+
+private extension NodePersistenceCoordinator {
+    func persist(
+        blockUpdates: [UUID: String],
+        titleUpdates: [UUID: String]
+    ) async throws {
+        for (blockID, content) in blockUpdates {
+            guard var block = try await engine.blockRepository.fetch(by: blockID) else {
+                throw RepositoryError.notFound
+            }
+            block.content = content
+            block.updatedAt = Date()
+            try await engine.blockRepository.update(block)
         }
-        pendingBlockUpdates.removeAll()
-        pendingTitleUpdates.removeAll()
-        saveState = .saved
+
+        for (nodeID, title) in titleUpdates {
+            guard var node = try await engine.nodeRepository.fetch(by: nodeID) else {
+                throw RepositoryError.notFound
+            }
+            node.title = title
+            node.updatedAt = Date()
+            try await engine.nodeRepository.update(node)
+        }
+    }
+
+    func clearPersistedSnapshots(
+        blockUpdates: [UUID: String],
+        titleUpdates: [UUID: String]
+    ) {
+        for (blockID, content) in blockUpdates where pendingBlockUpdates[blockID] == content {
+            pendingBlockUpdates.removeValue(forKey: blockID)
+        }
+
+        for (nodeID, title) in titleUpdates where pendingTitleUpdates[nodeID] == title {
+            pendingTitleUpdates.removeValue(forKey: nodeID)
+        }
     }
 }
