@@ -7,6 +7,7 @@
 
 import Combine
 import SwiftData
+import Foundation
 
 @MainActor
 class DependencyContainer: ObservableObject {
@@ -22,5 +23,16 @@ class DependencyContainer: ObservableObject {
         self.pageRepository = PageRepository(context: context)
         self.nodeRepository = NodeRepository(context: context)
         self.blockRepository = BlockRepository(context: context)
+    }
+    
+    // MARK: - ViewModel 工厂方法
+
+    func makePageEditorViewModel(pageID: UUID, pageTitle: String) -> PageEditorViewModel {
+        PageEditorViewModel(
+            pageID: pageID,
+            pageTitle: pageTitle,
+            nodeRepository: nodeRepository,
+            blockRepository: blockRepository
+        )
     }
 }
