@@ -47,7 +47,8 @@ feature/m4-node-editor-core
 32. [M4-31 键盘 Backspace 空节点行为](#m4-31-键盘-backspace-空节点行为)
 33. [M4-32 键盘 Tab → indent 行为](#m4-32-键盘-tab--indent-行为)
 34. [M4-33 键盘 Shift+Tab → outdent 行为](#m4-33-键盘-shifttab--outdent-行为)
-35. [M4-34～50 单元测试与集成测试](#m4-3450-单元测试与集成测试)
+35. [M4-34 RootView 更新（接入 PageEditorView）](#m4-34-rootview-更新接入-pageeditorview)
+36. [M4-35～50 单元测试与集成测试](#m4-3450-单元测试与集成测试)
 
 ---
 
@@ -1446,51 +1447,55 @@ class NodeEditorEngine: ObservableObject {
 
     // MARK: - Node 命令分发
 
-    func dispatch(_ command: NodeCommand) async {
-        do {
-            switch command {
-            case .insertAfter(let nodeID):
-                _ = try await mutationService.insertAfter(nodeID: nodeID, in: pageID)
-            case .insertChild(let nodeID):
-                _ = try await mutationService.insertChild(nodeID: nodeID, in: pageID)
-            case .delete(let nodeID):
-                try await mutationService.delete(nodeID: nodeID, in: pageID)
-            case .moveUp(let nodeID):
-                try await mutationService.moveUp(nodeID: nodeID, in: pageID)
-            case .moveDown(let nodeID):
-                try await mutationService.moveDown(nodeID: nodeID, in: pageID)
-            case .indent(let nodeID):
-                try await mutationService.indent(nodeID: nodeID, in: pageID)
-            case .outdent(let nodeID):
-                try await mutationService.outdent(nodeID: nodeID, in: pageID)
-            case .toggleCollapse(let nodeID):
-                try await mutationService.toggleCollapse(nodeID: nodeID)
-            case .updateTitle(let nodeID, let title):
-                try await mutationService.updateTitle(nodeID: nodeID, title: title)
+    func dispatch(_ command: NodeCommand) {
+        Task {
+            do {
+                switch command {
+                case .insertAfter(let nodeID):
+                    _ = try await mutationService.insertAfter(nodeID: nodeID, in: pageID)
+                case .insertChild(let nodeID):
+                    _ = try await mutationService.insertChild(nodeID: nodeID, in: pageID)
+                case .delete(let nodeID):
+                    try await mutationService.delete(nodeID: nodeID, in: pageID)
+                case .moveUp(let nodeID):
+                    try await mutationService.moveUp(nodeID: nodeID, in: pageID)
+                case .moveDown(let nodeID):
+                    try await mutationService.moveDown(nodeID: nodeID, in: pageID)
+                case .indent(let nodeID):
+                    try await mutationService.indent(nodeID: nodeID, in: pageID)
+                case .outdent(let nodeID):
+                    try await mutationService.outdent(nodeID: nodeID, in: pageID)
+                case .toggleCollapse(let nodeID):
+                    try await mutationService.toggleCollapse(nodeID: nodeID)
+                case .updateTitle(let nodeID, let title):
+                    try await mutationService.updateTitle(nodeID: nodeID, title: title)
+                }
+                await loadNodes()
+            } catch {
+                self.error = error as? AppError
             }
-            await loadNodes()
-        } catch {
-            self.error = error as? AppError
         }
     }
 
     // MARK: - Block 命令分发
 
-    func dispatch(_ command: BlockCommand) async {
-        do {
-            switch command {
-            case .addBlock(let nodeID, let type):
-                _ = try await blockService.addBlock(nodeID: nodeID, type: type)
-            case .deleteBlock(let blockID):
-                try await blockService.deleteBlock(blockID: blockID)
-            case .updateContent(let blockID, let content):
-                try await blockService.updateContent(blockID: blockID, content: content)
-            case .reorderBlock(let blockID, let newSortIndex):
-                try await blockService.reorderBlock(blockID: blockID, newSortIndex: newSortIndex)
+    func dispatch(_ command: BlockCommand) {
+        Task {
+            do {
+                switch command {
+                case .addBlock(let nodeID, let type):
+                    _ = try await blockService.addBlock(nodeID: nodeID, type: type)
+                case .deleteBlock(let blockID):
+                    try await blockService.deleteBlock(blockID: blockID)
+                case .updateContent(let blockID, let content):
+                    try await blockService.updateContent(blockID: blockID, content: content)
+                case .reorderBlock(let blockID, let newSortIndex):
+                    try await blockService.reorderBlock(blockID: blockID, newSortIndex: newSortIndex)
+                }
+                await loadNodes()
+            } catch {
+                self.error = error as? AppError
             }
-            await loadNodes()
-        } catch {
-            self.error = error as? AppError
         }
     }
 }
@@ -1499,14 +1504,14 @@ class NodeEditorEngine: ObservableObject {
 **Git commit message：**
 
 ```
-refactor: make NodeEditorEngine dispatch awaitable
+feat: implement NodeEditorEngine with command dispatch
 ```
 
 **解释：**
 
 - `NodeEditorEngine` 是编辑器的"总线"，`PageEditorViewModel` 只与它对话，不直接调用 Service。层次关系：`ViewModel → Engine → Service → Repository`。
 - `@MainActor` 确保 `@Published` 属性的更新发生在主线程，SwiftUI 视图能正确响应。
-- `dispatch` 现在是 `async` 方法，调用方可以真正等待命令执行完成。每次命令执行成功后调用 `loadNodes()` 重建整棵树并刷新 `editorNodes`。这是 M4 的"重新加载"策略——简单可靠，M5 可优化为局部刷新。
+- `dispatch` 内部用 `Task { }` 将 `async throws` 的 Service 调用包装，每次命令执行完成后调用 `loadNodes()` 重建整棵树并刷新 `editorNodes`。这是 M4 的"重新加载"策略——简单可靠，M5 可优化为局部刷新。
 - `loadNodes` 批量加载 Block：先取所有 Node，再逐个加载其 Block。MVP 阶段单页 Node 数量有限，性能可接受。
 - 两个 `dispatch` 方法重载，Swift 编译器通过参数类型自动路由到 `NodeCommand` 或 `BlockCommand` 版本。
 
@@ -1704,16 +1709,18 @@ class PageEditorViewModel: ObservableObject {
     // MARK: - 命令转发
 
     func send(_ command: NodeCommand) {
+        engine.dispatch(command)
         Task {
-            await engine.dispatch(command)
+            try? await Task.sleep(for: .milliseconds(100))
             visibleNodes = engine.editorNodes
             error = engine.error
         }
     }
 
     func send(_ command: BlockCommand) {
+        engine.dispatch(command)
         Task {
-            await engine.dispatch(command)
+            try? await Task.sleep(for: .milliseconds(100))
             visibleNodes = engine.editorNodes
             error = engine.error
         }
@@ -1751,14 +1758,14 @@ class PageEditorViewModel: ObservableObject {
 **Git commit message：**
 
 ```
-refactor: await engine dispatch in PageEditorViewModel
+feat: implement PageEditorViewModel with load and command dispatch
 ```
 
 **解释：**
 
 - `PageEditorViewModel` 是 View 层唯一的数据入口，`PageEditorView` 不直接操作 Engine 或 Service。
 - `onTitleChanged` 和 `onContentChanged` 采用"乐观更新"策略：先立即修改内存中的 `visibleNodes`（保证 UI 无延迟响应），再通过 `persistenceCoordinator` 延迟写入存储。这样用户感知不到任何输入卡顿。
-- `send(_ command: NodeCommand)` 和 `send(_ command: BlockCommand)` 现在直接等待 `engine.dispatch(...)` 完成，再同步 `visibleNodes` 与 `error`。这样状态刷新依赖真实任务完成，而不是猜测性的 `sleep(100ms)`。
+- `send(_ command: NodeCommand)` 在 `engine.dispatch` 后加了 100ms 等待再同步 `visibleNodes`，给 Engine 内部的 `loadNodes` 异步操作足够完成时间。M5 阶段可改用更优雅的响应式模式替代。
 - `onDisappear` 调用 `persistenceCoordinator.flush()` 时，现在会真正等待本轮批量持久化完成，而不是只把保存请求异步发出去。这让退出页面或进入后台时的数据安全语义更可靠。
 
 ---
@@ -2502,9 +2509,86 @@ feat: wire Shift+Tab to outdent via toolbar button
 
 ---
 
-## M4-34~50 单元测试与集成测试
+---
 
-**分支：** `feature/m4-tests`
+## M4-34 RootView 更新（接入 PageEditorView）
+
+**文件：** `App/AppRouter.swift`（更新 `AppRoute.nodeEditor` 关联值）
+
+```swift
+import Foundation
+
+enum AppRoute: Hashable {
+    case pageList(collectionID: UUID, collectionTitle: String)
+    case nodeEditor(pageID: UUID, pageTitle: String)   // 新增 pageTitle
+}
+```
+
+**文件：** `App/RootView.swift`（替换 `.nodeEditor` 占位 Text）
+
+```swift
+import SwiftUI
+
+struct RootView: View {
+    @StateObject private var router = AppRouter()
+    @EnvironmentObject private var dependencyContainer: DependencyContainer
+
+    var body: some View {
+        NavigationStack(path: $router.path) {
+            CollectionListScreen(
+                repository: dependencyContainer.collectionRepository
+            )
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+                case .pageList(let collectionID, let collectionTitle):
+                    PageListScreen(
+                        collectionID: collectionID,
+                        collectionTitle: collectionTitle,
+                        pageRepository: dependencyContainer.pageRepository,
+                        nodeRepository: dependencyContainer.nodeRepository
+                    )
+                case .nodeEditor(let pageID, let pageTitle):
+                    PageEditorView(
+                        viewModel: dependencyContainer.makePageEditorViewModel(
+                            pageID: pageID,
+                            pageTitle: pageTitle
+                        )
+                    )
+                }
+            }
+        }
+        .environmentObject(router)
+    }
+}
+```
+
+**文件：** `Features/Pages/Views/PageListScreen.swift`（更新 `router.navigate` 调用，传入 `pageTitle`）
+
+```swift
+// 将 M3 中的：
+router.navigate(to: .nodeEditor(pageID: page.id))
+
+// 改为：
+router.navigate(to: .nodeEditor(pageID: page.id, pageTitle: page.title))
+```
+
+**Git commit message：**
+
+```
+feat: wire PageEditorView into RootView navigation
+```
+
+**解释：**
+
+- M3 的 `AppRoute.nodeEditor` 只携带 `pageID`，但 `PageEditorView` 初始化时需要 `pageTitle` 用于 `navigationTitle`。若在 `PageEditorView` 内部再根据 `pageID` 发起查询来取标题，会增加一次异步 IO 且 `navigationTitle` 会有短暂空白。最简洁的做法是在 `AppRoute.nodeEditor` 关联值中直接携带 `pageTitle`，`PageListScreen` 在触发导航时已经持有 `page.title`，无额外开销。
+- `PageListScreen` 只改 `router.navigate` 这一行，其余代码不动，改动范围极小。
+- `dependencyContainer.makePageEditorViewModel(pageID:pageTitle:)` 是 M4-27 中已定义的工厂方法，这里直接调用，`RootView` 不需要感知 `NodeRepository` 和 `BlockRepository` 的细节。
+
+---
+
+## M4-35~50 单元测试与集成测试
+
+
 
 ---
 
@@ -3173,6 +3257,8 @@ M4 新增与修改的文件一览：
 ```
 Notte/
 ├── App/
+│   ├── AppRouter.swift                                ← 更新：AppRoute.nodeEditor 新增 pageTitle
+│   ├── RootView.swift                                 ← 更新：替换 .nodeEditor 占位为 PageEditorView
 │   └── DependencyContainer.swift                      ← 更新：新增 nodeRepository、blockRepository
 │
 ├── Features/
