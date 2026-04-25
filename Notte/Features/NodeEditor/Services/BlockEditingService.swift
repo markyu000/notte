@@ -48,3 +48,16 @@ struct BlockEditingService {
         logger.info("Block 内容更新成功, blockID=\(blockID)", function: #function)
     }
 }
+
+extension BlockEditingService {
+    func reorderBlock(blockID: UUID, newSortIndex: Double) async throws {
+        logger.debug("调整 Block 排序, blockID=\(blockID), newSortIndex=\(newSortIndex)", function: #function)
+        guard var block = try await blockRepository.fetch(by: blockID) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        block.sortIndex = newSortIndex
+        block.updatedAt = Date()
+        try await blockRepository.update(block)
+        logger.info("Block 排序更新成功, blockID=\(blockID)", function: #function)
+    }
+}
