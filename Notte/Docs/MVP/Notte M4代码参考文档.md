@@ -37,7 +37,9 @@ feature/m4-node-editor-core
 22. [M4-21 PageEditorView](#m4-21-pageeditorview)
 23. [M4-22 NodeRowView](#m4-22-noderowview)
 24. [M4-23 NodeContentEditor（UITextView 包装）](#m4-23-nodecontenteditoruitextview-包装)
-25. [M4-24 NodeIndentationGuide](#m4-24-nodeindentationguide)
+25. [M4-23b NodeTitleEditor](#m4-23b-nodetitleeditor)
+26. [M4-23c BlockListView](#m4-23c-blocklistview)
+27. [M4-24 NodeIndentationGuide](#m4-24-nodeindentationguide)
 26. [M4-25 NodeCollapseControl](#m4-25-nodecollapsecontrol)
 27. [M4-26 NodeTypeIndicator](#m4-26-nodetypeindicator)
 28. [M4-27 DependencyContainer 更新](#m4-27-dependencycontainer-更新)
@@ -2041,6 +2043,188 @@ feat: implement NodeContentEditor as UITextView wrapper
 
 ---
 
+## M4-23b NodeTitleEditor
+
+**分支：** `feature/m4-node-editor-core`  
+**文件：** `Features/NodeEditor/Views/NodeTitleEditor.swift`
+
+```swift
+import SwiftUI
+import UIKit
+
+/// 专用于 Node 标题输入的 UITextField 包装。
+/// 单行输入，支持 Return / Backspace 空时 / Tab / Shift+Tab 键盘行为。
+struct NodeTitleEditor: UIViewRepresentable {
+
+    var text: String
+    var depth: Int
+    var onTextChanged: (String) -> Void
+    var onReturn: () -> Void
+    var onBackspaceWhenEmpty: () -> Void
+    var onTab: () -> Void
+    var onShiftTab: () -> Void
+
+    func makeUIView(context: Context) -> CustomTextField {
+        let field = CustomTextField()
+        field.backgroundColor = .clear
+        field.borderStyle = .none
+        field.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+        field.placeholder = depth == 0 ? "标题" : "节点"
+        field.delegate = context.coordinator
+        field.onBackspaceWhenEmpty = { context.coordinator.parent.onBackspaceWhenEmpty() }
+        return field
+    }
+
+    func updateUIView(_ uiView: CustomTextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        uiView.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    // MARK: - 自定义 UITextField，拦截 Backspace
+
+    class CustomTextField: UITextField {
+        var onBackspaceWhenEmpty: (() -> Void)?
+
+        override func deleteBackward() {
+            if text?.isEmpty == true {
+                onBackspaceWhenEmpty?()
+            } else {
+                super.deleteBackward()
+            }
+        }
+    }
+
+    // MARK: - Coordinator
+
+    class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: NodeTitleEditor
+
+        init(_ parent: NodeTitleEditor) {
+            self.parent = parent
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            parent.onTextChanged(textField.text ?? "")
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            parent.onReturn()
+            return false
+        }
+    }
+}
+```
+
+**Git commit message：**
+
+```
+feat: build NodeTitleEditor as UITextField wrapper
+```
+
+**解释：**
+
+- 标题是单行输入，用 `UITextField` 比 `UITextView` 更合适：天然单行、`textFieldShouldReturn` 直接拦截 Return 键，不需要在 `shouldChangeTextIn` 里判断 `"\n"`。
+- Backspace 空时的拦截需要子类化 `UITextField` 并重写 `deleteBackward()`，因为 `UITextFieldDelegate` 没有提供对应回调。
+- `depth == 0` 时用 `.headline` 字重，子节点用 `.body`，与 `TypographyTokens` 的层级语义对齐。
+- `NodeRowView` 的标题行从 `NodeContentEditor` 换成 `NodeTitleEditor`，`NodeContentEditor` 只用于 Block 内容区。
+
+---
+
+## M4-23c BlockListView
+
+**分支：** `feature/m4-node-editor-core`  
+**文件：** `Features/NodeEditor/Views/BlockListView.swift`
+
+```swift
+import SwiftUI
+
+/// Node 内容区：顺序渲染该 Node 的所有 Block。
+/// MVP 阶段只有 .text 类型，POST 阶段扩展类型时在 switch 里添加对应 BlockView 即可。
+struct BlockListView: View {
+
+    let blocks: [EditorBlock]
+    let onContentChanged: (UUID, String) -> Void
+
+    var body: some View {
+        ForEach(blocks) { block in
+            switch block.type {
+            case .text:
+                NodeContentEditor(
+                    text: block.content,
+                    font: TypographyTokens.body,
+                    placeholder: "内容",
+                    onTextChanged: { onContentChanged(block.id, $0) },
+                    onReturn: { },
+                    onBackspaceWhenEmpty: { },
+                    onTab: { },
+                    onShiftTab: { }
+                )
+                .padding(.leading, 4)
+            }
+        }
+    }
+}
+```
+
+将 `NodeRowView` 中内联的 Block 渲染替换为 `BlockListView`：
+
+```swift
+// NodeRowView 中替换
+VStack(alignment: .leading, spacing: 4) {
+    HStack(spacing: 6) {
+        NodeTypeIndicator(depth: node.depth)
+        if !node.children.isEmpty {
+            NodeCollapseControl(isCollapsed: node.isCollapsed) {
+                onCommand(.toggleCollapse(nodeID: node.id))
+            }
+        }
+        NodeTitleEditor(              // 原来是 NodeContentEditor
+            text: node.title,
+            depth: node.depth,
+            onTextChanged: { onTitleChanged($0) },
+            onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
+            onBackspaceWhenEmpty: {
+                if node.depth > 0 {
+                    onCommand(.outdent(nodeID: node.id))
+                } else {
+                    onCommand(.delete(nodeID: node.id))
+                }
+            },
+            onTab: { onCommand(.indent(nodeID: node.id)) },
+            onShiftTab: { onCommand(.outdent(nodeID: node.id)) }
+        )
+        Spacer()
+        AddNodeButton { onCommand(.insertAfter(nodeID: node.id)) }
+    }
+
+    BlockListView(                    // 原来是内联 ForEach
+        blocks: node.blocks,
+        onContentChanged: onContentChanged
+    )
+    .padding(.leading, 20)
+}
+```
+
+**Git commit message：**
+
+```
+feat: extract BlockListView from NodeRowView
+```
+
+**解释：**
+
+- `BlockListView` 把 Block 渲染逻辑从 `NodeRowView` 中抽离，职责更清晰：`NodeRowView` 只负责行级布局，`BlockListView` 只负责内容区渲染。
+- `switch block.type` 为 POST 阶段扩展类型预留了结构，新增类型只需要加一个 `case`，不需要改 `NodeRowView`。
+- `NodeRowView` 同步把标题输入从 `NodeContentEditor` 换成 `NodeTitleEditor`，两个组件职责正式分离。
+
+---
+
 ## M4-24 NodeIndentationGuide
 
 **分支：** `feature/m4-node-ui-components`  
@@ -3285,6 +3469,8 @@ Notte/
 │           ├── PageEditorView.swift
 │           ├── NodeRowView.swift
 │           ├── NodeContentEditor.swift
+│           ├── NodeTitleEditor.swift                  ← 新增
+│           ├── BlockListView.swift                    ← 新增
 │           ├── NodeIndentationGuide.swift
 │           ├── NodeCollapseControl.swift
 │           ├── NodeTypeIndicator.swift
