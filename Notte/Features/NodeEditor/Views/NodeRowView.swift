@@ -48,6 +48,10 @@ struct NodeRowView: View {
                         onTab: { onCommand(.indent(nodeID: node.id)) },
                         onShiftTab: { onCommand(.outdent(nodeID: node.id)) }
                     )
+                    Spacer()
+                    AddNodeButton {
+                        onCommand(.insertAfter(nodeID: node.id))
+                    }
                 }
 
                 // Block 内容区（MVP 只有 text 类型）
