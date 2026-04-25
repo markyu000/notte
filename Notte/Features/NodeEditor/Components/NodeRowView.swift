@@ -32,10 +32,9 @@ struct NodeRowView: View {
                     }
 
                     // 标题输入框
-                    NodeContentEditor(
+                    NodeTitleEditor(
                         text: node.title,
-                        font: TypographyTokens.nodeTitle(depth: node.depth),
-                        placeholder: node.depth == 0 ? "标题" : "节点",
+                        depth: node.depth,
                         onTextChanged: { onTitleChanged($0) },
                         onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
                         onBackspaceWhenEmpty: {
@@ -55,19 +54,10 @@ struct NodeRowView: View {
                 }
 
                 // Block 内容区（MVP 只有 text 类型）
-                ForEach(node.blocks) { block in
-                    NodeContentEditor(
-                        text: block.content,
-                        font: TypographyTokens.body,
-                        placeholder: "内容",
-                        onTextChanged: { onContentChanged(block.id, $0) },
-                        onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
-                        onBackspaceWhenEmpty: { },
-                        onTab: { },
-                        onShiftTab: { }
-                    )
-                    .padding(.leading, 20)
-                }
+                BlockListView(                    // 原来是内联 ForEach
+                    blocks: node.blocks,
+                    onContentChanged: onContentChanged
+                )
             }
         }
         .padding(.vertical, 6)
