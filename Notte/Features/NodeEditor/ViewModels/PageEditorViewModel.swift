@@ -18,6 +18,7 @@ class PageEditorViewModel: ObservableObject {
     @Published var visibleNodes: [EditorNode] = []
     @Published var focusedNodeID: UUID?
     @Published var error: AppError?
+    private let logger = ConsoleLogger()
 
     private let engine: NodeEditorEngine
     let persistenceCoordinator: NodePersistenceCoordinator
@@ -42,7 +43,9 @@ class PageEditorViewModel: ObservableObject {
     // MARK: - 加载
 
     func loadPage() async {
+        logger.debug("loadPage 已调用，pageID: \(pageID)", function: #function)
         await engine.loadNodes()
+        logger.debug("visibleNodes count: \(engine.editorNodes.count)", function: #function)
         visibleNodes = engine.editorNodes
     }
 
