@@ -29,8 +29,13 @@ struct RootView: View {
                         nodeRepository: dependencyContainer.nodeRepository,
                         blockRepository: dependencyContainer.blockRepository
                     )
-                case .nodeEditor(let pageID):
-                    Text("Node Editor 占位 \(pageID)")
+                case .nodeEditor(let pageID, let pageTitle):
+                    PageEditorView(
+                        viewModel: dependencyContainer.makePageEditorViewModel(
+                            pageID: pageID,
+                            pageTitle: pageTitle
+                        )
+                    )
                 }
             }
         }

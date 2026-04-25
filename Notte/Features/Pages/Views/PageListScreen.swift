@@ -94,7 +94,7 @@ struct PageListScreen: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard editMode == .inactive else { return }
-                        router.navigate(to: .nodeEditor(pageID: page.id))
+                        router.navigate(to: .nodeEditor(pageID: page.id, pageTitle: page.title))
                     }
                     .contextMenu {
                         PageContextMenu(
