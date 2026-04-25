@@ -1580,16 +1580,66 @@ class NodePersistenceCoordinator {
             saveState = .saved
             return
         }
+
+        let blockUpdatesSnapshot = pendingBlockUpdates
+        let titleUpdatesSnapshot = pendingTitleUpdates
         saveState = .saving
-        for (blockID, content) in pendingBlockUpdates {
-            engine.dispatch(.updateContent(blockID: blockID, content: content))
+
+        do {
+            try await persist(blockUpdates: blockUpdatesSnapshot, titleUpdates: titleUpdatesSnapshot)
+            await engine.loadNodes()
+            clearPersistedSnapshots(
+                blockUpdates: blockUpdatesSnapshot,
+                titleUpdates: titleUpdatesSnapshot
+            )
+
+            if pendingBlockUpdates.isEmpty && pendingTitleUpdates.isEmpty {
+                saveState = .saved
+            } else {
+                saveState = .unsaved
+            }
+        } catch {
+            engine.error = .repositoryError(error as? RepositoryError ?? RepositoryError.saveFailed(error))
+            saveState = .unsaved
         }
-        for (nodeID, title) in pendingTitleUpdates {
-            engine.dispatch(.updateTitle(nodeID: nodeID, title: title))
+    }
+}
+
+private extension NodePersistenceCoordinator {
+    func persist(
+        blockUpdates: [UUID: String],
+        titleUpdates: [UUID: String]
+    ) async throws {
+        for (blockID, content) in blockUpdates {
+            guard var block = try await engine.blockRepository.fetch(by: blockID) else {
+                throw RepositoryError.notFound
+            }
+            block.content = content
+            block.updatedAt = Date()
+            try await engine.blockRepository.update(block)
         }
-        pendingBlockUpdates.removeAll()
-        pendingTitleUpdates.removeAll()
-        saveState = .saved
+
+        for (nodeID, title) in titleUpdates {
+            guard var node = try await engine.nodeRepository.fetch(by: nodeID) else {
+                throw RepositoryError.notFound
+            }
+            node.title = title
+            node.updatedAt = Date()
+            try await engine.nodeRepository.update(node)
+        }
+    }
+
+    func clearPersistedSnapshots(
+        blockUpdates: [UUID: String],
+        titleUpdates: [UUID: String]
+    ) {
+        for (blockID, content) in blockUpdates where pendingBlockUpdates[blockID] == content {
+            pendingBlockUpdates.removeValue(forKey: blockID)
+        }
+
+        for (nodeID, title) in titleUpdates where pendingTitleUpdates[nodeID] == title {
+            pendingTitleUpdates.removeValue(forKey: nodeID)
+        }
     }
 }
 ```
@@ -1597,14 +1647,15 @@ class NodePersistenceCoordinator {
 **Git commit message：**
 
 ```
-feat: implement NodePersistenceCoordinator with debounce flush
+refactor: batch autosave persistence in NodePersistenceCoordinator
 ```
 
 **解释：**
 
-- Debounce 策略：每次用户输入触发 `scheduleContentUpdate` 或 `scheduleTitleUpdate`，将变更缓存在字典中，并重置定时器。只有用户停止输入 600ms 后才真正写入 Repository。同一 blockID/nodeID 的多次更新覆盖字典中的旧值，最终只写一次。
-- `flush()` 是强制保存方法，在 `PageEditorView` 的 `onDisappear` 和 App 进入后台时调用，确保未 debounce 的变更不丢失。
-- `SaveState` 枚举向 ViewModel 暴露存储状态，M5 阶段可在导航栏显示"正在保存…"/"已保存"指示器。
+- Debounce 策略保持不变：每次用户输入触发 `scheduleContentUpdate` 或 `scheduleTitleUpdate`，将变更缓存在字典中，并重置定时器。只有用户停止输入 600ms 后才真正进入持久化阶段。同一 blockID/nodeID 的多次更新覆盖字典中的旧值，最终只保存最后一次内容。
+- `flush()` 不再逐条调用 `engine.dispatch(...)`，而是直接使用 `engine` 持有的 Repository 批量更新快照，再统一执行一次 `engine.loadNodes()`。这样可以避免一次 flush 触发多次重载。
+- `flush()` 基于快照保存，并且只移除“本次成功持久化且期间未被新输入覆盖”的缓存项。这样即使保存过程中又有新输入到来，也不会误删最新未保存内容。
+- 保存失败时，`saveState` 保持为 `.unsaved`，并将错误写入 `engine.error`，页面层仍然可以继续展示未保存状态并由上层决定是否提示用户。
 
 ---
 
@@ -1714,7 +1765,7 @@ feat: implement PageEditorViewModel with load and command dispatch
 - `PageEditorViewModel` 是 View 层唯一的数据入口，`PageEditorView` 不直接操作 Engine 或 Service。
 - `onTitleChanged` 和 `onContentChanged` 采用"乐观更新"策略：先立即修改内存中的 `visibleNodes`（保证 UI 无延迟响应），再通过 `persistenceCoordinator` 延迟写入存储。这样用户感知不到任何输入卡顿。
 - `send(_ command: NodeCommand)` 在 `engine.dispatch` 后加了 100ms 等待再同步 `visibleNodes`，给 Engine 内部的 `loadNodes` 异步操作足够完成时间。M5 阶段可改用更优雅的响应式模式替代。
-- `onDisappear` 调用 `persistenceCoordinator.flush()` 确保页面退出时所有未保存变更立即写入，这是数据安全的关键保障。
+- `onDisappear` 调用 `persistenceCoordinator.flush()` 时，现在会真正等待本轮批量持久化完成，而不是只把保存请求异步发出去。这让退出页面或进入后台时的数据安全语义更可靠。
 
 ---
 
