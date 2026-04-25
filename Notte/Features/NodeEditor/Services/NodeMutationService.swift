@@ -250,4 +250,31 @@ struct NodeMutationService {
         try await nodeRepository.update(node)
         logger.info("节点标题更新成功, nodeID=\(nodeID)", function: #function)
     }
+    
+    func insertFirst(in pageID: UUID) async throws -> Node {
+        let newNode = Node(
+            id: UUID(),
+            pageID: pageID,
+            parentNodeID: nil,
+            title: "",
+            depth: 0,
+            sortIndex: SortIndexPolicy.initialIndex(),
+            isCollapsed: false,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await nodeRepository.create(newNode)
+
+        let emptyBlock = Block(
+            id: UUID(),
+            nodeID: newNode.id,
+            type: .text,
+            content: "",
+            sortIndex: SortIndexPolicy.initialIndex(),
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await blockRepository.create(emptyBlock)
+        return newNode
+    }
 }

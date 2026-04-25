@@ -39,6 +39,19 @@ class PageEditorViewModel: ObservableObject {
         self.engine = engine
         self.persistenceCoordinator = NodePersistenceCoordinator(engine: engine)
     }
+    
+    func createFirstNode() {
+        Task {
+            do {
+                let newNode = try await engine.mutationService.insertFirst(in: pageID)
+                logger.debug("首个节点已创建，nodeID：\(newNode.id)", function: #function)
+                await engine.loadNodes()
+                visibleNodes = engine.editorNodes
+            } catch {
+                self.error = error as? AppError
+            }
+        }
+    }
 
     // MARK: - 加载
 

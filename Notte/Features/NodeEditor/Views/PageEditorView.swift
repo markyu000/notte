@@ -9,35 +9,45 @@ import SwiftUI
 
 struct PageEditorView: View {
 
-    @StateObject var viewModel: PageEditorViewModel
+    @ObservedObject var viewModel: PageEditorViewModel
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(viewModel.visibleNodes) { node in
-                    NodeRowView(
-                        node: node,
-                        onTitleChanged: { title in
-                            viewModel.onTitleChanged(nodeID: node.id, title: title)
-                        },
-                        onContentChanged: { blockID, content in
-                            viewModel.onContentChanged(blockID: blockID, content: content)
-                        },
-                        onCommand: { command in
-                            viewModel.send(command)
+                if viewModel.visibleNodes.isEmpty {
+                    // 空状态：点击任意位置创建第一个节点
+                    Color.clear
+                        .frame(maxWidth: .infinity, minHeight: 400)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.createFirstNode()
                         }
-                    )
-                }
-
-                // 底部空白点击区域：在末尾插入新节点
-                Color.clear
-                    .frame(height: 200)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if let lastNode = viewModel.visibleNodes.last {
-                            viewModel.send(.insertAfter(nodeID: lastNode.id))
-                        }
+                } else {
+                    ForEach(viewModel.visibleNodes) { node in
+                        NodeRowView(
+                            node: node,
+                            onTitleChanged: { title in
+                                viewModel.onTitleChanged(nodeID: node.id, title: title)
+                            },
+                            onContentChanged: { blockID, content in
+                                viewModel.onContentChanged(blockID: blockID, content: content)
+                            },
+                            onCommand: { command in
+                                viewModel.send(command)
+                            }
+                        )
                     }
+
+                    // 底部空白点击区域：在末尾插入新节点
+                    Color.clear
+                        .frame(height: 200)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if let lastNode = viewModel.visibleNodes.last {
+                                viewModel.send(.insertAfter(nodeID: lastNode.id))
+                            }
+                        }
+                }
             }
             .padding(.horizontal, 16)
         }
