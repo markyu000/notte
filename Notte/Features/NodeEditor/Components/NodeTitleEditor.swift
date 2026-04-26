@@ -28,6 +28,11 @@ struct NodeTitleEditor: UIViewRepresentable {
         field.placeholder = depth == 0 ? "标题" : "节点"
         field.delegate = context.coordinator
         field.onBackspaceWhenEmpty = { context.coordinator.parent.onBackspaceWhenEmpty() }
+        field.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.textFieldDidChange(_:)),
+            for: .editingChanged
+        )
         return field
     }
 
@@ -65,7 +70,7 @@ struct NodeTitleEditor: UIViewRepresentable {
             self.parent = parent
         }
 
-        func textFieldDidChangeSelection(_ textField: UITextField) {
+        @objc func textFieldDidChange(_ textField: UITextField) {
             parent.onTextChanged(textField.text ?? "")
         }
 
