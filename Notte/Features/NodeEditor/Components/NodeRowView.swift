@@ -13,6 +13,7 @@ struct NodeRowView: View {
     let onTitleChanged: (String) -> Void
     let onContentChanged: (UUID, String) -> Void
     let onCommand: (NodeCommand) -> Void
+    let onFocused: (UUID) -> Void
     private let logger = ConsoleLogger()
 
     private var debugLog: Void {
@@ -52,7 +53,8 @@ struct NodeRowView: View {
                             }
                         },
                         onTab: { onCommand(.indent(nodeID: node.id)) },
-                        onShiftTab: { onCommand(.outdent(nodeID: node.id)) }
+                        onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
+                        onFocus: { onFocused(node.id) }
                     )
                     Spacer()
                     AddNodeButton {

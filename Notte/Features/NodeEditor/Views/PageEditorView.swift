@@ -34,7 +34,8 @@ struct PageEditorView: View {
                             },
                             onCommand: { command in
                                 viewModel.send(command)
-                            }
+                            },
+                            onFocused: { id in viewModel.focusedNodeID = id }
                         )
                     }
 
@@ -68,11 +69,46 @@ struct PageEditorView: View {
             Text(viewModel.error?.localizedDescription ?? "")
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("缩进") {
-                    if let second = viewModel.visibleNodes.dropFirst().first {
-                        viewModel.send(.indent(nodeID: second.id))
+            ToolbarItemGroup(placement: .keyboard) {
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.indent(nodeID: id))
                     }
+                } label: {
+                    Image(systemName: "increase.indent")
+                }
+
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.outdent(nodeID: id))
+                    }
+                } label: {
+                    Image(systemName: "decrease.indent")
+                }
+
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.moveUp(nodeID: id))
+                    }
+                } label: {
+                    Image(systemName: "arrow.up")
+                }
+
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.moveDown(nodeID: id))
+                    }
+                } label: {
+                    Image(systemName: "arrow.down")
+                }
+
+                Spacer()
+
+                Button("完成") {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder),
+                        to: nil, from: nil, for: nil
+                    )
                 }
             }
         }

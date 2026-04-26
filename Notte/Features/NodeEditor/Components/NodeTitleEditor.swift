@@ -19,6 +19,7 @@ struct NodeTitleEditor: UIViewRepresentable {
     var onBackspaceWhenEmpty: () -> Void
     var onTab: () -> Void
     var onShiftTab: () -> Void
+    var onFocus: () -> Void
 
     func makeUIView(context: Context) -> CustomTextField {
         let field = CustomTextField()
@@ -32,6 +33,11 @@ struct NodeTitleEditor: UIViewRepresentable {
             context.coordinator,
             action: #selector(Coordinator.textFieldDidChange(_:)),
             for: .editingChanged
+        )
+        field.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.editingDidBegin(_:)),
+            for: .editingDidBegin
         )
         return field
     }
@@ -77,6 +83,10 @@ struct NodeTitleEditor: UIViewRepresentable {
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             parent.onReturn()
             return false
+        }
+        
+        @objc func editingDidBegin(_ textField: UITextField) {
+            parent.onFocus()
         }
     }
 }
