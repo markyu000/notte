@@ -46,13 +46,20 @@ struct NodeQueryService {
         }
 
         // 3. 建立父子关系
+        for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
+            guard let parentID = node.parentNodeID,
+                  let child = editorNodes[node.id] else { continue }
+            if var parent = editorNodes[parentID] {
+                parent.children.append(child)
+                editorNodes[parentID] = parent
+            }
+        }
+
+        // 4. 收集根节点（必须在父子关系建立完成之后）
         var rootNodes: [EditorNode] = []
         for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
-            guard let child = editorNodes[node.id] else { continue }
-            if let parentID = node.parentNodeID {
-                editorNodes[parentID]?.children.append(child)
-            } else {
-                rootNodes.append(child)
+            if node.parentNodeID == nil {
+                rootNodes.append(editorNodes[node.id]!)
             }
         }
 
