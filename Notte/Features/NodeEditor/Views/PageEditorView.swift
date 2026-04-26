@@ -69,7 +69,7 @@ struct PageEditorView: View {
             Text(viewModel.error?.localizedDescription ?? "")
         }
         .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button {
                     if let id = viewModel.focusedNodeID {
                         viewModel.send(.indent(nodeID: id))
@@ -77,7 +77,6 @@ struct PageEditorView: View {
                 } label: {
                     Image(systemName: "increase.indent")
                 }
-
                 Button {
                     if let id = viewModel.focusedNodeID {
                         viewModel.send(.outdent(nodeID: id))
@@ -85,7 +84,6 @@ struct PageEditorView: View {
                 } label: {
                     Image(systemName: "decrease.indent")
                 }
-
                 Button {
                     if let id = viewModel.focusedNodeID {
                         viewModel.send(.moveUp(nodeID: id))
@@ -93,22 +91,12 @@ struct PageEditorView: View {
                 } label: {
                     Image(systemName: "arrow.up")
                 }
-
                 Button {
                     if let id = viewModel.focusedNodeID {
                         viewModel.send(.moveDown(nodeID: id))
                     }
                 } label: {
                     Image(systemName: "arrow.down")
-                }
-
-                Spacer()
-
-                Button("完成") {
-                    UIApplication.shared.sendAction(
-                        #selector(UIResponder.resignFirstResponder),
-                        to: nil, from: nil, for: nil
-                    )
                 }
             }
         }
