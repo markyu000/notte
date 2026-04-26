@@ -67,5 +67,14 @@ struct PageEditorView: View {
         } message: {
             Text(viewModel.error?.localizedDescription ?? "")
         }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("缩进") {
+                    if let second = viewModel.visibleNodes.dropFirst().first {
+                        viewModel.send(.indent(nodeID: second.id))
+                    }
+                }
+            }
+        }
     }
 }
