@@ -45,25 +45,25 @@ struct NodeQueryService {
             )
         }
 
-        // 3. 建立父子关系
+        // 3. 建立父子 ID 映射（按 sortIndex 排序）
+        var childIDsByParent: [UUID: [UUID]] = [:]
         for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
-            guard let parentID = node.parentNodeID,
-                  let child = editorNodes[node.id] else { continue }
-            if var parent = editorNodes[parentID] {
-                parent.children.append(child)
-                editorNodes[parentID] = parent
-            }
+            guard let parentID = node.parentNodeID else { continue }
+            childIDsByParent[parentID, default: []].append(node.id)
         }
 
-        // 4. 收集根节点（必须在父子关系建立完成之后）
-        var rootNodes: [EditorNode] = []
-        for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
-            if node.parentNodeID == nil {
-                rootNodes.append(editorNodes[node.id]!)
-            }
+        // 递归构建 EditorNode 树，避免 struct 值拷贝导致孙节点丢失
+        func buildNode(_ id: UUID) -> EditorNode {
+            var node = editorNodes[id]!
+            node.children = (childIDsByParent[id] ?? []).map { buildNode($0) }
+            return node
         }
 
-        return rootNodes
+        // 4. 收集根节点
+        return nodes
+            .filter { $0.parentNodeID == nil }
+            .sorted { $0.sortIndex < $1.sortIndex }
+            .map { buildNode($0.id) }
     }
 
     /// 将树形结构展平为按视觉顺序排列的 EditorNode 列表（深度优先，前序遍历）
