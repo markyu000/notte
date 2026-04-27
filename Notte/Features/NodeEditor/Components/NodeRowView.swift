@@ -46,10 +46,10 @@ struct NodeRowView: View {
                         onTextChanged: { onTitleChanged($0) },
                         onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
                         onBackspaceWhenEmpty: {
-                            if node.depth > 0 {
-                                onCommand(.outdent(nodeID: node.id))
-                            } else {
+                            if node.children.isEmpty {
                                 onCommand(.delete(nodeID: node.id))
+                            } else {
+                                onCommand(.outdent(nodeID: node.id))
                             }
                         },
                         onTab: { onCommand(.indent(nodeID: node.id)) },
