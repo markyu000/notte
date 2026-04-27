@@ -26,6 +26,7 @@ struct PageEditorView: View {
                     ForEach(viewModel.visibleNodes) { node in
                         NodeRowView(
                             node: node,
+                            isFocused: viewModel.pendingFocusNodeID == node.id,
                             onTitleChanged: { title in
                                 viewModel.onTitleChanged(nodeID: node.id, title: title)
                             },
@@ -35,7 +36,10 @@ struct PageEditorView: View {
                             onCommand: { command in
                                 viewModel.send(command)
                             },
-                            onFocused: { id in viewModel.focusedNodeID = id }
+                            onFocused: { id in
+                                viewModel.focusedNodeID = id
+                                viewModel.pendingFocusNodeID = nil
+                            }
                         )
                     }
 

@@ -17,6 +17,7 @@ class PageEditorViewModel: ObservableObject {
 
     @Published var visibleNodes: [EditorNode] = []
     @Published var focusedNodeID: UUID?
+    @Published var pendingFocusNodeID: UUID?
     @Published var error: AppError?
     private let logger = ConsoleLogger()
 
@@ -65,6 +66,11 @@ class PageEditorViewModel: ObservableObject {
     // MARK: - 命令转发
 
     func send(_ command: NodeCommand) {
+        if case .delete(let nodeID) = command,
+           let idx = visibleNodes.firstIndex(where: { $0.id == nodeID }),
+           idx > 0 {
+            pendingFocusNodeID = visibleNodes[idx - 1].id
+        }
         Task {
             await engine.dispatch(command)
             visibleNodes = engine.editorNodes

@@ -10,6 +10,7 @@ import SwiftUI
 struct NodeRowView: View {
 
     let node: EditorNode
+    let isFocused: Bool
     let onTitleChanged: (String) -> Void
     let onContentChanged: (UUID, String) -> Void
     let onCommand: (NodeCommand) -> Void
@@ -43,6 +44,7 @@ struct NodeRowView: View {
                     NodeTitleEditor(
                         text: node.title,
                         depth: node.depth,
+                        isFocused: isFocused,
                         onTextChanged: { onTitleChanged($0) },
                         onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
                         onBackspaceWhenEmpty: {

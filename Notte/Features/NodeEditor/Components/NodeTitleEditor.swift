@@ -14,6 +14,7 @@ struct NodeTitleEditor: UIViewRepresentable {
 
     var text: String
     var depth: Int
+    var isFocused: Bool
     var onTextChanged: (String) -> Void
     var onReturn: () -> Void
     var onBackspaceWhenEmpty: () -> Void
@@ -47,6 +48,9 @@ struct NodeTitleEditor: UIViewRepresentable {
             uiView.text = text
         }
         uiView.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+        if isFocused && !uiView.isFirstResponder {
+            uiView.becomeFirstResponder()
+        }
     }
 
     func makeCoordinator() -> Coordinator {
