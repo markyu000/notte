@@ -10,7 +10,7 @@ import Combine
 
 enum AppRoute: Hashable {
     case pageList(collectionID: UUID, collectionTitle: String)
-    case nodeEditor(pageID: UUID)
+    case nodeEditor(pageID: UUID, pageTitle: String)
 }
 
 @MainActor

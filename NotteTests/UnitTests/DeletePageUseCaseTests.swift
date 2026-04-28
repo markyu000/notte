@@ -13,14 +13,17 @@ final class DeletePageUseCaseTests: XCTestCase {
 
     var pageRepository: MockPageRepository!
     var nodeRepository: MockNodeRepository!
+    var blockRepository: MockBlockRepository!
     var useCase: DeletePageUseCase!
 
     override func setUp() {
         pageRepository = MockPageRepository()
         nodeRepository = MockNodeRepository()
+        blockRepository = MockBlockRepository()
         useCase = DeletePageUseCase(
             repository: pageRepository,
-            nodeRepository: nodeRepository
+            nodeRepository: nodeRepository,
+            blockRepository: blockRepository
         )
     }
 

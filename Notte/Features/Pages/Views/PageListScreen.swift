@@ -18,14 +18,16 @@ struct PageListScreen: View {
         collectionID: UUID,
         collectionTitle: String,
         pageRepository: PageRepositoryProtocol,
-        nodeRepository: NodeRepositoryProtocol
+        nodeRepository: NodeRepositoryProtocol,
+        blockRepository: BlockRepositoryProtocol
     ) {
         _viewModel = StateObject(
             wrappedValue: PageListViewModel(
                 collectionID: collectionID,
                 collectionTitle: collectionTitle,
                 pageRepository: pageRepository,
-                nodeRepository: nodeRepository
+                nodeRepository: nodeRepository,
+                blockRepository: blockRepository
             )
         )
     }
@@ -92,7 +94,7 @@ struct PageListScreen: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard editMode == .inactive else { return }
-                        router.navigate(to: .nodeEditor(pageID: page.id))
+                        router.navigate(to: .nodeEditor(pageID: page.id, pageTitle: page.title))
                     }
                     .contextMenu {
                         PageContextMenu(
@@ -195,13 +197,15 @@ private struct PageErrorAlertModifier: ViewModifier {
     let context = ModelContext(container)
     let pageRepo = PageRepository(context: context)
     let nodeRepo = NodeRepository(context: context)
+    let blockRepo = BlockRepository(context: context)
 
     NavigationStack {
         PageListScreen(
             collectionID: collectionID,
             collectionTitle: "我的笔记",
             pageRepository: pageRepo,
-            nodeRepository: nodeRepo
+            nodeRepository: nodeRepo,
+            blockRepository: blockRepo
         )
     }
     .task {
