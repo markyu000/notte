@@ -70,7 +70,6 @@ class NodePersistenceCoordinator {
 
         do {
             try await persist(blockUpdates: blockUpdatesSnapshot, titleUpdates: titleUpdatesSnapshot)
-            await engine.loadNodes()
             clearPersistedSnapshots(
                 blockUpdates: blockUpdatesSnapshot,
                 titleUpdates: titleUpdatesSnapshot
