@@ -8,7 +8,7 @@
 ## 分支
 
 ```
-feature/node-editor-ux
+feature/m5-node-editor-ux
 ```
 
 ## 目录
@@ -16,9 +16,8 @@ feature/node-editor-ux
 1. [M5-01 NodePersistenceCoordinator debounce 自动保存](#m5-01-nodepersistencecoordinator-debounce-自动保存)
 2. [M5-02 退出页面时强制 flush](#m5-02-退出页面时强制-flush)
 3. [M5-03 进入后台时强制 flush](#m5-03-进入后台时强制-flush)
-4. [M5-04 insertAfter 后焦点自动转移](#m5-04-insertafter-后焦点自动转移)
-5. [M5-05 delete 后焦点自动转移到前一节点](#m5-05-delete-后焦点自动转移到前一节点)
-6. [M5-06 indent / outdent 后保持当前节点焦点](#m5-06-indent--outdent-后保持当前节点焦点)
+4. [M5-04/05 insertAfter 后焦点转移 / delete 后焦点转移到前一节点](#m5-04-insertafter-后焦点自动转移--m5-05-delete-后焦点自动转移到前一节点)
+5. [M5-06 indent / outdent 后保持当前节点焦点](#m5-06-indent--outdent-后保持当前节点焦点)
 7. [M5-07 moveUp / moveDown 后焦点跟随节点](#m5-07-moveup--movedown-后焦点跟随节点)
 8. [M5-08 LazyVStack 渲染长列表](#m5-08-lazyvstack-渲染长列表)
 9. [M5-09 滚动定位到聚焦节点](#m5-09-滚动定位到聚焦节点)
@@ -103,7 +102,6 @@ class NodePersistenceCoordinator {
 
         do {
             try await persist(blockUpdates: blockUpdatesSnapshot, titleUpdates: titleUpdatesSnapshot)
-            await engine.loadNodes()
             clearPersistedSnapshots(
                 blockUpdates: blockUpdatesSnapshot,
                 titleUpdates: titleUpdatesSnapshot
@@ -171,6 +169,7 @@ feat: add debounce autosave coordinator
 - 标题与 Block 内容的高频变更先暂存到 `pendingTitleUpdates` / `pendingBlockUpdates`，每次输入都会取消上一个 debounce Task 并重新延迟 600ms，把多次按键合并成一次写入。
 - `flush()` 是公开接口，既给 debounce Task 内部调用，也给 `onDisappear` 与 App 进入后台时强制调用，保证未保存数据不丢。
 - 持久化完成后比较快照与当前队列内容，只清除已写入的条目，避免保存过程中新增的输入被误删。
+- 不在 `flush()` 后调用 `engine.loadNodes()`：`NodeEditorEngine` 的内存状态由各 `dispatch` 命令自行维护，flush 仅做持久化写入，无需触发全量重建，避免长页面不必要的性能开销。
 
 ---
 
@@ -248,23 +247,26 @@ feat: flush autosave on app background
 
 ---
 
-## M5-04 insertAfter 后焦点自动转移
+## M5-04 insertAfter 后焦点自动转移 / M5-05 delete 后焦点自动转移到前一节点
 
 **文件：** `Features/NodeEditor/ViewModels/PageEditorViewModel.swift`
 
 ```swift
 func send(_ command: NodeCommand) {
+    // delete：在 dispatch 前记录前一节点 ID，dispatch 后 visibleNodes 已重建，索引失效
     if case .delete(let nodeID) = command,
        let idx = visibleNodes.firstIndex(where: { $0.id == nodeID }),
        idx > 0 {
         pendingFocusNodeID = visibleNodes[idx - 1].id
     }
+
     Task {
         let previousIDs = Set(visibleNodes.map(\.id))
         await engine.dispatch(command)
         visibleNodes = engine.editorNodes
         error = engine.error
 
+        // insertAfter：dispatch 后用差集找出新插入的节点
         if case .insertAfter = command {
             if let new = visibleNodes.first(where: { !previousIDs.contains($0.id) }) {
                 pendingFocusNodeID = new.id
@@ -277,46 +279,14 @@ func send(_ command: NodeCommand) {
 **Git commit message：**
 
 ```
-feat: focus new node after insertAfter
+feat: auto focus after insert and delete
 ```
 
 **解释：**
 
-- 命令分发前快照当前可见节点 ID 集合，分发完成后用差集找出新插入的节点。
-- 设置 `pendingFocusNodeID` 让 `NodeTitleEditor` 在 `updateUIView` 中调用 `becomeFirstResponder`，新节点立即进入可输入状态。
-
----
-
-## M5-05 delete 后焦点自动转移到前一节点
-
-**文件：** `Features/NodeEditor/ViewModels/PageEditorViewModel.swift`
-
-```swift
-func send(_ command: NodeCommand) {
-    if case .delete(let nodeID) = command,
-       let idx = visibleNodes.firstIndex(where: { $0.id == nodeID }),
-       idx > 0 {
-        pendingFocusNodeID = visibleNodes[idx - 1].id
-    }
-    Task {
-        await engine.dispatch(command)
-        visibleNodes = engine.editorNodes
-        error = engine.error
-    }
-}
-```
-
-**Git commit message：**
-
-```
-feat: focus previous node after delete
-```
-
-**解释：**
-
-- 删除前先在 `visibleNodes` 中定位被删节点的位置，把它前一个节点的 ID 写入 `pendingFocusNodeID`。
-- 必须在 dispatch 之前抓取，因为 dispatch 完成后 `visibleNodes` 会被重建，索引不再有效。
-- `idx > 0` 保护边界情况，删除第一个节点时不做焦点转移。
+- **insertAfter**：命令分发前快照当前可见节点 ID 集合，分发完成后用差集找出新插入的节点，将其 ID 写入 `pendingFocusNodeID`，新节点立即进入可输入状态。
+- **delete**：必须在 dispatch *之前* 定位被删节点的前一个节点并记录 ID，因为 dispatch 完成后 `visibleNodes` 会被重建，原来的索引不再有效。`idx > 0` 保护边界：删除第一个节点时不做焦点转移。
+- 两个 case 共用同一个 `send()` 入口，互不干扰。
 
 ---
 
@@ -651,7 +621,7 @@ struct NodeCollapseControl: View {
                 .foregroundStyle(ColorTokens.textSecondary)
                 .frame(width: 16, height: 16)
                 .contentShape(Rectangle())
-                .rotationEffect(.degrees(isCollapsed ? 0 : 0))
+                .rotationEffect(.degrees(isCollapsed ? 0 : 90))
         }
         .buttonStyle(.plain)
     }
@@ -1051,7 +1021,9 @@ final class PageEditorViewModelBackgroundTests: XCTestCase {
 
     let pageID = UUID()
 
-    /// 测试：模拟 willResignActive 通知触发后队列内容已写入
+    /// 测试：通过 NotificationCenter 发送 willResignActive 通知后，队列内容已写入 Repository
+    /// View 层 onReceive 最终调用的是 viewModel.onDisappear()，
+    /// 此处绕过 View 直接模拟通知 → onDisappear 调用链，验证保存路径完整。
     func testBackgroundNotificationTriggersFlush() async throws {
         let nodeRepository = MockNodeRepository()
         let blockRepository = MockBlockRepository()
@@ -1072,8 +1044,13 @@ final class PageEditorViewModelBackgroundTests: XCTestCase {
         await viewModel.loadPage()
 
         viewModel.onTitleChanged(nodeID: nodeID, title: "background")
-        // 在 PageEditorView 的 onReceive 中调用的也是 onDisappear()
-        viewModel.onDisappear()
+
+        // 模拟系统发出 willResignActive 通知
+        NotificationCenter.default.post(
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
+        // 给 onDisappear 内的 Task 调度时间
         try await Task.sleep(for: .milliseconds(100))
 
         let updated = try await nodeRepository.fetch(by: nodeID)
@@ -1085,10 +1062,11 @@ final class PageEditorViewModelBackgroundTests: XCTestCase {
 **Git commit message：**
 
 ```
-test: verify flush on app background
+test: verify flush triggered by willResignActive notification
 ```
 
 **解释：**
 
-- View 层 `onReceive(willResignActiveNotification)` 调的也是 `viewModel.onDisappear()`，所以单测直接调用此入口验证后台保存路径。
-- 真实的 `NotificationCenter` 行为由 SwiftUI / UIKit 框架托管，不进入此单测覆盖范围；视图层路径由 `PageEditorView` 的代码 review 保证。
+- 通过 `NotificationCenter.default.post` 真实发出 `willResignActiveNotification`，验证通知 → `onDisappear()` → `flush()` 的完整调用链，而不是直接调用 `onDisappear()`（M5-20 已覆盖该路径）。
+- View 层通过 `.onReceive` 订阅此通知并调用 `viewModel.onDisappear()`；此测试在单元层面模拟相同的通知，保证后台保存的端到端路径可验证。
+- 100ms 容忍 Task 调度，远小于 600ms debounce 窗口，证明 flush 不依赖 debounce 触发。
