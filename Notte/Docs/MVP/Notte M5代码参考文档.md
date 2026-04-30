@@ -366,7 +366,7 @@ ScrollView {
 **Git commit message：**
 
 ```
-perf: render node list with LazyVStack
+refactor: render node list with LazyVStack
 ```
 
 **解释：**
