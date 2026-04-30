@@ -72,9 +72,16 @@ class PageEditorViewModel: ObservableObject {
             pendingFocusNodeID = visibleNodes[idx - 1].id
         }
         Task {
+            let previousIDs = Set(visibleNodes.map(\.id))
             await engine.dispatch(command)
             visibleNodes = engine.editorNodes
             error = engine.error
+
+            if case .insertAfter = command {
+                if let new = visibleNodes.first(where: { !previousIDs.contains($0.id) }) {
+                    pendingFocusNodeID = new.id
+                }
+            }
         }
     }
 
