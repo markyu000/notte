@@ -56,6 +56,8 @@ struct NodeRowView: View {
                         },
                         onTab: { onCommand(.indent(nodeID: node.id)) },
                         onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
+                        onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
+                        onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
                         onFocus: { onFocused(node.id) }
                     )
                     Spacer()
