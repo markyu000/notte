@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct PageEditorView: View {
 
@@ -110,6 +111,45 @@ struct PageEditorView: View {
                     }
                 } label: {
                     Image(systemName: "arrow.down")
+                }
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.outdent(nodeID: id))
+                    }
+                } label: {
+                    Image(systemName: "decrease.indent")
+                }
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.indent(nodeID: id))
+                    }
+                } label: {
+                    Image(systemName: "increase.indent")
+                }
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.moveUp(nodeID: id))
+                    }
+                } label: {
+                    Image(systemName: "arrow.up")
+                }
+                Button {
+                    if let id = viewModel.focusedNodeID {
+                        viewModel.send(.moveDown(nodeID: id))
+                    }
+                } label: {
+                    Image(systemName: "arrow.down")
+                }
+                Spacer()
+                Button("完成") {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder),
+                        to: nil,
+                        from: nil,
+                        for: nil
+                    )
                 }
             }
         }
