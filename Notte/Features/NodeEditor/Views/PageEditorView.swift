@@ -24,6 +24,11 @@ struct PageEditorView: View {
                             .onTapGesture {
                                 viewModel.createFirstNode()
                             }
+                            .overlay(
+                                Text("点击任意位置开始")
+                                    .font(TypographyTokens.body)
+                                    .foregroundStyle(ColorTokens.textSecondary)
+                            )
                     } else {
                         ForEach(viewModel.visibleNodes) { node in
                             NodeRowView(
