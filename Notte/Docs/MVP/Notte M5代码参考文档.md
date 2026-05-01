@@ -416,41 +416,84 @@ feat: scroll editor to focused node
 
 ## M5-10 键盘工具条（缩进 / 反缩进 / 完成）
 
-**文件：** `Features/NodeEditor/Views/PageEditorView.swift`
+**文件：** `Features/NodeEditor/Components/NodeTitleEditor.swift`
+
+> **注意**：SwiftUI 的 `ToolbarItemGroup(placement: .keyboard)` 只对原生 `TextField`/`TextEditor` 生效，对 `UIViewRepresentable` 包装的 `UITextField` 无效——UIKit 在 UITextField 成为 first responder 时只读取其自身的 `inputAccessoryView` 属性。因此工具条在 `NodeTitleEditor` 的 `makeUIView` 里直接构建并赋值给 `UITextField.inputAccessoryView`。
 
 ```swift
-.toolbar {
-    ToolbarItemGroup(placement: .keyboard) {
-        Button {
-            if let id = viewModel.focusedNodeID {
-                viewModel.send(.outdent(nodeID: id))
-            }
-        } label: {
-            Image(systemName: "decrease.indent")
-        }
-        Button {
-            if let id = viewModel.focusedNodeID {
-                viewModel.send(.indent(nodeID: id))
-            }
-        } label: {
-            Image(systemName: "increase.indent")
-        }
-        Button {
-            if let id = viewModel.focusedNodeID {
-                viewModel.send(.moveUp(nodeID: id))
-            }
-        } label: {
-            Image(systemName: "arrow.up")
-        }
-        Button {
-            if let id = viewModel.focusedNodeID {
-                viewModel.send(.moveDown(nodeID: id))
-            }
-        } label: {
-            Image(systemName: "arrow.down")
-        }
-        Spacer()
-        Button("完成") {
+/// 专用于 Node 标题输入的 UITextField 包装。
+/// 单行输入，支持 Return / Backspace 空时 / Tab / Shift+Tab 键盘行为。
+/// inputAccessoryView 直接设在 UITextField 上，因为 SwiftUI placement:.keyboard
+/// 对 UIViewRepresentable 无效。
+struct NodeTitleEditor: UIViewRepresentable {
+
+    var text: String
+    var depth: Int
+    var isFocused: Bool
+    var onTextChanged: (String) -> Void
+    var onReturn: () -> Void
+    var onBackspaceWhenEmpty: () -> Void
+    var onTab: () -> Void
+    var onShiftTab: () -> Void
+    var onMoveUp: () -> Void
+    var onMoveDown: () -> Void
+    var onFocus: () -> Void
+
+    func makeUIView(context: Context) -> CustomTextField {
+        let field = CustomTextField()
+        // ... 基础设置 ...
+        field.inputAccessoryView = makeInputAccessoryView(coordinator: context.coordinator)
+        return field
+    }
+
+    func updateUIView(_ uiView: CustomTextField, context: Context) {
+        context.coordinator.parent = self   // 保持 coordinator 持有最新闭包
+        // ... 其他更新 ...
+    }
+
+    private func makeInputAccessoryView(coordinator: Coordinator) -> UIToolbar {
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        toolbar.items = [
+            UIBarButtonItem(
+                image: UIImage(systemName: "decrease.indent"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapOutdent)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "increase.indent"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapIndent)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "arrow.up"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapMoveUp)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "arrow.down"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapMoveDown)
+            ),
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            UIBarButtonItem(
+                title: "完成", style: .done, target: coordinator,
+                action: #selector(Coordinator.didTapDone)
+            ),
+        ]
+        return toolbar
+    }
+
+    // MARK: - Coordinator（新增工具条 action）
+
+    class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: NodeTitleEditor
+        // ...
+        @objc func didTapIndent() { parent.onTab() }
+        @objc func didTapOutdent() { parent.onShiftTab() }
+        @objc func didTapMoveUp() { parent.onMoveUp() }
+        @objc func didTapMoveDown() { parent.onMoveDown() }
+        @objc func didTapDone() {
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),
                 to: nil, from: nil, for: nil
@@ -460,17 +503,39 @@ feat: scroll editor to focused node
 }
 ```
 
+`NodeRowView` 相应传入两个新回调：
+
+```swift
+NodeTitleEditor(
+    // ...
+    onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
+    onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
+    // ...
+)
+```
+
 **Git commit message：**
 
 ```
-feat: add keyboard toolbar for editor
+fix: use UITextField inputAccessoryView for keyboard toolbar
+
+SwiftUI ToolbarItemGroup(placement: .keyboard) has no effect on
+UIViewRepresentable-wrapped UITextField. UIKit only reads the
+first responder's own inputAccessoryView property.
+
+- Add onMoveUp/onMoveDown callbacks to NodeTitleEditor
+- Build UIToolbar in makeUIView and assign to inputAccessoryView
+- Sync coordinator.parent in updateUIView to keep callbacks fresh
+- Pass onMoveUp/onMoveDown from NodeRowView
+- Remove the dead placement:.keyboard ToolbarItemGroup from PageEditorView
 ```
 
 **解释：**
 
-- `placement: .keyboard` 让工具条贴在键盘上方，仅在键盘弹起时显示，避免占用页面空间。
-- 操作按钮全部基于 `focusedNodeID` 派发命令；"完成" 通过 `resignFirstResponder` 收起键盘。
-- 工具条与外部导航栏按钮可以共存，二者互不干扰。
+- `UITextField.inputAccessoryView` 是 UIKit 在 first responder 弹出键盘时直接读取的属性，与 SwiftUI 的 toolbar 系统无关，因此能可靠地贴在键盘上方显示。
+- `makeInputAccessoryView` 只在 `makeUIView` 时构建一次，toolbar 持有 coordinator（引用类型）；每次 SwiftUI 更新时 `updateUIView` 会将最新的 `parent`（含最新闭包）写入 coordinator，确保按钮触发时回调不过期。
+- `onTab`/`onShiftTab` 复用现有键盘快捷键回调，toolbar 按钮与键盘 Tab/Shift+Tab 行为完全一致。
+- "完成" 通过 `resignFirstResponder` 全局收起键盘，不依赖具体的 UITextField 引用。
 
 ---
 
