@@ -14,12 +14,17 @@ struct NodeCollapseControl: View {
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                onTap()
+            }
+        } label: {
             Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(ColorTokens.textSecondary)
                 .frame(width: 16, height: 16)
                 .contentShape(Rectangle())
+                .rotationEffect(.degrees(isCollapsed ? 0 : 90))
         }
         .buttonStyle(.plain)
     }
