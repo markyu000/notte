@@ -12,6 +12,7 @@ import Foundation
 class MockNodeRepository: NodeRepositoryProtocol {
 
     var storedNodes: [Node] = []
+    var updateCallCount = 0
 
     func fetchAll(in pageID: UUID) async throws -> [Node] {
         storedNodes.filter { $0.pageID == pageID }
@@ -30,6 +31,7 @@ class MockNodeRepository: NodeRepositoryProtocol {
             throw RepositoryError.notFound
         }
         storedNodes[index] = node
+        updateCallCount += 1
     }
 
     func delete(by id: UUID) async throws {
