@@ -120,10 +120,5 @@ struct PageEditorView: View {
                 }
             }
         }
-        .onReceive(
-            NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)
-        ) { _ in
-            viewModel.onDisappear()
-        }
     }
 }

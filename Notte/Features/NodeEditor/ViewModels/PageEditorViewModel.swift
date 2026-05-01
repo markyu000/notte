@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
 
 @MainActor
 class PageEditorViewModel: ObservableObject {
@@ -23,6 +24,7 @@ class PageEditorViewModel: ObservableObject {
 
     private let engine: NodeEditorEngine
     let persistenceCoordinator: NodePersistenceCoordinator
+    private var willResignActiveObserver: NSObjectProtocol?
 
     init(
         pageID: UUID,
@@ -39,6 +41,13 @@ class PageEditorViewModel: ObservableObject {
         )
         self.engine = engine
         self.persistenceCoordinator = NodePersistenceCoordinator(engine: engine)
+        self.willResignActiveObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.onDisappear()
+        }
     }
     
     func createFirstNode() {
@@ -117,6 +126,12 @@ class PageEditorViewModel: ObservableObject {
     func onDisappear() {
         Task {
             await persistenceCoordinator.flush()
+        }
+    }
+
+    deinit {
+        if let willResignActiveObserver {
+            NotificationCenter.default.removeObserver(willResignActiveObserver)
         }
     }
 }
