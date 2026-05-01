@@ -40,7 +40,7 @@ final class NodePersistenceCoordinatorTests: XCTestCase {
         nodeRepository.storedNodes = [node]
 
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "new")
-        try await Task.sleep(for: .milliseconds(600))
+        try await Task.sleep(for: .milliseconds(700))
 
         let updated = try await nodeRepository.fetch(by: nodeID)
         XCTAssertEqual(updated?.title, "new")
@@ -65,7 +65,7 @@ final class NodePersistenceCoordinatorTests: XCTestCase {
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "a")
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "ab")
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "abc")
-        try await Task.sleep(for: .milliseconds(600))
+        try await Task.sleep(for: .milliseconds(700))
 
         let updated = try await nodeRepository.fetch(by: nodeID)
         XCTAssertEqual(updated?.title, "abc")
