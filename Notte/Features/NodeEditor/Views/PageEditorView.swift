@@ -28,7 +28,8 @@ struct PageEditorView: View {
                         ForEach(viewModel.visibleNodes) { node in
                             NodeRowView(
                                 node: node,
-                                isFocused: viewModel.pendingFocusNodeID == node.id,
+                                isFocused: viewModel.focusedNodeID == node.id
+                                    || viewModel.pendingFocusNodeID == node.id,
                                 onTitleChanged: { title in
                                     viewModel.onTitleChanged(nodeID: node.id, title: title)
                                 },
