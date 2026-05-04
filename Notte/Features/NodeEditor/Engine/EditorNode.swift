@@ -10,7 +10,7 @@ import Foundation
 /// Node 编辑器的运行时模型。
 /// 存储模型（NodeModel/Node）是扁平的，EditorNode 是树形的，
 /// 由 NodeQueryService.buildTree 从扁平列表构建。
-struct EditorNode: Identifiable {
+struct EditorNode: Identifiable, Equatable {
     let id: UUID
     var parentID: UUID?
     var title: String

@@ -57,6 +57,7 @@ class PageEditorViewModel: ObservableObject {
                 logger.debug("首个节点已创建，nodeID：\(newNode.id)", function: #function)
                 await engine.loadNodes()
                 visibleNodes = engine.editorNodes
+                persistenceCoordinator.markStructuralChange()
             } catch {
                 self.error = error as? AppError
             }
@@ -81,6 +82,7 @@ class PageEditorViewModel: ObservableObject {
             pendingFocusNodeID = visibleNodes[idx - 1].id
         }
         Task {
+            let previousNodes = visibleNodes
             // 结构性命令前先 flush，防止 pending title 与新状态竞争
             switch command {
             case .insertAfter, .delete, .indent, .outdent, .moveUp, .moveDown:
@@ -93,6 +95,9 @@ class PageEditorViewModel: ObservableObject {
             await engine.dispatch(command)
             visibleNodes = engine.editorNodes
             error = engine.error
+            if error == nil, visibleNodes != previousNodes {
+                persistenceCoordinator.markStructuralChange()
+            }
 
             if case .insertAfter = command {
                 if let new = visibleNodes.first(where: { !previousIDs.contains($0.id) }) {
@@ -104,9 +109,13 @@ class PageEditorViewModel: ObservableObject {
 
     func send(_ command: BlockCommand) {
         Task {
+            let previousNodes = visibleNodes
             await engine.dispatch(command)
             visibleNodes = engine.editorNodes
             error = engine.error
+            if error == nil, visibleNodes != previousNodes {
+                persistenceCoordinator.markStructuralChange()
+            }
         }
     }
 

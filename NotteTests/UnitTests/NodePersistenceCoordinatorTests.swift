@@ -101,4 +101,17 @@ final class NodePersistenceCoordinatorTests: XCTestCase {
         await coordinator.flush()
         XCTAssertEqual(nodeRepository.updateCallCount, 0)
     }
+
+    /// 测试：结构性变更会进入未保存状态，flush 后恢复已保存
+    func testStructuralChangeMarksUnsavedUntilFlush() async {
+        coordinator.markStructuralChange()
+
+        XCTAssertTrue(coordinator.hasUnsavedChanges)
+        XCTAssertEqual(coordinator.saveState, .unsaved)
+
+        await coordinator.flush()
+
+        XCTAssertFalse(coordinator.hasUnsavedChanges)
+        XCTAssertEqual(coordinator.saveState, .saved)
+    }
 }

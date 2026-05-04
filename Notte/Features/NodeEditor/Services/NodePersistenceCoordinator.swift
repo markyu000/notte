@@ -21,6 +21,7 @@ class NodePersistenceCoordinator: ObservableObject {
     }
 
     @Published private(set) var saveState: SaveState = .saved
+    @Published private(set) var hasUnsavedChanges = false
 
     private let engine: NodeEditorEngine
     private var pendingBlockUpdates: [UUID: String] = [:]
@@ -34,12 +35,21 @@ class NodePersistenceCoordinator: ObservableObject {
 
     func scheduleContentUpdate(blockID: UUID, content: String) {
         pendingBlockUpdates[blockID] = content
+        hasUnsavedChanges = true
         saveState = .unsaved
     }
 
     func scheduleTitleUpdate(nodeID: UUID, title: String) {
         pendingTitleUpdates[nodeID] = title
+        hasUnsavedChanges = true
         saveState = .unsaved
+    }
+
+    func markStructuralChange() {
+        hasUnsavedChanges = true
+        if saveState == .saved {
+            saveState = .unsaved
+        }
     }
 
     // MARK: - 强制立即保存（按钮/退出/后台时调用）
@@ -47,6 +57,7 @@ class NodePersistenceCoordinator: ObservableObject {
     func flush() async {
         guard !pendingBlockUpdates.isEmpty || !pendingTitleUpdates.isEmpty else {
             saveState = .saved
+            hasUnsavedChanges = false
             return
         }
 
@@ -63,12 +74,15 @@ class NodePersistenceCoordinator: ObservableObject {
 
             if pendingBlockUpdates.isEmpty && pendingTitleUpdates.isEmpty {
                 saveState = .saved
+                hasUnsavedChanges = false
             } else {
                 saveState = .unsaved
+                hasUnsavedChanges = true
             }
         } catch {
             engine.error = .repositoryError(error as? RepositoryError ?? RepositoryError.saveFailed(error))
             saveState = .unsaved
+            hasUnsavedChanges = true
         }
     }
 }

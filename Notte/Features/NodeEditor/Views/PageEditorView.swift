@@ -93,7 +93,7 @@ struct PageEditorView: View {
             Text(viewModel.error?.localizedDescription ?? "")
         }
         .toolbar {
-            if persistenceCoordinator.saveState != .saved {
+            if persistenceCoordinator.hasUnsavedChanges {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.saveChanges()

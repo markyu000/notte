@@ -9,7 +9,7 @@ import Foundation
 
 /// Block 的运行时模型，随所属 EditorNode 一起携带。
 /// MVP 阶段 type 只有 .text，但结构已为 POST 类型预留。
-struct EditorBlock: Identifiable {
+struct EditorBlock: Identifiable, Equatable {
     let id: UUID
     var type: BlockType
     var content: String
