@@ -62,7 +62,7 @@ struct NodeRowView: View {
                     )
                     Spacer()
                     AddNodeButton {
-                        onCommand(.insertAfter(nodeID: node.id))
+                        onCommand(.insertChild(nodeID: node.id))
                     }
                 }
 

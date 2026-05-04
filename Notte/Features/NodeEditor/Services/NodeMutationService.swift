@@ -11,6 +11,42 @@ struct NodeMutationService {
 
     // MARK: - 插入
 
+    func insertTopLevel(in pageID: UUID) async throws -> Node {
+        logger.debug("开始插入顶级节点, pageID=\(pageID)", function: #function)
+        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        let topLevelNodes = nodes.filter { $0.parentNodeID == nil }
+        let newSortIndex = topLevelNodes.map(\.sortIndex).max().map {
+            SortIndexPolicy.indexAfter(last: $0)
+        } ?? SortIndexPolicy.initialIndex()
+
+        let newNode = Node(
+            id: UUID(),
+            pageID: pageID,
+            parentNodeID: nil,
+            title: "",
+            depth: 0,
+            sortIndex: newSortIndex,
+            isCollapsed: false,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await nodeRepository.create(newNode)
+
+        let emptyBlock = Block(
+            id: UUID(),
+            nodeID: newNode.id,
+            type: .text,
+            content: "",
+            sortIndex: SortIndexPolicy.initialIndex(),
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await blockRepository.create(emptyBlock)
+
+        logger.info("顶级节点插入成功, id=\(newNode.id)", function: #function)
+        return newNode
+    }
+
     func insertAfter(nodeID: UUID, in pageID: UUID) async throws -> Node {
         logger.debug("开始在节点后插入, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
@@ -252,29 +288,6 @@ struct NodeMutationService {
     }
     
     func insertFirst(in pageID: UUID) async throws -> Node {
-        let newNode = Node(
-            id: UUID(),
-            pageID: pageID,
-            parentNodeID: nil,
-            title: "",
-            depth: 0,
-            sortIndex: SortIndexPolicy.initialIndex(),
-            isCollapsed: false,
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        try await nodeRepository.create(newNode)
-
-        let emptyBlock = Block(
-            id: UUID(),
-            nodeID: newNode.id,
-            type: .text,
-            content: "",
-            sortIndex: SortIndexPolicy.initialIndex(),
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        try await blockRepository.create(emptyBlock)
-        return newNode
+        try await insertTopLevel(in: pageID)
     }
 }

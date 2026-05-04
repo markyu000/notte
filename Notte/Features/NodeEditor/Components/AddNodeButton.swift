@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// 行末的加号按钮，点击后在该节点之后插入一个新同级节点。
+/// 行末的加号按钮，点击后在该节点下创建一个新的子节点。
 /// 在 NodeRowView 中悬停或长按时显示，MVP 阶段始终可见。
 struct AddNodeButton: View {
 

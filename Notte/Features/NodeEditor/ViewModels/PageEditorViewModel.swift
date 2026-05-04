@@ -50,13 +50,14 @@ class PageEditorViewModel: ObservableObject {
         }
     }
     
-    func createFirstNode() {
+    func createTopLevelNode() {
         Task {
             do {
-                let newNode = try await engine.mutationService.insertFirst(in: pageID)
-                logger.debug("首个节点已创建，nodeID：\(newNode.id)", function: #function)
+                let newNode = try await engine.mutationService.insertTopLevel(in: pageID)
+                logger.debug("顶级节点已创建，nodeID：\(newNode.id)", function: #function)
                 await engine.loadNodes()
                 visibleNodes = engine.editorNodes
+                pendingFocusNodeID = newNode.id
                 persistenceCoordinator.markStructuralChange()
             } catch {
                 self.error = error as? AppError
@@ -85,7 +86,7 @@ class PageEditorViewModel: ObservableObject {
             let previousNodes = visibleNodes
             // 结构性命令前先 flush，防止 pending title 与新状态竞争
             switch command {
-            case .insertAfter, .delete, .indent, .outdent, .moveUp, .moveDown:
+            case .insertAfter, .insertChild, .delete, .indent, .outdent, .moveUp, .moveDown:
                 await persistenceCoordinator.flush()
             default:
                 break
@@ -99,10 +100,13 @@ class PageEditorViewModel: ObservableObject {
                 persistenceCoordinator.markStructuralChange()
             }
 
-            if case .insertAfter = command {
+            switch command {
+            case .insertAfter, .insertChild:
                 if let new = visibleNodes.first(where: { !previousIDs.contains($0.id) }) {
                     pendingFocusNodeID = new.id
                 }
+            default:
+                break
             }
         }
     }

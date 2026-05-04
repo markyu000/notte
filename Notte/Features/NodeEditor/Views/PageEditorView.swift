@@ -22,15 +22,11 @@ struct PageEditorView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if viewModel.visibleNodes.isEmpty {
-                        // 空状态：点击任意位置创建第一个节点
+                        // 空状态：通过顶部按钮创建第一个顶级节点
                         ColorTokens.backgroundPrimary
                             .frame(maxWidth: .infinity, minHeight: 400)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.createFirstNode()
-                            }
                             .overlay(
-                                Text("点击任意位置开始")
+                                Text("点击左上角加号创建顶级节点")
                                     .font(TypographyTokens.body)
                                     .foregroundStyle(ColorTokens.textSecondary)
                             )
@@ -56,15 +52,8 @@ struct PageEditorView: View {
                             .id(node.id)
                         }
 
-                        // 底部空白点击区域：在末尾插入新节点
                         ColorTokens.backgroundPrimary
                             .frame(height: 200)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if let lastNode = viewModel.visibleNodes.last {
-                                    viewModel.send(.insertAfter(nodeID: lastNode.id))
-                                }
-                            }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -93,6 +82,14 @@ struct PageEditorView: View {
             Text(viewModel.error?.localizedDescription ?? "")
         }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    viewModel.createTopLevelNode()
+                } label: {
+                    Image(systemName: "plus")
+                        .foregroundStyle(ColorTokens.accent)
+                }
+            }
             if persistenceCoordinator.hasUnsavedChanges {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
