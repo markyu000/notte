@@ -87,5 +87,20 @@ struct PageEditorView: View {
         } message: {
             Text(viewModel.error?.localizedDescription ?? "")
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder),
+                        to: nil,
+                        from: nil,
+                        for: nil
+                    )
+                } label: {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(ColorTokens.accent)
+                }
+            }
+        }
     }
 }

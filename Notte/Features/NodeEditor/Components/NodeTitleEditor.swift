@@ -84,11 +84,7 @@ struct NodeTitleEditor: UIViewRepresentable {
                 style: .plain, target: coordinator,
                 action: #selector(Coordinator.didTapMoveDown)
             ),
-            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-            UIBarButtonItem(
-                title: "完成", style: .done, target: coordinator,
-                action: #selector(Coordinator.didTapDone)
-            ),
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         ]
         return toolbar
     }
@@ -140,11 +136,5 @@ struct NodeTitleEditor: UIViewRepresentable {
         @objc func didTapOutdent() { parent.onShiftTab() }
         @objc func didTapMoveUp() { parent.onMoveUp() }
         @objc func didTapMoveDown() { parent.onMoveDown() }
-        @objc func didTapDone() {
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil, from: nil, for: nil
-            )
-        }
     }
 }
