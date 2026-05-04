@@ -24,6 +24,7 @@ struct NodeTitleEditor: UIViewRepresentable {
     var onShiftTab: () -> Void
     var onMoveUp: () -> Void
     var onMoveDown: () -> Void
+    var onDelete: () -> Void
     var onFocus: () -> Void
 
     func makeUIView(context: Context) -> CustomTextField {
@@ -63,6 +64,13 @@ struct NodeTitleEditor: UIViewRepresentable {
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
         toolbar.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 54)
+        let deleteItem = UIBarButtonItem(
+            image: UIImage(systemName: "trash"),
+            style: .plain,
+            target: coordinator,
+            action: #selector(Coordinator.didTapDelete)
+        )
+        deleteItem.tintColor = .systemRed
         toolbar.items = [
             UIBarButtonItem(
                 image: UIImage(systemName: "decrease.indent"),
@@ -84,7 +92,8 @@ struct NodeTitleEditor: UIViewRepresentable {
                 style: .plain, target: coordinator,
                 action: #selector(Coordinator.didTapMoveDown)
             ),
-            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            deleteItem
         ]
         return toolbar
     }
@@ -136,5 +145,6 @@ struct NodeTitleEditor: UIViewRepresentable {
         @objc func didTapOutdent() { parent.onShiftTab() }
         @objc func didTapMoveUp() { parent.onMoveUp() }
         @objc func didTapMoveDown() { parent.onMoveDown() }
+        @objc func didTapDelete() { parent.onDelete() }
     }
 }
