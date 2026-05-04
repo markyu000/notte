@@ -6,11 +6,16 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct PageEditorView: View {
 
     @ObservedObject var viewModel: PageEditorViewModel
+    @ObservedObject private var persistenceCoordinator: NodePersistenceCoordinator
+
+    init(viewModel: PageEditorViewModel) {
+        self.viewModel = viewModel
+        _persistenceCoordinator = ObservedObject(wrappedValue: viewModel.persistenceCoordinator)
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -88,17 +93,17 @@ struct PageEditorView: View {
             Text(viewModel.error?.localizedDescription ?? "")
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    UIApplication.shared.sendAction(
-                        #selector(UIResponder.resignFirstResponder),
-                        to: nil,
-                        from: nil,
-                        for: nil
-                    )
-                } label: {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(ColorTokens.accent)
+            if persistenceCoordinator.saveState != .saved {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.saveChanges()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(ColorTokens.textPrimary)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ColorTokens.accent)
+                    .disabled(persistenceCoordinator.saveState == .saving)
                 }
             }
         }

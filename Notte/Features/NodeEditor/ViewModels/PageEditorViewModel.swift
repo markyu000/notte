@@ -110,7 +110,7 @@ class PageEditorViewModel: ObservableObject {
         }
     }
 
-    // MARK: - 内容输入（走 debounce）
+    // MARK: - 内容输入（标记未保存）
 
     func onTitleChanged(nodeID: UUID, title: String) {
         // 立即更新内存，保持 UI 响应流畅
@@ -135,11 +135,19 @@ class PageEditorViewModel: ObservableObject {
         pendingFocusNodeID = nil
     }
 
+    func saveChanges() {
+        Task {
+            await persistenceCoordinator.flush()
+            error = engine.error
+        }
+    }
+
     // MARK: - 退出时强制保存
 
     func onDisappear() {
         Task {
             await persistenceCoordinator.flush()
+            error = engine.error
         }
     }
 

@@ -23,8 +23,8 @@ final class NodePersistenceCoordinatorTests: XCTestCase {
         coordinator = NodePersistenceCoordinator(engine: engine)
     }
 
-    /// 测试：单次 scheduleTitleUpdate 在 debounce 后写入 Repository
-    func testScheduleTitleUpdatePersistsAfterDebounce() async throws {
+    /// 测试：scheduleTitleUpdate 只标记未保存，不会自动写入 Repository
+    func testScheduleTitleUpdateDoesNotPersistWithoutFlush() async throws {
         let nodeID = UUID()
         let node = Node(
             id: nodeID,
@@ -40,14 +40,14 @@ final class NodePersistenceCoordinatorTests: XCTestCase {
         nodeRepository.storedNodes = [node]
 
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "new")
-        try await Task.sleep(for: .milliseconds(700))
 
         let updated = try await nodeRepository.fetch(by: nodeID)
-        XCTAssertEqual(updated?.title, "new")
+        XCTAssertEqual(updated?.title, "old")
+        XCTAssertEqual(coordinator.saveState, .unsaved)
     }
 
-    /// 测试：高频 scheduleTitleUpdate 只会在最后一次调用 debounce 后写入一次
-    func testRapidUpdatesAreCoalesced() async throws {
+    /// 测试：高频 scheduleTitleUpdate 会保留最后一次未保存内容，直到 flush 时再写入
+    func testRapidUpdatesAreCoalescedUntilFlush() async throws {
         let nodeID = UUID()
         let node = Node(
             id: nodeID,
@@ -65,14 +65,14 @@ final class NodePersistenceCoordinatorTests: XCTestCase {
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "a")
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "ab")
         coordinator.scheduleTitleUpdate(nodeID: nodeID, title: "abc")
-        try await Task.sleep(for: .milliseconds(700))
+        await coordinator.flush()
 
         let updated = try await nodeRepository.fetch(by: nodeID)
         XCTAssertEqual(updated?.title, "abc")
         XCTAssertEqual(nodeRepository.updateCallCount, 1)
     }
 
-    /// 测试：flush 立即写入未 debounce 完的内容
+    /// 测试：flush 立即写入待保存内容
     func testFlushPersistsImmediately() async throws {
         let nodeID = UUID()
         let node = Node(
@@ -93,6 +93,7 @@ final class NodePersistenceCoordinatorTests: XCTestCase {
 
         let updated = try await nodeRepository.fetch(by: nodeID)
         XCTAssertEqual(updated?.title, "flushed")
+        XCTAssertEqual(coordinator.saveState, .saved)
     }
 
     /// 测试：空队列时 flush 不会调用 Repository
