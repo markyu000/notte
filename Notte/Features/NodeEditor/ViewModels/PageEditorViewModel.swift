@@ -77,10 +77,11 @@ class PageEditorViewModel: ObservableObject {
     // MARK: - 命令转发
 
     func send(_ command: NodeCommand) {
-        if case .delete(let nodeID) = command,
-           let idx = visibleNodes.firstIndex(where: { $0.id == nodeID }),
-           idx > 0 {
-            pendingFocusNodeID = visibleNodes[idx - 1].id
+        if case .delete(let nodeID) = command {
+            pendingFocusNodeID = previousVisibleNodeID(before: nodeID)
+            if focusedNodeID == nodeID {
+                focusedNodeID = nil
+            }
         }
         Task {
             let previousNodes = visibleNodes
@@ -104,6 +105,13 @@ class PageEditorViewModel: ObservableObject {
             case .insertAfter, .insertChild:
                 if let new = visibleNodes.first(where: { !previousIDs.contains($0.id) }) {
                     pendingFocusNodeID = new.id
+                }
+            case .delete:
+                if let pendingFocusNodeID,
+                   visibleNodes.contains(where: { $0.id == pendingFocusNodeID }) {
+                    self.pendingFocusNodeID = pendingFocusNodeID
+                } else {
+                    pendingFocusNodeID = nil
                 }
             default:
                 break
@@ -140,6 +148,14 @@ class PageEditorViewModel: ObservableObject {
             }
         }
         persistenceCoordinator.scheduleContentUpdate(blockID: blockID, content: content)
+    }
+
+    private func previousVisibleNodeID(before nodeID: UUID) -> UUID? {
+        guard let idx = visibleNodes.firstIndex(where: { $0.id == nodeID }),
+              idx > 0 else {
+            return nil
+        }
+        return visibleNodes[idx - 1].id
     }
 
     func didFocusNode(_ nodeID: UUID) {
