@@ -13,6 +13,7 @@ struct BlockListView: View {
 
     let blocks: [EditorBlock]
     let onContentChanged: (UUID, String) -> Void
+    let onFocused: () -> Void
 
     var body: some View {
         ForEach(blocks) { block in
@@ -26,7 +27,8 @@ struct BlockListView: View {
                     onReturn: { },
                     onBackspaceWhenEmpty: { },
                     onTab: { },
-                    onShiftTab: { }
+                    onShiftTab: { },
+                    onFocus: onFocused
                 )
                 .padding(.leading, 4)
             }

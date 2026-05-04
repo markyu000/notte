@@ -19,7 +19,7 @@ struct NodeIndentationGuide: View {
         HStack(spacing: 0) {
             ForEach(0..<depth, id: \.self) { _ in
                 ZStack(alignment: .leading) {
-                    ColorTokens.backgroundPrimary
+                    Color.clear
                         .frame(width: indentWidth)
                     Rectangle()
                         .fill(ColorTokens.separator.opacity(0.4))

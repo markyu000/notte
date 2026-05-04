@@ -70,7 +70,8 @@ struct NodeRowView: View {
                 // Block 内容区（MVP 只有 text 类型）
                 BlockListView(                    // 原来是内联 ForEach
                     blocks: node.blocks,
-                    onContentChanged: onContentChanged
+                    onContentChanged: onContentChanged,
+                    onFocused: { onFocused(node.id) }
                 )
             }
         }

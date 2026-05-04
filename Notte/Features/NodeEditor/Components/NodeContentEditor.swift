@@ -21,6 +21,7 @@ struct NodeContentEditor: UIViewRepresentable {
     var onBackspaceWhenEmpty: () -> Void
     var onTab: () -> Void
     var onShiftTab: () -> Void
+    var onFocus: () -> Void
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -65,6 +66,10 @@ struct NodeContentEditor: UIViewRepresentable {
             if textView.textColor == UIColor(ColorTokens.textSecondary) {
                 textView.text = ""
                 textView.textColor = UIColor(ColorTokens.textPrimary)
+            }
+            let onFocus = parent.onFocus
+            DispatchQueue.main.async {
+                onFocus()
             }
         }
 
