@@ -62,6 +62,7 @@ struct NodeTitleEditor: UIViewRepresentable {
     private func makeInputAccessoryView(coordinator: Coordinator) -> UIToolbar {
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
+        toolbar.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 54)
         toolbar.items = [
             UIBarButtonItem(
                 image: UIImage(systemName: "decrease.indent"),
