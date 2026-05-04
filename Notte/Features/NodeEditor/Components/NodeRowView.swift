@@ -76,8 +76,8 @@ struct NodeRowView: View {
         .padding(.vertical, 6)
         .background(
             isFocused
-                ? ColorTokens.accent.opacity(0.12)
-                : Color.clear
+            ? ColorTokens.backgroundSecondary
+            : ColorTokens.backgroundPrimary
         )
         .animation(.easeInOut(duration: 0.15), value: isFocused)
     }

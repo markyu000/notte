@@ -18,7 +18,7 @@ struct PageEditorView: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if viewModel.visibleNodes.isEmpty {
                         // 空状态：点击任意位置创建第一个节点
-                        Color.clear
+                        ColorTokens.backgroundPrimary
                             .frame(maxWidth: .infinity, minHeight: 400)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -52,7 +52,7 @@ struct PageEditorView: View {
                         }
 
                         // 底部空白点击区域：在末尾插入新节点
-                        Color.clear
+                        ColorTokens.backgroundPrimary
                             .frame(height: 200)
                             .contentShape(Rectangle())
                             .onTapGesture {
