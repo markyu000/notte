@@ -81,6 +81,14 @@ class PageEditorViewModel: ObservableObject {
             pendingFocusNodeID = visibleNodes[idx - 1].id
         }
         Task {
+            // 结构性命令前先 flush，防止 pending title 与新状态竞争
+            switch command {
+            case .insertAfter, .delete, .indent, .outdent, .moveUp, .moveDown:
+                await persistenceCoordinator.flush()
+            default:
+                break
+            }
+            
             let previousIDs = Set(visibleNodes.map(\.id))
             await engine.dispatch(command)
             visibleNodes = engine.editorNodes
