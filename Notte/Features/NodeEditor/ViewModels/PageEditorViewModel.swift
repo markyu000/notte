@@ -121,6 +121,12 @@ class PageEditorViewModel: ObservableObject {
         persistenceCoordinator.scheduleContentUpdate(blockID: blockID, content: content)
     }
 
+    func didFocusNode(_ nodeID: UUID) {
+        guard focusedNodeID != nodeID || pendingFocusNodeID != nil else { return }
+        focusedNodeID = nodeID
+        pendingFocusNodeID = nil
+    }
+
     // MARK: - 退出时强制保存
 
     func onDisappear() {

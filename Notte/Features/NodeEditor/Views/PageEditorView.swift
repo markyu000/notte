@@ -45,8 +45,7 @@ struct PageEditorView: View {
                                     viewModel.send(command)
                                 },
                                 onFocused: { id in
-                                    viewModel.focusedNodeID = id
-                                    viewModel.pendingFocusNodeID = nil
+                                    viewModel.didFocusNode(id)
                                 }
                             )
                             .id(node.id)

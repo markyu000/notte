@@ -129,7 +129,10 @@ struct NodeTitleEditor: UIViewRepresentable {
         }
         
         @objc func editingDidBegin(_ textField: UITextField) {
-            parent.onFocus()
+            let onFocus = parent.onFocus
+            DispatchQueue.main.async {
+                onFocus()
+            }
         }
 
         @objc func didTapIndent() { parent.onTab() }
