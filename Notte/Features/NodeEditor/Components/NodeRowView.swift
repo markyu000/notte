@@ -47,13 +47,7 @@ struct NodeRowView: View {
                         isFocused: isFocused,
                         onTextChanged: { onTitleChanged($0) },
                         onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
-                        onBackspaceWhenEmpty: {
-                            if node.children.isEmpty {
-                                onCommand(.delete(nodeID: node.id))
-                            } else {
-                                onCommand(.outdent(nodeID: node.id))
-                            }
-                        },
+                        onBackspaceWhenEmpty: { },
                         onTab: { onCommand(.indent(nodeID: node.id)) },
                         onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
                         onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
