@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import Combine
 import UIKit
+import UIKit
 
 @MainActor
 class PageEditorViewModel: ObservableObject {
@@ -165,6 +166,8 @@ class PageEditorViewModel: ObservableObject {
     }
 
     func saveChanges() {
+        focusedNodeID = nil
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         Task {
             await persistenceCoordinator.flush()
             error = engine.error
