@@ -47,7 +47,7 @@ class PageEditorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.onDisappear()
+            Task { @MainActor in self?.onDisappear() }
         }
     }
     
