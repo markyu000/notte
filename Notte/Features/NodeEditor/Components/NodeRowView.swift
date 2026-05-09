@@ -62,9 +62,6 @@ struct NodeRowView: View {
                         onFocus: { onFocused(node.id) }
                     )
                     Spacer()
-                    AddNodeButton {
-                        onCommand(.insertChild(nodeID: node.id))
-                    }
                 }
 
                 // Block 内容区（MVP 只有 text 类型）

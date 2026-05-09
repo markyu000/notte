@@ -10,11 +10,15 @@ import SwiftUI
 struct PageEditorView: View {
 
     @ObservedObject var viewModel: PageEditorViewModel
-    @ObservedObject private var persistenceCoordinator: NodePersistenceCoordinator
+    @ObservedObject private var persistenceCoordinator:
+        NodePersistenceCoordinator
+    @State private var showAddMenu = false
 
     init(viewModel: PageEditorViewModel) {
         self.viewModel = viewModel
-        _persistenceCoordinator = ObservedObject(wrappedValue: viewModel.persistenceCoordinator)
+        _persistenceCoordinator = ObservedObject(
+            wrappedValue: viewModel.persistenceCoordinator
+        )
     }
 
     var body: some View {
@@ -37,10 +41,16 @@ struct PageEditorView: View {
                                 isFocused: viewModel.focusedNodeID == node.id
                                     || viewModel.pendingFocusNodeID == node.id,
                                 onTitleChanged: { title in
-                                    viewModel.onTitleChanged(nodeID: node.id, title: title)
+                                    viewModel.onTitleChanged(
+                                        nodeID: node.id,
+                                        title: title
+                                    )
                                 },
                                 onContentChanged: { blockID, content in
-                                    viewModel.onContentChanged(blockID: blockID, content: content)
+                                    viewModel.onContentChanged(
+                                        blockID: blockID,
+                                        content: content
+                                    )
                                 },
                                 onCommand: { command in
                                     viewModel.send(command)
@@ -73,21 +83,44 @@ struct PageEditorView: View {
         .onDisappear {
             viewModel.onDisappear()
         }
-        .alert("错误", isPresented: Binding(
-            get: { viewModel.error != nil },
-            set: { if !$0 { viewModel.error = nil } }
-        )) {
+        .alert(
+            "错误",
+            isPresented: Binding(
+                get: { viewModel.error != nil },
+                set: { if !$0 { viewModel.error = nil } }
+            )
+        ) {
             Button("好") { viewModel.error = nil }
         } message: {
             Text(viewModel.error?.localizedDescription ?? "")
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    viewModel.createTopLevelNode()
+                Menu {
+                    Button {
+                        handleAddSibling()
+                    } label: {
+                        Label("添加同级节点", systemImage: "text.append")
+                    }
+                    .disabled(viewModel.focusedNodeID == nil)
+
+                    Button {
+                        handleAddChild()
+                    } label: {
+                        Label("添加子节点", systemImage: "arrow.turn.down.right")
+                    }
+                    .disabled(viewModel.focusedNodeID == nil)
+
+                    Button {
+                        handleAddRoot()
+                    } label: {
+                        Label("添加根节点", systemImage: "text.alignleft")
+                    }
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(ColorTokens.accent)
+                } primaryAction: {
+                    handleSmartAdd()
                 }
             }
             if persistenceCoordinator.hasUnsavedChanges {
@@ -104,5 +137,37 @@ struct PageEditorView: View {
                 }
             }
         }
+    }
+
+    // MARK: - + 按钮处理
+
+    private func handleSmartAdd() {
+        if let focusedID = viewModel.focusedNodeID {
+            // 有焦点 → 在当前节点后插入同级
+            viewModel.send(.insertAfter(nodeID: focusedID))
+        } else {
+            // 无焦点 → 创建顶级节点
+            viewModel.createTopLevelNode()
+        }
+    }
+
+    private func handleAddSibling() {
+        guard let focusedID = viewModel.focusedNodeID else {
+            viewModel.createTopLevelNode()
+            return
+        }
+        viewModel.send(.insertAfter(nodeID: focusedID))
+    }
+
+    private func handleAddChild() {
+        guard let focusedID = viewModel.focusedNodeID else {
+            viewModel.createTopLevelNode()
+            return
+        }
+        viewModel.send(.insertChild(nodeID: focusedID))
+    }
+
+    private func handleAddRoot() {
+        viewModel.createTopLevelNode()
     }
 }
