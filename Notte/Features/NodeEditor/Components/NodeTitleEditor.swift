@@ -31,7 +31,7 @@ struct NodeTitleEditor: UIViewRepresentable {
         let field = CustomTextField()
         field.backgroundColor = .clear
         field.borderStyle = .none
-        field.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+        field.font = TypographyTokens.nodeTitleUI(depth: depth)
         field.placeholder = depth == 0 ? "标题" : "节点"
         field.delegate = context.coordinator
         field.onBackspaceWhenEmpty = { context.coordinator.parent.onBackspaceWhenEmpty() }
@@ -54,7 +54,7 @@ struct NodeTitleEditor: UIViewRepresentable {
         if uiView.text != text {
             uiView.text = text
         }
-        uiView.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+        uiView.font = TypographyTokens.nodeTitleUI(depth: depth)
         if isFocused && !uiView.isFirstResponder {
             uiView.becomeFirstResponder()
         }
