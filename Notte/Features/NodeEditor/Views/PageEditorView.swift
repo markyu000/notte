@@ -24,7 +24,7 @@ struct PageEditorView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
                     if viewModel.visibleNodes.isEmpty {
                         // 空状态：通过顶部按钮创建第一个顶级节点
                         ColorTokens.backgroundPrimary
@@ -60,12 +60,14 @@ struct PageEditorView: View {
                                 }
                             )
                             .id(node.id)
+                            .transition(.nodeExpand)
                         }
 
                         ColorTokens.backgroundPrimary
                             .frame(height: 200)
                     }
                 }
+                .animation(.spring(duration: 0.3), value: viewModel.visibleNodes.map(\.id))
                 .padding(.horizontal, 16)
             }
             .onChange(of: viewModel.focusedNodeID) { _, newID in
@@ -169,5 +171,28 @@ struct PageEditorView: View {
 
     private func handleAddRoot() {
         viewModel.createTopLevelNode()
+    }
+}
+
+private struct NodeSlideModifier: ViewModifier {
+    let offset: CGFloat
+    let opacity: Double
+    func body(content: Content) -> some View {
+        content.offset(y: offset).opacity(opacity)
+    }
+}
+
+private extension AnyTransition {
+    static var nodeExpand: AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: NodeSlideModifier(offset: 44, opacity: 0),
+                identity: NodeSlideModifier(offset: 0, opacity: 1)
+            ),
+            removal: .modifier(
+                active: NodeSlideModifier(offset: -44, opacity: 0),
+                identity: NodeSlideModifier(offset: 0, opacity: 1)
+            )
+        )
     }
 }
