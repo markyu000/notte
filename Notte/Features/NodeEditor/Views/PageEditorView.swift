@@ -123,7 +123,7 @@ struct PageEditorView: View {
                     handleSmartAdd()
                 }
             }
-            if persistenceCoordinator.hasUnsavedChanges {
+            if viewModel.focusedNodeID != nil || persistenceCoordinator.hasUnsavedChanges {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.saveChanges()
