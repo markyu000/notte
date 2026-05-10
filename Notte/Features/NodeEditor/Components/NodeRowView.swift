@@ -64,6 +64,7 @@ struct NodeRowView: View {
                     onContentChanged: onContentChanged,
                     onFocused: { onFocused(node.id) }
                 )
+                .padding(.leading, node.children.isEmpty ? 16 : 38)
             }
         }
         .padding(.vertical, 6)
