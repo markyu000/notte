@@ -34,6 +34,12 @@ struct NodeContentEditor: UIViewRepresentable {
         return textView
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? uiView.bounds.width
+        let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: fitting.height)
+    }
+
     func updateUIView(_ uiView: UITextView, context: Context) {
         if text.isEmpty {
             uiView.text = placeholder

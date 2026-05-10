@@ -49,6 +49,11 @@ struct NodeTitleEditor: UIViewRepresentable {
         return field
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: CustomTextField, context: Context) -> CGSize? {
+        let height = uiView.intrinsicContentSize.height
+        return CGSize(width: proposal.width ?? uiView.intrinsicContentSize.width, height: height)
+    }
+
     func updateUIView(_ uiView: CustomTextField, context: Context) {
         context.coordinator.parent = self
         if uiView.text != text {
