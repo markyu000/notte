@@ -19,7 +19,7 @@ struct NodeCollapseControl: View {
                 onTap()
             }
         } label: {
-            Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+            Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(ColorTokens.textSecondary)
                 .frame(width: 16, height: 16)
