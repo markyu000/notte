@@ -32,12 +32,12 @@ struct TypographyTokens {
 
     static func nodeTitleUI(depth: Int) -> UIFont {
         switch depth {
-        case 0: return UIFont.preferredFont(forTextStyle: .title1).rounded().withWeight(.bold)
-        case 1: return UIFont.preferredFont(forTextStyle: .title2).rounded().withWeight(.semibold)
-        case 2: return UIFont.preferredFont(forTextStyle: .title3).rounded().withWeight(.semibold)
-        case 3: return UIFont.preferredFont(forTextStyle: .headline)
-        case 4: return UIFont.preferredFont(forTextStyle: .subheadline)
-        default: return UIFont.preferredFont(forTextStyle: .body)
+        case 0: return UIFont.systemFont(ofSize: 26, weight: .bold).rounded()
+        case 1: return UIFont.systemFont(ofSize: 22, weight: .semibold).rounded()
+        case 2: return UIFont.systemFont(ofSize: 20, weight: .semibold).rounded()
+        case 3: return UIFont.systemFont(ofSize: 18, weight: .semibold).rounded()
+        case 4: return UIFont.systemFont(ofSize: 17, weight: .semibold).rounded()
+        default: return UIFont.systemFont(ofSize: 17, weight: .medium).rounded()
         }
     }
 
