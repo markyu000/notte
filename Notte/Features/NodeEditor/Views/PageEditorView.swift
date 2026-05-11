@@ -10,51 +10,72 @@ import SwiftUI
 struct PageEditorView: View {
 
     @ObservedObject var viewModel: PageEditorViewModel
+    @ObservedObject private var persistenceCoordinator:
+        NodePersistenceCoordinator
+    @State private var showAddMenu = false
+
+    init(viewModel: PageEditorViewModel) {
+        self.viewModel = viewModel
+        _persistenceCoordinator = ObservedObject(
+            wrappedValue: viewModel.persistenceCoordinator
+        )
+    }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                if viewModel.visibleNodes.isEmpty {
-                    // 空状态：点击任意位置创建第一个节点
-                    Color.clear
-                        .frame(maxWidth: .infinity, minHeight: 400)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.createFirstNode()
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if viewModel.visibleNodes.isEmpty {
+                        // 空状态：通过顶部按钮创建第一个顶级节点
+                        ColorTokens.backgroundPrimary
+                            .frame(maxWidth: .infinity, minHeight: 400)
+                            .overlay(
+                                Text("点击左上角加号创建顶级节点")
+                                    .font(TypographyTokens.body)
+                                    .foregroundStyle(ColorTokens.textSecondary)
+                            )
+                    } else {
+                        ForEach(viewModel.visibleNodes) { node in
+                            NodeRowView(
+                                node: node,
+                                isFocused: viewModel.focusedNodeID == node.id
+                                    || viewModel.pendingFocusNodeID == node.id,
+                                onTitleChanged: { title in
+                                    viewModel.onTitleChanged(
+                                        nodeID: node.id,
+                                        title: title
+                                    )
+                                },
+                                onContentChanged: { blockID, content in
+                                    viewModel.onContentChanged(
+                                        blockID: blockID,
+                                        content: content
+                                    )
+                                },
+                                onCommand: { command in
+                                    viewModel.send(command)
+                                },
+                                onFocused: { id in
+                                    viewModel.didFocusNode(id)
+                                }
+                            )
+                            .id(node.id)
+                            .transition(.nodeExpand)
                         }
-                } else {
-                    ForEach(viewModel.visibleNodes) { node in
-                        NodeRowView(
-                            node: node,
-                            isFocused: viewModel.pendingFocusNodeID == node.id,
-                            onTitleChanged: { title in
-                                viewModel.onTitleChanged(nodeID: node.id, title: title)
-                            },
-                            onContentChanged: { blockID, content in
-                                viewModel.onContentChanged(blockID: blockID, content: content)
-                            },
-                            onCommand: { command in
-                                viewModel.send(command)
-                            },
-                            onFocused: { id in
-                                viewModel.focusedNodeID = id
-                                viewModel.pendingFocusNodeID = nil
-                            }
-                        )
-                    }
 
-                    // 底部空白点击区域：在末尾插入新节点
-                    Color.clear
-                        .frame(height: 200)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if let lastNode = viewModel.visibleNodes.last {
-                                viewModel.send(.insertAfter(nodeID: lastNode.id))
-                            }
-                        }
+                        ColorTokens.backgroundPrimary
+                            .frame(height: 200)
+                    }
+                }
+                .animation(.spring(duration: 0.3), value: viewModel.visibleNodes.map(\.id))
+                .padding(.horizontal, 16)
+            }
+            .onChange(of: viewModel.focusedNodeID) { _, newID in
+                guard let id = newID else { return }
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(id, anchor: .center)
                 }
             }
-            .padding(.horizontal, 16)
         }
         .navigationTitle(viewModel.pageTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -64,45 +85,114 @@ struct PageEditorView: View {
         .onDisappear {
             viewModel.onDisappear()
         }
-        .alert("错误", isPresented: Binding(
-            get: { viewModel.error != nil },
-            set: { if !$0 { viewModel.error = nil } }
-        )) {
+        .alert(
+            "错误",
+            isPresented: Binding(
+                get: { viewModel.error != nil },
+                set: { if !$0 { viewModel.error = nil } }
+            )
+        ) {
             Button("好") { viewModel.error = nil }
         } message: {
             Text(viewModel.error?.localizedDescription ?? "")
         }
         .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button {
-                    if let id = viewModel.focusedNodeID {
-                        viewModel.send(.indent(nodeID: id))
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    Button {
+                        handleAddSibling()
+                    } label: {
+                        Label("添加同级节点", systemImage: "text.append")
+                    }
+                    .disabled(viewModel.focusedNodeID == nil)
+
+                    Button {
+                        handleAddChild()
+                    } label: {
+                        Label("添加子节点", systemImage: "arrow.turn.down.right")
+                    }
+                    .disabled(viewModel.focusedNodeID == nil)
+
+                    Button {
+                        handleAddRoot()
+                    } label: {
+                        Label("添加根节点", systemImage: "text.alignleft")
                     }
                 } label: {
-                    Image(systemName: "increase.indent")
+                    Image(systemName: "plus")
+                        .foregroundStyle(ColorTokens.accent)
+                } primaryAction: {
+                    handleSmartAdd()
                 }
-                Button {
-                    if let id = viewModel.focusedNodeID {
-                        viewModel.send(.outdent(nodeID: id))
+            }
+            if viewModel.focusedNodeID != nil || persistenceCoordinator.hasUnsavedChanges {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.saveChanges()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(ColorTokens.textPrimary)
                     }
-                } label: {
-                    Image(systemName: "decrease.indent")
-                }
-                Button {
-                    if let id = viewModel.focusedNodeID {
-                        viewModel.send(.moveUp(nodeID: id))
-                    }
-                } label: {
-                    Image(systemName: "arrow.up")
-                }
-                Button {
-                    if let id = viewModel.focusedNodeID {
-                        viewModel.send(.moveDown(nodeID: id))
-                    }
-                } label: {
-                    Image(systemName: "arrow.down")
+                    .buttonStyle(.borderedProminent)
+                    .tint(ColorTokens.accent)
+                    .disabled(persistenceCoordinator.saveState == .saving)
                 }
             }
         }
+    }
+
+    // MARK: - + 按钮处理
+
+    private func handleSmartAdd() {
+        if let focusedID = viewModel.focusedNodeID {
+            // 有焦点 → 在当前节点后插入同级
+            viewModel.send(.insertAfter(nodeID: focusedID))
+        } else {
+            // 无焦点 → 创建顶级节点
+            viewModel.createTopLevelNode()
+        }
+    }
+
+    private func handleAddSibling() {
+        guard let focusedID = viewModel.focusedNodeID else {
+            viewModel.createTopLevelNode()
+            return
+        }
+        viewModel.send(.insertAfter(nodeID: focusedID))
+    }
+
+    private func handleAddChild() {
+        guard let focusedID = viewModel.focusedNodeID else {
+            viewModel.createTopLevelNode()
+            return
+        }
+        viewModel.send(.insertChild(nodeID: focusedID))
+    }
+
+    private func handleAddRoot() {
+        viewModel.createTopLevelNode()
+    }
+}
+
+private struct NodeSlideModifier: ViewModifier {
+    let offset: CGFloat
+    let opacity: Double
+    func body(content: Content) -> some View {
+        content.offset(y: offset).opacity(opacity)
+    }
+}
+
+private extension AnyTransition {
+    static var nodeExpand: AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: NodeSlideModifier(offset: 44, opacity: 0),
+                identity: NodeSlideModifier(offset: 0, opacity: 1)
+            ),
+            removal: .modifier(
+                active: NodeSlideModifier(offset: -44, opacity: 0),
+                identity: NodeSlideModifier(offset: 0, opacity: 1)
+            )
+        )
     }
 }

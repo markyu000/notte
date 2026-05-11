@@ -10,6 +10,8 @@ import UIKit
 
 /// 专用于 Node 标题输入的 UITextField 包装。
 /// 单行输入，支持 Return / Backspace 空时 / Tab / Shift+Tab 键盘行为。
+/// inputAccessoryView 直接设在 UITextField 上，因为 SwiftUI placement:.keyboard
+/// 对 UIViewRepresentable 无效。
 struct NodeTitleEditor: UIViewRepresentable {
 
     var text: String
@@ -20,13 +22,16 @@ struct NodeTitleEditor: UIViewRepresentable {
     var onBackspaceWhenEmpty: () -> Void
     var onTab: () -> Void
     var onShiftTab: () -> Void
+    var onMoveUp: () -> Void
+    var onMoveDown: () -> Void
+    var onDelete: () -> Void
     var onFocus: () -> Void
 
     func makeUIView(context: Context) -> CustomTextField {
         let field = CustomTextField()
         field.backgroundColor = .clear
         field.borderStyle = .none
-        field.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+        field.font = TypographyTokens.nodeTitleUI(depth: depth)
         field.placeholder = depth == 0 ? "标题" : "节点"
         field.delegate = context.coordinator
         field.onBackspaceWhenEmpty = { context.coordinator.parent.onBackspaceWhenEmpty() }
@@ -40,17 +45,62 @@ struct NodeTitleEditor: UIViewRepresentable {
             action: #selector(Coordinator.editingDidBegin(_:)),
             for: .editingDidBegin
         )
+        field.inputAccessoryView = makeInputAccessoryView(coordinator: context.coordinator)
         return field
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: CustomTextField, context: Context) -> CGSize? {
+        let height = uiView.intrinsicContentSize.height
+        return CGSize(width: proposal.width ?? uiView.intrinsicContentSize.width, height: height)
+    }
+
     func updateUIView(_ uiView: CustomTextField, context: Context) {
+        context.coordinator.parent = self
         if uiView.text != text {
             uiView.text = text
         }
-        uiView.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+        uiView.font = TypographyTokens.nodeTitleUI(depth: depth)
         if isFocused && !uiView.isFirstResponder {
             uiView.becomeFirstResponder()
         }
+    }
+
+    private func makeInputAccessoryView(coordinator: Coordinator) -> UIToolbar {
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        toolbar.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 54)
+        let deleteItem = UIBarButtonItem(
+            image: UIImage(systemName: "trash"),
+            style: .plain,
+            target: coordinator,
+            action: #selector(Coordinator.didTapDelete)
+        )
+        deleteItem.tintColor = .systemRed
+        toolbar.items = [
+            UIBarButtonItem(
+                image: UIImage(systemName: "decrease.indent"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapOutdent)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "increase.indent"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapIndent)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "arrow.up"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapMoveUp)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "arrow.down"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapMoveDown)
+            ),
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            deleteItem
+        ]
+        return toolbar
     }
 
     func makeCoordinator() -> Coordinator {
@@ -90,7 +140,16 @@ struct NodeTitleEditor: UIViewRepresentable {
         }
         
         @objc func editingDidBegin(_ textField: UITextField) {
-            parent.onFocus()
+            let onFocus = parent.onFocus
+            DispatchQueue.main.async {
+                onFocus()
+            }
         }
+
+        @objc func didTapIndent() { parent.onTab() }
+        @objc func didTapOutdent() { parent.onShiftTab() }
+        @objc func didTapMoveUp() { parent.onMoveUp() }
+        @objc func didTapMoveDown() { parent.onMoveDown() }
+        @objc func didTapDelete() { parent.onDelete() }
     }
 }

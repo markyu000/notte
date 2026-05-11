@@ -47,30 +47,32 @@ struct NodeRowView: View {
                         isFocused: isFocused,
                         onTextChanged: { onTitleChanged($0) },
                         onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
-                        onBackspaceWhenEmpty: {
-                            if node.children.isEmpty {
-                                onCommand(.delete(nodeID: node.id))
-                            } else {
-                                onCommand(.outdent(nodeID: node.id))
-                            }
-                        },
+                        onBackspaceWhenEmpty: { },
                         onTab: { onCommand(.indent(nodeID: node.id)) },
                         onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
+                        onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
+                        onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
+                        onDelete: { onCommand(.delete(nodeID: node.id)) },
                         onFocus: { onFocused(node.id) }
                     )
                     Spacer()
-                    AddNodeButton {
-                        onCommand(.insertAfter(nodeID: node.id))
-                    }
                 }
 
                 // Block 内容区（MVP 只有 text 类型）
                 BlockListView(                    // 原来是内联 ForEach
                     blocks: node.blocks,
-                    onContentChanged: onContentChanged
+                    onContentChanged: onContentChanged,
+                    onFocused: { onFocused(node.id) }
                 )
+                .padding(.leading, node.children.isEmpty ? 16 : 38)
             }
         }
         .padding(.vertical, 6)
+        .background(
+            isFocused
+            ? ColorTokens.backgroundSecondary
+            : ColorTokens.backgroundPrimary
+        )
+        .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 }

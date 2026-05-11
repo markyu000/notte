@@ -21,6 +21,7 @@ struct NodeContentEditor: UIViewRepresentable {
     var onBackspaceWhenEmpty: () -> Void
     var onTab: () -> Void
     var onShiftTab: () -> Void
+    var onFocus: () -> Void
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -33,13 +34,19 @@ struct NodeContentEditor: UIViewRepresentable {
         return textView
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? uiView.bounds.width
+        let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: fitting.height)
+    }
+
     func updateUIView(_ uiView: UITextView, context: Context) {
         if text.isEmpty {
             uiView.text = placeholder
-            uiView.textColor = UIColor.placeholderText
+            uiView.textColor = UIColor(ColorTokens.textSecondary)
         } else if uiView.text != text {
             uiView.text = text
-            uiView.textColor = UIColor.label
+            uiView.textColor = UIColor(ColorTokens.textPrimary)
         }
     }
 
@@ -56,15 +63,19 @@ struct NodeContentEditor: UIViewRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             // 占位符状态下不上报内容变更
-            guard textView.textColor != UIColor.placeholderText else { return }
+            guard textView.textColor != UIColor(ColorTokens.textSecondary) else { return }
             parent.onTextChanged(textView.text ?? "")
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
             // 开始编辑时清除占位符
-            if textView.textColor == UIColor.placeholderText {
+            if textView.textColor == UIColor(ColorTokens.textSecondary) {
                 textView.text = ""
-                textView.textColor = UIColor.label
+                textView.textColor = UIColor(ColorTokens.textPrimary)
+            }
+            let onFocus = parent.onFocus
+            DispatchQueue.main.async {
+                onFocus()
             }
         }
 
@@ -81,7 +92,7 @@ struct NodeContentEditor: UIViewRepresentable {
             // Backspace 且文本为空：触发反缩进或删除
             if text.isEmpty,
                let current = textView.text,
-               current.isEmpty || textView.textColor == UIColor.placeholderText {
+               current.isEmpty || textView.textColor == UIColor(ColorTokens.textSecondary) {
                 parent.onBackspaceWhenEmpty()
                 return false
             }

@@ -6,24 +6,59 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct TypographyTokens {
-    static let largeTitle = Font.system(.largeTitle, design: .rounded, weight: .bold)
-    static let title = Font.system(size: 20, weight: .bold, design: .rounded)
-    static let subTitle = Font.system(size: 15, weight: .regular, design: .rounded)
-    static let title2 = Font.system(size: 17, weight: .semibold, design: .rounded)
-    static let body = Font.system(.body)
-    static let caption = Font.system(.caption)
+    // MARK: - UIFont(数据源)
 
-    // Node 标题渲染，对应 depth 0-5
-    static func nodeTitle(depth: Int) -> Font {
+    static let UIlargeTitle = UIFont.preferredFont(forTextStyle: .largeTitle)
+        .rounded().withWeight(.bold)
+    static let UItitle = UIFont.systemFont(ofSize: 20, weight: .bold).rounded()
+    static let UIsubTitle = UIFont.systemFont(ofSize: 15, weight: .regular).rounded()
+    static let UItitle2 = UIFont.systemFont(ofSize: 17, weight: .semibold).rounded()
+    static let UIbody = UIFont.preferredFont(forTextStyle: .body)
+    static let UIcaption = UIFont.preferredFont(forTextStyle: .caption1)
+
+    // MARK: - Font(从 UIFont 派生)
+
+    static let largeTitle = Font(UIlargeTitle)
+    static let title = Font(UItitle)
+    static let subTitle = Font(UIsubTitle)
+    static let title2 = Font(UItitle2)
+    static let body = Font(UIbody)
+    static let caption = Font(UIcaption)
+
+    // MARK: - Node 标题
+
+    static func nodeTitleUI(depth: Int) -> UIFont {
         switch depth {
-        case 0: return Font.system(.title, design: .rounded, weight: .bold)
-        case 1: return Font.system(.title2, design: .rounded, weight: .semibold)
-        case 2: return Font.system(.title3, design: .rounded, weight: .semibold)
-        case 3: return Font.system(.headline)
-        case 4: return Font.system(.subheadline)
-        default: return Font.system(.body)
+        case 0: return UIFont.systemFont(ofSize: 26, weight: .bold).rounded()
+        case 1: return UIFont.systemFont(ofSize: 22, weight: .semibold).rounded()
+        case 2: return UIFont.systemFont(ofSize: 20, weight: .semibold).rounded()
+        case 3: return UIFont.systemFont(ofSize: 18, weight: .semibold).rounded()
+        case 4: return UIFont.systemFont(ofSize: 17, weight: .semibold).rounded()
+        default: return UIFont.systemFont(ofSize: 17, weight: .medium).rounded()
         }
+    }
+
+    static func nodeTitle(depth: Int) -> Font {
+        Font(nodeTitleUI(depth: depth))
+    }
+}
+
+// MARK: - UIFont 辅助
+
+private extension UIFont {
+    /// 应用 rounded design,失败时返回原字体
+    func rounded() -> UIFont {
+        guard let descriptor = fontDescriptor.withDesign(.rounded) else { return self }
+        return UIFont(descriptor: descriptor, size: pointSize)
+    }
+
+    /// 修改字重,保留尺寸和 design
+    func withWeight(_ weight: UIFont.Weight) -> UIFont {
+        let traits: [UIFontDescriptor.TraitKey: Any] = [.weight: weight]
+        let descriptor = fontDescriptor.addingAttributes([.traits: traits])
+        return UIFont(descriptor: descriptor, size: pointSize)
     }
 }
