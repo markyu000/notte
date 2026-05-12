@@ -25,3 +25,7 @@ struct OnboardingScreenOne: View {
         .padding(.horizontal, SpacingTokens.md)
     }
 }
+
+#Preview {
+    OnboardingScreenOne()
+}
