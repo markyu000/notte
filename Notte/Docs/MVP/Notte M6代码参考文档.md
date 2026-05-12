@@ -38,7 +38,7 @@ feature/onboarding-settings
 
 ## M6-01 OnboardingView 屏 1：产品理念与层级示意
 
-**文件：** `Features/Onboarding/Views/OnboardingView.swift` / `Features/Onboarding/Components/OnboardingHierarchyIllustration.swift` / `Features/Onboarding/ViewModels/OnboardingViewModel.swift`
+**文件：** `Features/Onboarding/Views/OnboardingScreenOne.swift` / `Features/Onboarding/Components/OnboardingHierarchyIllustration.swift` / `Features/Onboarding/ViewModels/OnboardingViewModel.swift`
 
 ```swift
 // Features/Onboarding/ViewModels/OnboardingViewModel.swift
@@ -100,7 +100,9 @@ struct OnboardingHierarchyIllustration: View {
 ```
 
 ```swift
-// Features/Onboarding/Views/OnboardingView.swift（屏 1 部分，完整文件在 M6-03 给出）
+// Features/Onboarding/Views/OnboardingScreenOne.swift
+import SwiftUI
+
 struct OnboardingScreenOne: View {
     var body: some View {
         VStack(spacing: SpacingTokens.lg) {
