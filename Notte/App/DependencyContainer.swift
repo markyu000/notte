@@ -35,4 +35,13 @@ class DependencyContainer: ObservableObject {
             blockRepository: blockRepository
         )
     }
+    
+    func makeExampleDataFactory() -> ExampleDataFactory {
+        ExampleDataFactory(
+            collectionRepository: collectionRepository,
+            pageRepository: pageRepository,
+            nodeRepository: nodeRepository,
+            blockRepository: blockRepository
+        )
+    }
 }
