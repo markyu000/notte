@@ -18,20 +18,29 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button("跳过") {
+                Button {
                     hasCompletedOnboarding = true
+                } label: {
+                    Text("跳过")
+                        .padding(.vertical, SpacingTokens.xs)
+                        .padding(.horizontal, SpacingTokens.xs)
                 }
                 .font(TypographyTokens.body)
-                .foregroundStyle(ColorTokens.textSecondary)
-                .padding(SpacingTokens.md)
+                .buttonStyle(.glass)
+                .padding(.vertical, SpacingTokens.sm)
+                .padding(.horizontal, SpacingTokens.md)
             }
+            .padding(.trailing, SpacingTokens.sm)
 
             TabView(selection: $viewModel.currentPage) {
                 OnboardingScreenOne()
+                    .padding(.bottom, SpacingTokens.xl * 3)
                     .tag(0)
                 OnboardingScreenTwo()
+                    .padding(.bottom, SpacingTokens.xl * 3)
                     .tag(1)
                 OnboardingScreenThree()
+                    .padding(.bottom, SpacingTokens.xl * 3)
                     .tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
@@ -53,7 +62,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, SpacingTokens.sm)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
             .tint(ColorTokens.accent)
             .padding(.top, SpacingTokens.sm)
         } else {
@@ -67,7 +76,7 @@ struct OnboardingView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, SpacingTokens.sm)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.glassProminent)
                 .tint(ColorTokens.accent)
 
                 Button(action: {
@@ -79,8 +88,7 @@ struct OnboardingView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, SpacingTokens.sm)
                 }
-                .buttonStyle(.bordered)
-                .tint(ColorTokens.accent)
+                .buttonStyle(.glass)
             }
             .padding(.top, SpacingTokens.sm)
         }
