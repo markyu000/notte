@@ -11,13 +11,32 @@ import SwiftUI
 struct RootView: View {
     @StateObject private var router = AppRouter()
     @EnvironmentObject private var dependencyContainer: DependencyContainer
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    @State private var pendingAction: PostOnboardingAction?
+
+    enum PostOnboardingAction { case createFirst, importSamples }
 
     var body: some View {
+        Group {
+            if !hasCompletedOnboarding {
+                OnboardingView(
+                    onCreateFirstCollection: { pendingAction = .createFirst },
+                    onImportSampleData: { pendingAction = .importSamples }
+                )
+            } else {
+                mainNavigation
+            }
+        }
+    }
+
+    private var mainNavigation: some View {
         NavigationStack(path: $router.path) {
             CollectionListScreen(
                 repository: dependencyContainer.collectionRepository,
                 pageRepository: dependencyContainer.pageRepository,
-                nodeRepository: dependencyContainer.nodeRepository
+                nodeRepository: dependencyContainer.nodeRepository,
+                pendingAction: pendingAction,
+                onActionConsumed: { pendingAction = nil }
             )
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {

@@ -14,10 +14,15 @@ struct CollectionListScreen: View {
     @State private var editMode: EditMode = .inactive
     @State private var collectionToDelete: Collection?
 
+    let pendingAction: RootView.PostOnboardingAction?
+    let onActionConsumed: () -> Void
+
     init(
         repository: CollectionRepositoryProtocol,
         pageRepository: PageRepositoryProtocol,
-        nodeRepository: NodeRepositoryProtocol
+        nodeRepository: NodeRepositoryProtocol,
+        pendingAction: RootView.PostOnboardingAction? = nil,
+        onActionConsumed: @escaping () -> Void = {}
     ) {
         _viewModel = StateObject(
             wrappedValue: CollectionListViewModel(
@@ -26,6 +31,8 @@ struct CollectionListScreen: View {
                 nodeRepository: nodeRepository
             )
         )
+        self.pendingAction = pendingAction
+        self.onActionConsumed = onActionConsumed
     }
 
     var body: some View {
@@ -97,6 +104,10 @@ struct CollectionListScreen: View {
             }
             .task {
                 await viewModel.loadCollections()
+                if pendingAction == .createFirst {
+                    viewModel.handlePendingCreateFirst()
+                    onActionConsumed()
+                }
             }
         }
     }

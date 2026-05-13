@@ -100,6 +100,10 @@ class CollectionListViewModel: ObservableObject {
         }
     }
 
+    func handlePendingCreateFirst() {
+        isShowingCreateSheet = true
+    }
+
     func reorderCollection(moving id: UUID, after targetID: UUID?) async {
         do {
             try await reorderUseCase.execute(moving: id, after: targetID)
