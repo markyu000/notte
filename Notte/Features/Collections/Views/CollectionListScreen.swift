@@ -104,10 +104,15 @@ struct CollectionListScreen: View {
             }
             .task {
                 await viewModel.loadCollections()
-                if pendingAction == .createFirst {
+                switch pendingAction {
+                case .createFirst:
                     viewModel.handlePendingCreateFirst()
-                    onActionConsumed()
+                case .importSamples:
+                    await viewModel.importSampleData(using: dependencyContainer.makeExampleDataFactory())
+                case nil:
+                    break
                 }
+                onActionConsumed()
             }
         }
     }

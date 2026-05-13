@@ -112,4 +112,15 @@ class CollectionListViewModel: ObservableObject {
             self.error = error as? AppError
         }
     }
+    
+    func importSampleData(using factory: ExampleDataFactory) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            try await factory.importAll()
+            await loadCollections()
+        } catch {
+            self.error = AppError.unknown(error.localizedDescription)
+        }
+    }
 }
