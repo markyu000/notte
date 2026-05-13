@@ -17,16 +17,19 @@ struct RootView: View {
     enum PostOnboardingAction { case createFirst, importSamples }
 
     var body: some View {
-        Group {
+        ZStack {
             if !hasCompletedOnboarding {
                 OnboardingView(
                     onCreateFirstCollection: { pendingAction = .createFirst },
                     onImportSampleData: { pendingAction = .importSamples }
                 )
+                .transition(.opacity.combined(with: .scale(scale: 1.04)))
             } else {
                 mainNavigation
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
             }
         }
+        .animation(.easeInOut(duration: 0.45), value: hasCompletedOnboarding)
     }
 
     private var mainNavigation: some View {
