@@ -1,0 +1,42 @@
+{
+  "title": "项目规划",
+  "iconName": "list.clipboard",
+  "colorToken": null,
+  "pages": [
+    {
+      "title": "需求梳理",
+      "nodes": [
+        { "title": "用户故事", "depth": 0, "blocks": [{ "type": "text", "content": "作为 …，我希望 …，以便 …。" }] },
+        { "title": "竞品调研", "depth": 0, "blocks": [{ "type": "text", "content": "列出 3-5 个主要竞品的差异点。" }] },
+        { "title": "MVP 范围", "depth": 0, "blocks": [{ "type": "text", "content": "明确 in-scope / out-of-scope。" }] }
+      ]
+    },
+    {
+      "title": "里程碑",
+      "nodes": [
+        {
+          "title": "Milestone 1",
+          "depth": 0,
+          "children": [
+            { "title": "工程底座", "depth": 1, "blocks": [{ "type": "text", "content": "工程可运行、数据模型就位。" }] },
+            { "title": "首屏可见", "depth": 1, "blocks": [{ "type": "text", "content": "Collection 列表与空状态。" }] }
+          ]
+        },
+        {
+          "title": "Milestone 2",
+          "depth": 0,
+          "children": [
+            { "title": "Editor 核心", "depth": 1, "blocks": [{ "type": "text", "content": "增删改、缩进、折叠全部成立。" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "风险与对策",
+      "nodes": [
+        { "title": "技术风险", "depth": 0, "blocks": [{ "type": "text", "content": "CloudKit 同步在阶段 7 才接入，确保模型字段提前稳定。" }] },
+        { "title": "进度风险", "depth": 0, "blocks": [{ "type": "text", "content": "Editor 阶段如延期，优先砍 UX polish。" }] }
+      ]
+    }
+  ]
+}
