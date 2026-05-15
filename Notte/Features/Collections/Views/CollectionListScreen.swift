@@ -11,6 +11,7 @@ import SwiftData
 struct CollectionListScreen: View {
     @StateObject private var viewModel: CollectionListViewModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var dependencyContainer: DependencyContainer
     @State private var editMode: EditMode = .inactive
     @State private var collectionToDelete: Collection?
 
@@ -224,6 +225,7 @@ struct CollectionListScreen: View {
     let repo = try! CollectionRepository(context: context)
     let pageRepo = PageRepository(context: context)
     let nodeRepo = NodeRepository(context: context)
+    let dependencyContainer = DependencyContainer(modelContainer: container)
 
     CollectionListScreen(
         repository: repo,
@@ -236,4 +238,5 @@ struct CollectionListScreen: View {
         try! await createUsecase.execute(title: "实例2")
     }
     .environmentObject(AppRouter())
+    .environmentObject(dependencyContainer)
 }
