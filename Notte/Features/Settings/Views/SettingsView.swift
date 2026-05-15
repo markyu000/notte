@@ -37,5 +37,6 @@ struct SettingsView: View {
             .padding(.trailing, SpacingTokens.md)
             .padding(.bottom, SpacingTokens.lg)
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }

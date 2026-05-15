@@ -37,6 +37,7 @@ struct PageListScreen: View {
             .overlay(alignment: .bottomTrailing) {
                 addButton
             }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .navigationTitle(viewModel.collectionTitle)
             .navigationBarTitleDisplayMode(.large)
             .toolbar { toolbarContent }

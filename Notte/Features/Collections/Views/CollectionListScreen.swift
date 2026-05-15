@@ -112,6 +112,7 @@ struct CollectionListScreen: View {
                 onActionConsumed()
             }
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     private var contentView: some View {
