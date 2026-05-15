@@ -105,17 +105,31 @@ struct ExampleDataFactory {
             )
             try await nodeRepository.create(node)
 
-            for (blockIdx, blockDTO) in (dto.blocks ?? []).enumerated() {
-                let block = Block(
+            let blockDTOs = dto.blocks ?? []
+            if blockDTOs.isEmpty {
+                let emptyBlock = Block(
                     id: UUID(),
                     nodeID: node.id,
-                    type: BlockType(rawValue: blockDTO.type) ?? .text,
-                    content: blockDTO.content,
-                    sortIndex: Double(blockIdx + 1) * 1000,
+                    type: .text,
+                    content: "",
+                    sortIndex: 1000,
                     createdAt: Date(),
                     updatedAt: Date()
                 )
-                try await blockRepository.create(block)
+                try await blockRepository.create(emptyBlock)
+            } else {
+                for (blockIdx, blockDTO) in blockDTOs.enumerated() {
+                    let block = Block(
+                        id: UUID(),
+                        nodeID: node.id,
+                        type: BlockType(rawValue: blockDTO.type) ?? .text,
+                        content: blockDTO.content,
+                        sortIndex: Double(blockIdx + 1) * 1000,
+                        createdAt: Date(),
+                        updatedAt: Date()
+                    )
+                    try await blockRepository.create(block)
+                }
             }
 
             try await persistNodes(dto.children ?? [], pageID: pageID, parentNodeID: node.id)
