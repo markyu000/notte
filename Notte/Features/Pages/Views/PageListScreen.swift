@@ -88,7 +88,7 @@ struct PageListScreen: View {
         } label: {
             Image(systemName: "plus")
                 .font(.title.weight(.semibold))
-                .frame(width: 56, height: 56)
+                .frame(width: 50, height: 50)
                 .foregroundStyle(Color.black)
                 .contentShape(Rectangle())
         }
