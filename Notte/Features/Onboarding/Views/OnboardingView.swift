@@ -19,7 +19,9 @@ struct OnboardingView: View {
             HStack {
                 Spacer()
                 Button {
-                    hasCompletedOnboarding = true
+                    withAnimation(.easeInOut(duration: 0.45)) {
+                        hasCompletedOnboarding = true
+                    }
                 } label: {
                     Text("跳过")
                         .padding(.vertical, SpacingTokens.xs)
@@ -47,6 +49,7 @@ struct OnboardingView: View {
             .indexViewStyle(.page(backgroundDisplayMode: .always))
 
             ctaArea
+                .animation(.spring(response: 0.45, dampingFraction: 0.85), value: viewModel.currentPage < 2)
                 .padding(.horizontal, SpacingTokens.md)
                 .padding(.bottom, SpacingTokens.lg)
         }
@@ -56,7 +59,11 @@ struct OnboardingView: View {
     @ViewBuilder
     private var ctaArea: some View {
         if viewModel.currentPage < 2 {
-            Button(action: viewModel.next) {
+            Button(action: {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) {
+                    viewModel.next()
+                }
+            }) {
                 Text("下一步")
                     .font(TypographyTokens.body.bold())
                     .frame(maxWidth: .infinity)
@@ -65,10 +72,13 @@ struct OnboardingView: View {
             .buttonStyle(.glassProminent)
             .tint(ColorTokens.accent)
             .padding(.top, SpacingTokens.sm)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
         } else {
             VStack(spacing: SpacingTokens.sm) {
                 Button(action: {
-                    hasCompletedOnboarding = true
+                    withAnimation(.easeInOut(duration: 0.45)) {
+                        hasCompletedOnboarding = true
+                    }
                     onCreateFirstCollection()
                 }) {
                     Text("创建我的第一个 Collection")
@@ -80,7 +90,9 @@ struct OnboardingView: View {
                 .tint(ColorTokens.accent)
 
                 Button(action: {
-                    hasCompletedOnboarding = true
+                    withAnimation(.easeInOut(duration: 0.45)) {
+                        hasCompletedOnboarding = true
+                    }
                     onImportSampleData()
                 }) {
                     Text("导入示例数据")
@@ -91,6 +103,7 @@ struct OnboardingView: View {
                 .buttonStyle(.glass)
             }
             .padding(.top, SpacingTokens.sm)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
     }
 }
