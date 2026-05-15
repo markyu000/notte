@@ -131,7 +131,7 @@ struct PageEditorView: View {
                         viewModel.saveChanges()
                     } label: {
                         Image(systemName: "checkmark")
-                            .foregroundStyle(ColorTokens.textPrimary)
+                            .foregroundStyle(Color.black)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(ColorTokens.accent)
