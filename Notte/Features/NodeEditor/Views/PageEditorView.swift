@@ -61,6 +61,7 @@ struct PageEditorView: View {
                             )
                             .id(node.id)
                             .transition(.nodeExpand)
+                            .zIndex(Double(100 - node.depth))
                         }
 
                         ColorTokens.backgroundPrimary
