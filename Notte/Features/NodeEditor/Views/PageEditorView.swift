@@ -120,7 +120,7 @@ struct PageEditorView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
-                        .foregroundStyle(ColorTokens.accent)
+                        .foregroundStyle(ColorTokens.textPrimary)
                 } primaryAction: {
                     handleSmartAdd()
                 }
