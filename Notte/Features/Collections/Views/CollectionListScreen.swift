@@ -14,6 +14,7 @@ struct CollectionListScreen: View {
     @EnvironmentObject private var dependencyContainer: DependencyContainer
     @State private var editMode: EditMode = .inactive
     @State private var collectionToDelete: Collection?
+    @State private var isShowingSettings = false
 
     let pendingAction: RootView.PostOnboardingAction?
     let onActionConsumed: () -> Void
@@ -38,26 +39,18 @@ struct CollectionListScreen: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.collections.isEmpty {
-                    CollectionEmptyState {
-                        viewModel.isShowingCreateSheet = true
-                    }
-                } else {
-                    collectionList
+            contentView
+                .overlay(alignment: .bottomTrailing) {
+                    addButton
                 }
-            }
-            .navigationTitle("Notte")
+                .navigationTitle("Notte")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        viewModel.isShowingCreateSheet = true
+                        isShowingSettings = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "gearshape")
                             .foregroundStyle(ColorTokens.accent)
                     }
                 }
@@ -70,6 +63,9 @@ struct CollectionListScreen: View {
             .environment(\.editMode, $editMode)
             .sheet(isPresented: $viewModel.isShowingCreateSheet) {
                 CollectionCreateSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
             }
             .sheet(
                 isPresented: Binding(
@@ -116,6 +112,37 @@ struct CollectionListScreen: View {
                 onActionConsumed()
             }
         }
+    }
+
+    private var contentView: some View {
+        Group {
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.collections.isEmpty {
+                CollectionEmptyState {
+                    viewModel.isShowingCreateSheet = true
+                }
+            } else {
+                collectionList
+            }
+        }
+    }
+
+    private var addButton: some View {
+        Button {
+            viewModel.isShowingCreateSheet = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(ColorTokens.backgroundPrimary)
+                .frame(width: 56, height: 56)
+                .background(ColorTokens.accent)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        }
+        .padding(.trailing, SpacingTokens.md)
+        .padding(.bottom, SpacingTokens.lg)
     }
 
     private var collectionList: some View {

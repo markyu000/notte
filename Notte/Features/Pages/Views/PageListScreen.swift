@@ -34,6 +34,9 @@ struct PageListScreen: View {
     
     var body: some View {
         contentView
+            .overlay(alignment: .bottomTrailing) {
+                addButton
+            }
             .navigationTitle(viewModel.collectionTitle)
             .navigationBarTitleDisplayMode(.large)
             .toolbar { toolbarContent }
@@ -72,19 +75,27 @@ struct PageListScreen: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.isShowingCreateSheet = true
-            } label: {
-                Image(systemName: "plus")
-                    .foregroundStyle(ColorTokens.accent)
-            }
-        }
         ToolbarItem(placement: .topBarLeading) {
             EditButton()
                 .tint(ColorTokens.accent)
                 .disabled(viewModel.pages.isEmpty)
         }
+    }
+
+    private var addButton: some View {
+        Button {
+            viewModel.isShowingCreateSheet = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(ColorTokens.backgroundPrimary)
+                .frame(width: 56, height: 56)
+                .background(ColorTokens.accent)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        }
+        .padding(.trailing, SpacingTokens.md)
+        .padding(.bottom, SpacingTokens.lg)
     }
 
     private var pageList: some View {
