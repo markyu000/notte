@@ -120,7 +120,7 @@ class CollectionListViewModel: ObservableObject {
             try await factory.importAll()
             await loadCollections()
         } catch {
-            self.error = AppError.unknown(error.localizedDescription)
+            self.error = AppError.unknown(error)
         }
     }
 }
