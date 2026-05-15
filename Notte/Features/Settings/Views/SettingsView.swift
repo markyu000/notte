@@ -24,16 +24,18 @@ struct SettingsView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("设置")
             .background(ColorTokens.backgroundPrimary)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(ColorTokens.accent)
-                    }
-                }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.black)
             }
+            .buttonStyle(.glass)
+            .padding(.trailing, SpacingTokens.md)
+            .padding(.bottom, SpacingTokens.lg)
         }
     }
 }

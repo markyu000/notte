@@ -134,13 +134,15 @@ struct CollectionListScreen: View {
             viewModel.isShowingCreateSheet = true
         } label: {
             Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(ColorTokens.backgroundPrimary)
+                .font(.title.weight(.semibold))
                 .frame(width: 56, height: 56)
-                .background(ColorTokens.accent)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+                .foregroundStyle(Color.black)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.glassProminent)
+        .tint(ColorTokens.accent)
+        .buttonBorderShape(.circle)
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
         .padding(.trailing, SpacingTokens.md)
         .padding(.bottom, SpacingTokens.lg)
     }
