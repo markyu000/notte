@@ -23,20 +23,21 @@ struct SettingsView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle("设置")
+            .navigationBarTitleDisplayMode(.inline)
             .background(ColorTokens.backgroundPrimary)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "checkmark")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.black)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.black)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(ColorTokens.accent)
+                }
             }
-            .buttonStyle(.glass)
-            .padding(.trailing, SpacingTokens.md)
-            .padding(.bottom, SpacingTokens.lg)
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
