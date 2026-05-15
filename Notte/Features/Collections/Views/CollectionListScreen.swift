@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct CollectionListScreen: View {
+    @Binding var showCreateTrigger: Bool
     @StateObject private var viewModel: CollectionListViewModel
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var dependencyContainer: DependencyContainer
@@ -20,12 +21,14 @@ struct CollectionListScreen: View {
     let onActionConsumed: () -> Void
 
     init(
+        showCreateTrigger: Binding<Bool> = .constant(false),
         repository: CollectionRepositoryProtocol,
         pageRepository: PageRepositoryProtocol,
         nodeRepository: NodeRepositoryProtocol,
         pendingAction: RootView.PostOnboardingAction? = nil,
         onActionConsumed: @escaping () -> Void = {}
     ) {
+        self._showCreateTrigger = showCreateTrigger
         _viewModel = StateObject(
             wrappedValue: CollectionListViewModel(
                 repository: repository,
@@ -40,9 +43,6 @@ struct CollectionListScreen: View {
     var body: some View {
         NavigationStack {
             contentView
-                .overlay(alignment: .bottomTrailing) {
-                    addButton
-                }
                 .navigationTitle("Notte")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -111,6 +111,12 @@ struct CollectionListScreen: View {
                 }
                 onActionConsumed()
             }
+            .onChange(of: showCreateTrigger) { _, triggered in
+                if triggered {
+                    viewModel.isShowingCreateSheet = true
+                    showCreateTrigger = false
+                }
+            }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
@@ -128,24 +134,6 @@ struct CollectionListScreen: View {
                 collectionList
             }
         }
-    }
-
-    private var addButton: some View {
-        Button {
-            viewModel.isShowingCreateSheet = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.title.weight(.semibold))
-                .frame(width: 50, height: 50)
-                .foregroundStyle(Color.black)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.glassProminent)
-        .tint(ColorTokens.accent)
-        .buttonBorderShape(.circle)
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-        .padding(.trailing, SpacingTokens.md)
-        .padding(.bottom, SpacingTokens.lg)
     }
 
     private var collectionList: some View {

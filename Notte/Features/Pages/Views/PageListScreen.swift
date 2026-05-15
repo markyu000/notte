@@ -9,18 +9,21 @@ import SwiftUI
 import SwiftData
 
 struct PageListScreen: View {
+    @Binding var showCreateTrigger: Bool
     @StateObject private var viewModel: PageListViewModel
     @EnvironmentObject private var router: AppRouter
     @State private var editMode: EditMode = .inactive
     @State private var pageToDelete: Page?
 
     init(
+        showCreateTrigger: Binding<Bool> = .constant(false),
         collectionID: UUID,
         collectionTitle: String,
         pageRepository: PageRepositoryProtocol,
         nodeRepository: NodeRepositoryProtocol,
         blockRepository: BlockRepositoryProtocol
     ) {
+        self._showCreateTrigger = showCreateTrigger
         _viewModel = StateObject(
             wrappedValue: PageListViewModel(
                 collectionID: collectionID,
@@ -34,9 +37,6 @@ struct PageListScreen: View {
     
     var body: some View {
         contentView
-            .overlay(alignment: .bottomTrailing) {
-                addButton
-            }
             .ignoresSafeArea(.keyboard, edges: .bottom)
             .navigationTitle(viewModel.collectionTitle)
             .navigationBarTitleDisplayMode(.large)
@@ -57,6 +57,12 @@ struct PageListScreen: View {
             .modifier(PageErrorAlertModifier(viewModel: viewModel))
             .task {
                 await viewModel.loadPages()
+            }
+            .onChange(of: showCreateTrigger) { _, triggered in
+                if triggered {
+                    viewModel.isShowingCreateSheet = true
+                    showCreateTrigger = false
+                }
             }
     }
 
@@ -81,24 +87,6 @@ struct PageListScreen: View {
                 .tint(ColorTokens.accent)
                 .disabled(viewModel.pages.isEmpty)
         }
-    }
-
-    private var addButton: some View {
-        Button {
-            viewModel.isShowingCreateSheet = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.title.weight(.semibold))
-                .frame(width: 50, height: 50)
-                .foregroundStyle(Color.black)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.glassProminent)
-        .tint(ColorTokens.accent)
-        .buttonBorderShape(.circle)
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-        .padding(.trailing, SpacingTokens.md)
-        .padding(.bottom, SpacingTokens.lg)
     }
 
     private var pageList: some View {

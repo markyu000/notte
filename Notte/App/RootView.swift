@@ -13,6 +13,8 @@ struct RootView: View {
     @EnvironmentObject private var dependencyContainer: DependencyContainer
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     @State private var pendingAction: PostOnboardingAction?
+    @State private var collectionCreateTrigger = false
+    @State private var pageCreateTrigger = false
 
     enum PostOnboardingAction { case createFirst, importSamples }
 
@@ -32,9 +34,16 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.45), value: hasCompletedOnboarding)
     }
 
+    private var shouldShowFAB: Bool {
+        if router.path.isEmpty { return true }
+        if case .pageList = router.path.last { return true }
+        return false
+    }
+
     private var mainNavigation: some View {
         NavigationStack(path: $router.path) {
             CollectionListScreen(
+                showCreateTrigger: $collectionCreateTrigger,
                 repository: dependencyContainer.collectionRepository,
                 pageRepository: dependencyContainer.pageRepository,
                 nodeRepository: dependencyContainer.nodeRepository,
@@ -45,6 +54,7 @@ struct RootView: View {
                 switch route {
                 case .pageList(let collectionID, let collectionTitle):
                     PageListScreen(
+                        showCreateTrigger: $pageCreateTrigger,
                         collectionID: collectionID,
                         collectionTitle: collectionTitle,
                         pageRepository: dependencyContainer.pageRepository,
@@ -61,6 +71,36 @@ struct RootView: View {
                 }
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if shouldShowFAB {
+                fab
+                    .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .bottomTrailing)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: shouldShowFAB)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .environmentObject(router)
+    }
+
+    private var fab: some View {
+        Button {
+            if router.path.isEmpty {
+                collectionCreateTrigger = true
+            } else if case .pageList = router.path.last {
+                pageCreateTrigger = true
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.title.weight(.semibold))
+                .frame(width: 50, height: 50)
+                .foregroundStyle(Color.black)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.glassProminent)
+        .tint(ColorTokens.accent)
+        .buttonBorderShape(.circle)
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        .padding(.trailing, SpacingTokens.md)
+        .padding(.bottom, SpacingTokens.lg)
     }
 }
