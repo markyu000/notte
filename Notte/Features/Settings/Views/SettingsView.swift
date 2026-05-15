@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,16 @@ struct SettingsView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("设置")
             .background(ColorTokens.backgroundPrimary)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(ColorTokens.accent)
+                    }
+                }
+            }
         }
     }
 }
