@@ -1,0 +1,30 @@
+{
+  "title": "读书笔记",
+  "iconName": "book",
+  "colorToken": null,
+  "pages": [
+    {
+      "title": "《思考，快与慢》",
+      "nodes": [
+        { "title": "系统 1 与系统 2", "depth": 0, "blocks": [{ "type": "text", "content": "直觉系统快但易错，理性系统慢但准确。" }] },
+        {
+          "title": "认知偏差",
+          "depth": 0,
+          "children": [
+            { "title": "锚定效应", "depth": 1, "blocks": [{ "type": "text", "content": "初始数值会影响后续判断。" }] },
+            { "title": "可得性启发", "depth": 1, "blocks": [{ "type": "text", "content": "越容易回忆的事件被判断为越常见。" }] }
+          ]
+        },
+        { "title": "前景理论", "depth": 0, "blocks": [{ "type": "text", "content": "损失带来的痛苦大于同等收益的快乐。" }] }
+      ]
+    },
+    {
+      "title": "《原则》",
+      "nodes": [
+        { "title": "极度求真", "depth": 0, "blocks": [{ "type": "text", "content": "面对现实，不自我欺骗。" }] },
+        { "title": "可信度加权", "depth": 0, "blocks": [{ "type": "text", "content": "决策时按可信度权重综合不同意见。" }] },
+        { "title": "五步流程", "depth": 0, "blocks": [{ "type": "text", "content": "目标 → 问题 → 诊断 → 设计 → 执行。" }] }
+      ]
+    }
+  ]
+}

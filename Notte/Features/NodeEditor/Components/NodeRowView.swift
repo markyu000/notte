@@ -68,6 +68,7 @@ struct NodeRowView: View {
             }
         }
         .padding(.vertical, 6)
+        .frame(minHeight: 44)
         .background(
             isFocused
             ? ColorTokens.backgroundSecondary

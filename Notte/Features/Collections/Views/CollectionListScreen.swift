@@ -9,16 +9,26 @@ import SwiftUI
 import SwiftData
 
 struct CollectionListScreen: View {
+    @Binding var showCreateTrigger: Bool
     @StateObject private var viewModel: CollectionListViewModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var dependencyContainer: DependencyContainer
     @State private var editMode: EditMode = .inactive
     @State private var collectionToDelete: Collection?
+    @State private var isShowingSettings = false
+
+    let pendingAction: RootView.PostOnboardingAction?
+    let onActionConsumed: () -> Void
 
     init(
+        showCreateTrigger: Binding<Bool> = .constant(false),
         repository: CollectionRepositoryProtocol,
         pageRepository: PageRepositoryProtocol,
-        nodeRepository: NodeRepositoryProtocol
+        nodeRepository: NodeRepositoryProtocol,
+        pendingAction: RootView.PostOnboardingAction? = nil,
+        onActionConsumed: @escaping () -> Void = {}
     ) {
+        self._showCreateTrigger = showCreateTrigger
         _viewModel = StateObject(
             wrappedValue: CollectionListViewModel(
                 repository: repository,
@@ -26,30 +36,21 @@ struct CollectionListScreen: View {
                 nodeRepository: nodeRepository
             )
         )
+        self.pendingAction = pendingAction
+        self.onActionConsumed = onActionConsumed
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.collections.isEmpty {
-                    CollectionEmptyState {
-                        viewModel.isShowingCreateSheet = true
-                    }
-                } else {
-                    collectionList
-                }
-            }
-            .navigationTitle("Notte")
+            contentView
+                .navigationTitle("Notte")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        viewModel.isShowingCreateSheet = true
+                        isShowingSettings = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "gearshape")
                             .foregroundStyle(ColorTokens.accent)
                     }
                 }
@@ -62,6 +63,9 @@ struct CollectionListScreen: View {
             .environment(\.editMode, $editMode)
             .sheet(isPresented: $viewModel.isShowingCreateSheet) {
                 CollectionCreateSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
             }
             .sheet(
                 isPresented: Binding(
@@ -97,6 +101,37 @@ struct CollectionListScreen: View {
             }
             .task {
                 await viewModel.loadCollections()
+                switch pendingAction {
+                case .createFirst:
+                    viewModel.handlePendingCreateFirst()
+                case .importSamples:
+                    await viewModel.importSampleData(using: dependencyContainer.makeExampleDataFactory())
+                case nil:
+                    break
+                }
+                onActionConsumed()
+            }
+            .onChange(of: showCreateTrigger) { _, triggered in
+                if triggered {
+                    viewModel.isShowingCreateSheet = true
+                    showCreateTrigger = false
+                }
+            }
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    private var contentView: some View {
+        Group {
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.collections.isEmpty {
+                CollectionEmptyState {
+                    viewModel.isShowingCreateSheet = true
+                }
+            } else {
+                collectionList
             }
         }
     }
@@ -208,6 +243,7 @@ struct CollectionListScreen: View {
     let repo = try! CollectionRepository(context: context)
     let pageRepo = PageRepository(context: context)
     let nodeRepo = NodeRepository(context: context)
+    let dependencyContainer = DependencyContainer(modelContainer: container)
 
     CollectionListScreen(
         repository: repo,
@@ -220,4 +256,5 @@ struct CollectionListScreen: View {
         try! await createUsecase.execute(title: "实例2")
     }
     .environmentObject(AppRouter())
+    .environmentObject(dependencyContainer)
 }

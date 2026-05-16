@@ -61,6 +61,7 @@ struct PageEditorView: View {
                             )
                             .id(node.id)
                             .transition(.nodeExpand)
+                            .zIndex(Double(100 - node.depth))
                         }
 
                         ColorTokens.backgroundPrimary
@@ -120,7 +121,7 @@ struct PageEditorView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
-                        .foregroundStyle(ColorTokens.accent)
+                        .foregroundStyle(ColorTokens.textPrimary)
                 } primaryAction: {
                     handleSmartAdd()
                 }
@@ -131,7 +132,7 @@ struct PageEditorView: View {
                         viewModel.saveChanges()
                     } label: {
                         Image(systemName: "checkmark")
-                            .foregroundStyle(ColorTokens.textPrimary)
+                            .foregroundStyle(Color.black)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(ColorTokens.accent)

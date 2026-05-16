@@ -9,18 +9,21 @@ import SwiftUI
 import SwiftData
 
 struct PageListScreen: View {
+    @Binding var showCreateTrigger: Bool
     @StateObject private var viewModel: PageListViewModel
     @EnvironmentObject private var router: AppRouter
     @State private var editMode: EditMode = .inactive
     @State private var pageToDelete: Page?
 
     init(
+        showCreateTrigger: Binding<Bool> = .constant(false),
         collectionID: UUID,
         collectionTitle: String,
         pageRepository: PageRepositoryProtocol,
         nodeRepository: NodeRepositoryProtocol,
         blockRepository: BlockRepositoryProtocol
     ) {
+        self._showCreateTrigger = showCreateTrigger
         _viewModel = StateObject(
             wrappedValue: PageListViewModel(
                 collectionID: collectionID,
@@ -34,6 +37,7 @@ struct PageListScreen: View {
     
     var body: some View {
         contentView
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .navigationTitle(viewModel.collectionTitle)
             .navigationBarTitleDisplayMode(.large)
             .toolbar { toolbarContent }
@@ -54,6 +58,12 @@ struct PageListScreen: View {
             .task {
                 await viewModel.loadPages()
             }
+            .onChange(of: showCreateTrigger) { _, triggered in
+                if triggered {
+                    viewModel.isShowingCreateSheet = true
+                    showCreateTrigger = false
+                }
+            }
     }
 
     private var contentView: some View {
@@ -72,14 +82,6 @@ struct PageListScreen: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.isShowingCreateSheet = true
-            } label: {
-                Image(systemName: "plus")
-                    .foregroundStyle(ColorTokens.accent)
-            }
-        }
         ToolbarItem(placement: .topBarLeading) {
             EditButton()
                 .tint(ColorTokens.accent)
