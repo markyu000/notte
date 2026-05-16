@@ -16,9 +16,10 @@ feature/m7-icloud-sync
 1. [M7-01 Xcode Capabilities 配置（CloudKit 声明）](#m7-01-xcode-capabilities-配置cloudkit-声明)
 2. [M7-02 PersistenceController 启用 CloudKit 同步](#m7-02-persistencecontroller-启用-cloudkit-同步)
 3. [M7-03 Debug / Production CloudKit 容器隔离](#m7-03-debug--production-cloudkit-容器隔离)
-4. [M7-04 CloudKitSyncLogger 实现](#m7-04-cloudkitsynclogger-实现)
-5. [M7-05 CloudKit 错误通知监听](#m7-05-cloudkit-错误通知监听)
-6. [M7-06 CloudKit 错误映射到 AppError](#m7-06-cloudkit-错误映射到-apperror)
+4. [M7-03.5 冲突策略声明（Last Write Wins）](#m7-035-冲突策略声明last-write-wins)
+5. [M7-04 CloudKitSyncLogger 实现](#m7-04-cloudkitsynclogger-实现)
+6. [M7-05 CloudKit 错误通知监听](#m7-05-cloudkit-错误通知监听)
+7. [M7-06 CloudKit 错误映射到 AppError](#m7-06-cloudkit-错误映射到-apperror)
 7. [M7-07 SettingsSyncSection 实时同步状态](#m7-07-settingssyncsection-实时同步状态)
 8. [M7-08 lastSyncDate AppStorage 追踪](#m7-08-lastsyncdate-appstorage-追踪)
 9. [M7-09 同步失败 Toast（RootView）](#m7-09-同步失败-toastrootview)
@@ -168,6 +169,36 @@ feat: use separate CloudKit container for debug builds
 
 ---
 
+## M7-03.5 冲突策略声明（Last Write Wins）
+
+**文件：** 无代码改动，工程决策记录
+
+**冲突策略：** Last Write Wins（LWW）
+
+SwiftData + CloudKit 默认冲突策略即为 LWW，无需额外代码实现。当两台设备对同一条记录做出相互冲突的修改时，CloudKit 以 `updatedAt` 字段决定保留哪一版本。
+
+**前提：** 四个 `@Model` 类均带有 `updatedAt: Date` 字段（M1 阶段已建立），每次写操作必须同步更新该字段：
+
+| 模型 | `updatedAt` 更新时机 |
+|---|---|
+| `CollectionModel` | 重命名、固定/取消固定、重排序 |
+| `PageModel` | 重命名、归档、重排序 |
+| `NodeModel` | 标题变更、缩进/反缩进、移动、折叠 |
+| `BlockModel` | 内容变更 |
+
+**已知局限：**
+
+- LWW 不处理结构性冲突（如两端同时移动同一 Node 的父子关系）。MVP 阶段接受此限制，不引入合并 UI，后续可在 M8 回归测试中增加"双端同时编辑同一 Node 标题"用例验证。
+- 若两端系统时钟差异过大，LWW 结果可能不符合直觉——这是 CloudKit LWW 的固有特性，MVP 不作额外处理。
+
+**Git commit message：**
+
+```
+docs: record LWW conflict strategy as engineering decision for M7
+```
+
+---
+
 ## M7-04 CloudKitSyncLogger 实现
 
 **文件：** `Data/Sync/CloudKitSyncLogger.swift`（新建）
@@ -179,7 +210,7 @@ import CoreData
 /// 监听 SwiftData + CloudKit 底层的同步事件，向 UI 层暴露同步状态。
 /// SwiftData 的 CloudKit 集成底层仍通过 NSPersistentCloudKitContainer 发出通知。
 @MainActor
-class CloudKitSyncLogger: ObservableObject {
+final class CloudKitSyncLogger: ObservableObject {
 
     struct SyncEvent: Identifiable {
         let id = UUID()
@@ -202,6 +233,8 @@ class CloudKitSyncLogger: ObservableObject {
     }
 
     deinit {
+        // deinit 不受 @MainActor 约束，可能在任意线程被调用；
+        // NotificationCenter.removeObserver 是线程安全的，可直接调用。
         if let observer {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -250,7 +283,9 @@ class CloudKitSyncLogger: ObservableObject {
         if let error = event.error {
             syncFailed = true
             syncError = error
-        } else if event.succeeded {
+        } else if event.succeeded && event.type != .setup {
+            // .setup 事件表示 CloudKit schema 初始化完成，不代表用户数据已同步，
+            // 不应记录为"上次同步时间"。
             syncFailed = false
             syncError = nil
             let now = event.endDate ?? Date()
@@ -272,6 +307,7 @@ feat: add CloudKit sync event logger
 - `startObserving()` 与 `init()` 分离：`AppBootStrap` 在 `isReady = true` 后再调用，确保 `ModelContainer` 已就绪。
 - `SyncEvent` 保留最近 50 条记录，供调试分区展示，不写入持久化。
 - `lastSyncDate` 在 init 时从 `UserDefaults` 恢复，使设置页重启后不显示"尚未同步"。
+- `event.type != .setup` 过滤掉 schema 初始化事件：`.setup` 仅代表 CloudKit 容器结构建立完成，不意味着用户数据已完成 import/export，不应将其时间戳记录为"上次同步"。
 - `@unknown default` 保护未来 Apple 新增事件类型时不崩溃。
 
 ---
@@ -345,37 +381,45 @@ feat: wire CloudKit sync logger into app bootstrap and environment
 
 ## M7-06 CloudKit 错误映射到 AppError
 
-**文件：** `Data/Sync/CloudKitSyncLogger.swift`（在 `handle(event:)` 内部扩展）
+**文件：** `Infrastructure/AppError.swift`（新增 `syncFailed` case）
 
 ```swift
-// 在 CloudKitSyncLogger.handle(event:) 中，将 CloudKit 错误包装为 RepositoryError
-if let error = event.error {
-    syncFailed = true
-    syncError = RepositoryError.saveFailed(error)
+enum AppError: Error {
+    // 现有 case（以实际文件为准，此处仅展示新增内容）
+    case repositoryError(RepositoryError)
+    // M7 新增：CloudKit 同步层专用错误域
+    case syncFailed(Error)
 }
 ```
 
-**文件：** `Domain/Enums/RepositoryError.swift`（确认 `saveFailed` case 接受任意 `Error`）
+**文件：** `Data/Sync/CloudKitSyncLogger.swift`（`handle(event:)` 直接保存原始 `Error`，不做跨层包装）
 
 ```swift
-enum RepositoryError: Error {
-    case notFound
-    case saveFailed(Error)
-    case fetchFailed(Error)
-    case deleteFailed(Error)
+// handle(event:) 的错误处理分支——已体现在 M7-04 完整实现中
+if let error = event.error {
+    syncFailed = true
+    syncError = error   // 保存原始 Error，不在 Data 层包装为 AppError
 }
+```
+
+需要向用户展示精确错误或进行日志上报时，在**表现层边界**处转换：
+
+```swift
+// 示例：在 Alert / 错误上报处按需转换
+let appError = AppError.syncFailed(syncLogger.syncError ?? SyncUnknownError())
 ```
 
 **Git commit message：**
 
 ```
-feat: map CloudKit sync errors to RepositoryError
+feat: add AppError.syncFailed case for CloudKit errors
 ```
 
 **解释：**
 
-- `RepositoryError.saveFailed(Error)` 已在现有代码中使用（`NodePersistenceCoordinator` 等），直接复用，不引入新的错误类型。
-- `CloudKitSyncLogger.syncError` 类型保持为 `Error?`，UI 层仅需判断 `syncFailed` 布尔值；`RepositoryError` 包装只对需要精确错误分类的层（如日志上报）有意义。
+- `RepositoryError` 是持久化层（SwiftData CRUD）的错误域，不适合描述 CloudKit 网络/权限/配额错误——两者错误语义不同，不应共用。
+- `CloudKitSyncLogger.syncError: Error?` 保存原始 CloudKit 错误，Data 层不做跨层包装，保持层级清洁。
+- `AppError.syncFailed(Error)` 作为表现层的映射点：MVP 阶段 `SyncFailureBanner` 只需判断 `syncFailed: Bool`，无需展开具体类型；此 case 为 M8 阶段精细错误展示（错误类型分类、用户友好提示）预留接口。
 
 ---
 
@@ -725,7 +769,7 @@ feat: add sync event log viewer in debug section
 **验收：**
 
 - [ ] 设备 B 显示「同步页面 v2」，未出现重复 Page
-- [ ] Page 的 `updatedAt` 在两设备上一致
+- [ ] 设备 B 的 Page 列表中旧名称「同步页面 v1」已不存在
 
 ---
 
@@ -768,47 +812,95 @@ feat: add sync event log viewer in debug section
 
 ## M7-16 测试：同步失败时本地数据完整性
 
-**文件：** `NotteTests/UnitTests/CloudKitSyncLoggerTests.swift`（新建）
+**文件：** `NotteTests/UnitTests/LocalDataIntegrityTests.swift`（新建）
+
+使用 `inMemory` 容器等价模拟"CloudKit 完全不可用"状态（网络断开 / 同步失败），验证本地 Repository 层的 CRUD 操作不受影响。
 
 ```swift
 import XCTest
+import SwiftData
 @testable import Notte
 
+/// 验证同步不可用时本地数据完整性：
+/// inMemory 容器 = CloudKit 同步路径被完全旁路，只剩本地存储层。
 @MainActor
-final class CloudKitSyncLoggerTests: XCTestCase {
+final class LocalDataIntegrityTests: XCTestCase {
 
-    override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: "lastSyncDate")
-        super.tearDown()
+    var container: ModelContainer!
+    var collectionRepo: CollectionRepository!
+    var nodeRepo: NodeRepository!
+
+    override func setUpWithError() throws {
+        container = try PersistenceController.makeContainer(inMemory: true)
+        let context = ModelContext(container)
+        collectionRepo = CollectionRepository(context: context)
+        nodeRepo = NodeRepository(context: context)
     }
 
-    /// 测试：初始状态下无错误、无同步日期（UserDefaults 无记录时）
-    func testInitialStateWithNoStoredDate() {
-        UserDefaults.standard.removeObject(forKey: "lastSyncDate")
-        let logger = CloudKitSyncLogger()
-        XCTAssertFalse(logger.syncFailed)
-        XCTAssertNil(logger.syncError)
-        XCTAssertNil(logger.lastSyncDate)
-        XCTAssertTrue(logger.eventLog.isEmpty)
-    }
-
-    /// 测试：UserDefaults 中存有 lastSyncDate 时，初始化后正确恢复
-    func testLastSyncDateRestoredFromUserDefaults() {
-        let expectedTs: Double = 1_700_000_000
-        UserDefaults.standard.set(expectedTs, forKey: "lastSyncDate")
-
-        let logger = CloudKitSyncLogger()
-
-        XCTAssertEqual(
-            logger.lastSyncDate?.timeIntervalSince1970 ?? 0,
-            expectedTs,
-            accuracy: 0.001
+    /// 测试：CloudKit 不可用时，Collection CRUD 完整可用
+    func testCollectionCRUDWithoutCloudKit() async throws {
+        let id = UUID()
+        let collection = Collection(
+            id: id,
+            title: "本地 Collection",
+            iconName: nil,
+            colorToken: nil,
+            createdAt: Date(),
+            updatedAt: Date(),
+            sortIndex: 1000,
+            isPinned: false
         )
+        try await collectionRepo.create(collection)
+
+        let all = try await collectionRepo.fetchAll()
+        XCTAssertEqual(all.count, 1)
+        XCTAssertEqual(all.first?.id, id)
+        XCTAssertEqual(all.first?.title, "本地 Collection")
     }
 
-    /// 测试：PersistenceController inMemory 模式下 ModelContainer 正常创建（不依赖 CloudKit）
-    func testInMemoryContainerCreatesWithoutCloudKit() throws {
-        XCTAssertNoThrow(try PersistenceController.makeContainer(inMemory: true))
+    /// 测试：CloudKit 不可用时，Node 写入后本地仍可独立读取
+    func testNodeDataPersistsLocallyWithoutCloudKit() async throws {
+        let nodeID = UUID()
+        let node = Node(
+            id: nodeID,
+            pageID: UUID(),
+            parentNodeID: nil,
+            title: "离线节点",
+            depth: 0,
+            sortIndex: 1000,
+            isCollapsed: false,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        try await nodeRepo.create(node)
+
+        let fetched = try await nodeRepo.fetch(by: nodeID)
+        XCTAssertNotNil(fetched)
+        XCTAssertEqual(fetched?.title, "离线节点")
+    }
+
+    /// 测试：连续多次写入，数据量准确，无静默丢失
+    func testConsecutiveWritesDontLoseData() async throws {
+        let pageID = UUID()
+        let ids = (0..<5).map { _ in UUID() }
+        for (i, id) in ids.enumerated() {
+            let node = Node(
+                id: id,
+                pageID: pageID,
+                parentNodeID: nil,
+                title: "节点 \(i)",
+                depth: 0,
+                sortIndex: Double(i + 1) * 1000,
+                isCollapsed: false,
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await nodeRepo.create(node)
+        }
+        for id in ids {
+            let fetched = try await nodeRepo.fetch(by: id)
+            XCTAssertNotNil(fetched, "节点 \(id) 写入后应可本地读取")
+        }
     }
 }
 ```
@@ -816,14 +908,14 @@ final class CloudKitSyncLoggerTests: XCTestCase {
 **Git commit message：**
 
 ```
-test: cover CloudKit sync logger initialization and local data integrity
+test: verify local data integrity when CloudKit sync is unavailable
 ```
 
 **解释：**
 
-- `testInMemoryContainerCreatesWithoutCloudKit`：验证在 CI / 单元测试环境（无 CloudKit 授权）下，`inMemory` 路径仍能正常初始化，确保所有现有测试不受 M7 改动影响。
-- `testLastSyncDateRestoredFromUserDefaults`：回归 `lastSyncDate` 的持久化路径，防止 init 逻辑被意外修改后 UI 显示"尚未同步"。
-- `tearDown` 每次清除 `UserDefaults` 测试 key，保持测试隔离。
+- `inMemory` 容器等价于"CloudKit 路径完全不工作"的状态：数据只写入本地内存，不经过任何 CloudKit 网络调用——这正是同步失败时应当成立的保证。
+- 三个测试分别验证：单条创建后可读取（Collection）、Node 独立读取、批量写入无丢失。覆盖"同步失败不破坏本地闭环"的核心验收条件。
+- 使用真实 `CollectionRepository` / `NodeRepository`（非 Mock），确保验证的是完整的数据层路径而非测试替身。
 
 ---
 
