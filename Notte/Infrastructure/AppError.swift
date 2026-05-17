@@ -11,7 +11,8 @@ enum AppError: LocalizedError {
     case repositoryError(RepositoryError)
     case validationFailure(String)
     case unknown(Error)
-
+    case syncFailed(Error)
+    
     var errorDescription: String? {
         switch self {
         case .repositoryError(let e):
@@ -20,6 +21,8 @@ enum AppError: LocalizedError {
             return message
         case .unknown(let e):
             return "未知错误：\(e.localizedDescription)"
+        case .syncFailed(let e):
+            return "同步失败： \(e)"
         }
     }
 }
