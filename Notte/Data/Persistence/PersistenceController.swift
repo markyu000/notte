@@ -26,12 +26,21 @@ struct PersistenceController {
 
         let config = ModelConfiguration(
             schema: schema,
-            cloudKitDatabase: .none
+            cloudKitDatabase: cloudKitDatabase
         )
         return try ModelContainer(
             for: schema,
             migrationPlan: NotteMigrationPlan.self,
             configurations: config
         )
+    }
+
+    private static var cloudKitDatabase: ModelConfiguration.CloudKitDatabase {
+        #if DEBUG
+//        return .private("iCloud.com.markyu000.notte.debug")
+        return .none
+        #else
+        return .automatic
+        #endif
     }
 }
