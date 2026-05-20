@@ -129,6 +129,7 @@ struct PageListScreen: View {
                     }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
             }
             .onMove { from, to in
                 guard let sourceIndex = from.first else { return }
@@ -142,8 +143,9 @@ struct PageListScreen: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(-25)
+        .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
+        .padding(.top, SpacingTokens.sm)
     }
     
     private var loadingView: some View {

@@ -35,7 +35,7 @@ struct CollectionCard: View {
 
             Spacer()
         }
-        .padding(.horizontal, SpacingTokens.md)
+        .padding(.horizontal, SpacingTokens.xl)
         .padding(.vertical, SpacingTokens.sm)
 //        .background(ColorTokens.backgroundSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
