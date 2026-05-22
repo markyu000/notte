@@ -100,12 +100,27 @@ class CollectionListViewModel: ObservableObject {
         }
     }
 
+    func handlePendingCreateFirst() {
+        isShowingCreateSheet = true
+    }
+
     func reorderCollection(moving id: UUID, after targetID: UUID?) async {
         do {
             try await reorderUseCase.execute(moving: id, after: targetID)
             await loadCollections()
         } catch {
             self.error = error as? AppError
+        }
+    }
+    
+    func importSampleData(using factory: ExampleDataFactory) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            try await factory.importAll()
+            await loadCollections()
+        } catch {
+            self.error = AppError.unknown(error)
         }
     }
 }

@@ -37,7 +37,9 @@ feature/m4-node-editor-core
 22. [M4-21 PageEditorView](#m4-21-pageeditorview)
 23. [M4-22 NodeRowView](#m4-22-noderowview)
 24. [M4-23 NodeContentEditor（UITextView 包装）](#m4-23-nodecontenteditoruitextview-包装)
-25. [M4-24 NodeIndentationGuide](#m4-24-nodeindentationguide)
+25. [M4-23b NodeTitleEditor](#m4-23b-nodetitleeditor)
+26. [M4-23c BlockListView](#m4-23c-blocklistview)
+27. [M4-24 NodeIndentationGuide](#m4-24-nodeindentationguide)
 26. [M4-25 NodeCollapseControl](#m4-25-nodecollapsecontrol)
 27. [M4-26 NodeTypeIndicator](#m4-26-nodetypeindicator)
 28. [M4-27 DependencyContainer 更新](#m4-27-dependencycontainer-更新)
@@ -47,7 +49,8 @@ feature/m4-node-editor-core
 32. [M4-31 键盘 Backspace 空节点行为](#m4-31-键盘-backspace-空节点行为)
 33. [M4-32 键盘 Tab → indent 行为](#m4-32-键盘-tab--indent-行为)
 34. [M4-33 键盘 Shift+Tab → outdent 行为](#m4-33-键盘-shifttab--outdent-行为)
-35. [M4-34～50 单元测试与集成测试](#m4-3450-单元测试与集成测试)
+35. [M4-34 RootView 更新（接入 PageEditorView）](#m4-34-rootview-更新接入-pageeditorview)
+36. [M4-35～50 单元测试与集成测试](#m4-3450-单元测试与集成测试)
 
 ---
 
@@ -709,10 +712,12 @@ struct NodeMutationService {
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
     let queryService: NodeQueryService
+    private let logger = ConsoleLogger()
 
     // MARK: - 插入
 
     func insertAfter(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始在节点后插入, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let current = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -740,10 +745,12 @@ struct NodeMutationService {
             createdAt: Date(), updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
+        logger.info("节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 
     func insertChild(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始插入子节点, parentNodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let parentNode = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -768,6 +775,7 @@ struct NodeMutationService {
             createdAt: Date(), updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
+        logger.info("子节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 }
@@ -795,6 +803,7 @@ feat: implement NodeMutationService insertAfter and insertChild
 ```swift
 extension NodeMutationService {
     func delete(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("开始删除节点, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         let descendants = queryService.descendants(of: nodeID, in: nodes)
         let allIDs = [nodeID] + descendants.map(\.id)
@@ -802,6 +811,7 @@ extension NodeMutationService {
             try await blockRepository.deleteAll(in: id)
             try await nodeRepository.delete(by: id)
         }
+        logger.info("节点删除成功, nodeID=\(nodeID), 共 \(allIDs.count) 个", function: #function)
     }
 }
 ```
@@ -828,6 +838,7 @@ feat: implement NodeMutationService.delete with cascade
 ```swift
 extension NodeMutationService {
     func moveUp(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("上移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -843,9 +854,11 @@ extension NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedPrev)
+        logger.info("节点上移成功, nodeID=\(nodeID)", function: #function)
     }
 
     func moveDown(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("下移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -861,6 +874,7 @@ extension NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedNext)
+        logger.info("节点下移成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -887,6 +901,7 @@ feat: implement NodeMutationService moveUp and moveDown
 ```swift
 extension NodeMutationService {
     func indent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -911,9 +926,11 @@ extension NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
     func outdent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("反缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -941,6 +958,7 @@ extension NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -967,21 +985,25 @@ feat: implement NodeMutationService indent and outdent
 ```swift
 extension NodeMutationService {
     func toggleCollapse(nodeID: UUID) async throws {
+        logger.debug("切换折叠状态, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.isCollapsed.toggle()
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("折叠状态更新成功, nodeID=\(nodeID)", function: #function)
     }
 
     func updateTitle(nodeID: UUID, title: String) async throws {
+        logger.debug("更新节点标题, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.title = title
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("节点标题更新成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -1008,10 +1030,12 @@ struct NodeMutationService {
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
     let queryService: NodeQueryService
+    private let logger = ConsoleLogger()
 
     // MARK: - 插入
 
     func insertAfter(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始在节点后插入, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let current = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1049,10 +1073,12 @@ struct NodeMutationService {
         )
         try await blockRepository.create(emptyBlock)
 
+        logger.info("节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 
     func insertChild(nodeID: UUID, in pageID: UUID) async throws -> Node {
+        logger.debug("开始插入子节点, parentNodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let parentNode = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1086,12 +1112,14 @@ struct NodeMutationService {
         )
         try await blockRepository.create(emptyBlock)
 
+        logger.info("子节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 
     // MARK: - 删除
 
     func delete(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("开始删除节点, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         // 1. 找到全部子孙节点 id（不含自身）
         let descendants = queryService.descendants(of: nodeID, in: nodes)
@@ -1101,11 +1129,13 @@ struct NodeMutationService {
             try await blockRepository.deleteAll(in: id)
             try await nodeRepository.delete(by: id)
         }
+        logger.info("节点删除成功, nodeID=\(nodeID), 共 \(allIDs.count) 个", function: #function)
     }
 
     // MARK: - 移动
 
     func moveUp(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("上移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1121,9 +1151,11 @@ struct NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedPrev)
+        logger.info("节点上移成功, nodeID=\(nodeID)", function: #function)
     }
 
     func moveDown(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("下移节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1139,11 +1171,13 @@ struct NodeMutationService {
 
         try await nodeRepository.update(updatedNode)
         try await nodeRepository.update(updatedNext)
+        logger.info("节点下移成功, nodeID=\(nodeID)", function: #function)
     }
 
     // MARK: - 缩进 / 反缩进
 
     func indent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1172,9 +1206,11 @@ struct NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
     func outdent(nodeID: UUID, in pageID: UUID) async throws {
+        logger.debug("反缩进节点, nodeID=\(nodeID)", function: #function)
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
@@ -1209,28 +1245,33 @@ struct NodeMutationService {
             desc.updatedAt = Date()
             try await nodeRepository.update(desc)
         }
+        logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
     // MARK: - 折叠
 
     func toggleCollapse(nodeID: UUID) async throws {
+        logger.debug("切换折叠状态, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.isCollapsed.toggle()
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("折叠状态更新成功, nodeID=\(nodeID)", function: #function)
     }
 
     // MARK: - 标题
 
     func updateTitle(nodeID: UUID, title: String) async throws {
+        logger.debug("更新节点标题, nodeID=\(nodeID)", function: #function)
         guard var node = try await nodeRepository.fetch(by: nodeID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         node.title = title
         node.updatedAt = Date()
         try await nodeRepository.update(node)
+        logger.info("节点标题更新成功, nodeID=\(nodeID)", function: #function)
     }
 }
 ```
@@ -1264,8 +1305,10 @@ import Foundation
 struct BlockEditingService {
 
     let blockRepository: BlockRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     func addBlock(nodeID: UUID, type: BlockType) async throws -> Block {
+        logger.debug("开始添加 Block, nodeID=\(nodeID), type=\(type)", function: #function)
         let existing = try await blockRepository.fetchAll(in: nodeID)
         let lastIndex = existing.map(\.sortIndex).max()
         let newSortIndex = lastIndex.map { SortIndexPolicy.indexAfter(last: $0) }
@@ -1277,20 +1320,25 @@ struct BlockEditingService {
             createdAt: Date(), updatedAt: Date()
         )
         try await blockRepository.create(block)
+        logger.info("Block 添加成功, id=\(block.id)", function: #function)
         return block
     }
 
     func deleteBlock(blockID: UUID) async throws {
+        logger.debug("开始删除 Block, blockID=\(blockID)", function: #function)
         try await blockRepository.delete(by: blockID)
+        logger.info("Block 删除成功, blockID=\(blockID)", function: #function)
     }
 
     func updateContent(blockID: UUID, content: String) async throws {
+        logger.debug("更新 Block 内容, blockID=\(blockID)", function: #function)
         guard var block = try await blockRepository.fetch(by: blockID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         block.content = content
         block.updatedAt = Date()
         try await blockRepository.update(block)
+        logger.info("Block 内容更新成功, blockID=\(blockID)", function: #function)
     }
 }
 ```
@@ -1316,12 +1364,14 @@ feat: implement BlockEditingService addBlock, deleteBlock, updateContent
 ```swift
 extension BlockEditingService {
     func reorderBlock(blockID: UUID, newSortIndex: Double) async throws {
+        logger.debug("调整 Block 排序, blockID=\(blockID), newSortIndex=\(newSortIndex)", function: #function)
         guard var block = try await blockRepository.fetch(by: blockID) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
         block.sortIndex = newSortIndex
         block.updatedAt = Date()
         try await blockRepository.update(block)
+        logger.info("Block 排序更新成功, blockID=\(blockID)", function: #function)
     }
 }
 ```
@@ -1533,16 +1583,66 @@ class NodePersistenceCoordinator {
             saveState = .saved
             return
         }
+
+        let blockUpdatesSnapshot = pendingBlockUpdates
+        let titleUpdatesSnapshot = pendingTitleUpdates
         saveState = .saving
-        for (blockID, content) in pendingBlockUpdates {
-            engine.dispatch(.updateContent(blockID: blockID, content: content))
+
+        do {
+            try await persist(blockUpdates: blockUpdatesSnapshot, titleUpdates: titleUpdatesSnapshot)
+            await engine.loadNodes()
+            clearPersistedSnapshots(
+                blockUpdates: blockUpdatesSnapshot,
+                titleUpdates: titleUpdatesSnapshot
+            )
+
+            if pendingBlockUpdates.isEmpty && pendingTitleUpdates.isEmpty {
+                saveState = .saved
+            } else {
+                saveState = .unsaved
+            }
+        } catch {
+            engine.error = .repositoryError(error as? RepositoryError ?? RepositoryError.saveFailed(error))
+            saveState = .unsaved
         }
-        for (nodeID, title) in pendingTitleUpdates {
-            engine.dispatch(.updateTitle(nodeID: nodeID, title: title))
+    }
+}
+
+private extension NodePersistenceCoordinator {
+    func persist(
+        blockUpdates: [UUID: String],
+        titleUpdates: [UUID: String]
+    ) async throws {
+        for (blockID, content) in blockUpdates {
+            guard var block = try await engine.blockRepository.fetch(by: blockID) else {
+                throw RepositoryError.notFound
+            }
+            block.content = content
+            block.updatedAt = Date()
+            try await engine.blockRepository.update(block)
         }
-        pendingBlockUpdates.removeAll()
-        pendingTitleUpdates.removeAll()
-        saveState = .saved
+
+        for (nodeID, title) in titleUpdates {
+            guard var node = try await engine.nodeRepository.fetch(by: nodeID) else {
+                throw RepositoryError.notFound
+            }
+            node.title = title
+            node.updatedAt = Date()
+            try await engine.nodeRepository.update(node)
+        }
+    }
+
+    func clearPersistedSnapshots(
+        blockUpdates: [UUID: String],
+        titleUpdates: [UUID: String]
+    ) {
+        for (blockID, content) in blockUpdates where pendingBlockUpdates[blockID] == content {
+            pendingBlockUpdates.removeValue(forKey: blockID)
+        }
+
+        for (nodeID, title) in titleUpdates where pendingTitleUpdates[nodeID] == title {
+            pendingTitleUpdates.removeValue(forKey: nodeID)
+        }
     }
 }
 ```
@@ -1550,14 +1650,15 @@ class NodePersistenceCoordinator {
 **Git commit message：**
 
 ```
-feat: implement NodePersistenceCoordinator with debounce flush
+refactor: batch autosave persistence in NodePersistenceCoordinator
 ```
 
 **解释：**
 
-- Debounce 策略：每次用户输入触发 `scheduleContentUpdate` 或 `scheduleTitleUpdate`，将变更缓存在字典中，并重置定时器。只有用户停止输入 600ms 后才真正写入 Repository。同一 blockID/nodeID 的多次更新覆盖字典中的旧值，最终只写一次。
-- `flush()` 是强制保存方法，在 `PageEditorView` 的 `onDisappear` 和 App 进入后台时调用，确保未 debounce 的变更不丢失。
-- `SaveState` 枚举向 ViewModel 暴露存储状态，M5 阶段可在导航栏显示"正在保存…"/"已保存"指示器。
+- Debounce 策略保持不变：每次用户输入触发 `scheduleContentUpdate` 或 `scheduleTitleUpdate`，将变更缓存在字典中，并重置定时器。只有用户停止输入 600ms 后才真正进入持久化阶段。同一 blockID/nodeID 的多次更新覆盖字典中的旧值，最终只保存最后一次内容。
+- `flush()` 不再逐条调用 `engine.dispatch(...)`，而是直接使用 `engine` 持有的 Repository 批量更新快照，再统一执行一次 `engine.loadNodes()`。这样可以避免一次 flush 触发多次重载。
+- `flush()` 基于快照保存，并且只移除“本次成功持久化且期间未被新输入覆盖”的缓存项。这样即使保存过程中又有新输入到来，也不会误删最新未保存内容。
+- 保存失败时，`saveState` 保持为 `.unsaved`，并将错误写入 `engine.error`，页面层仍然可以继续展示未保存状态并由上层决定是否提示用户。
 
 ---
 
@@ -1667,7 +1768,7 @@ feat: implement PageEditorViewModel with load and command dispatch
 - `PageEditorViewModel` 是 View 层唯一的数据入口，`PageEditorView` 不直接操作 Engine 或 Service。
 - `onTitleChanged` 和 `onContentChanged` 采用"乐观更新"策略：先立即修改内存中的 `visibleNodes`（保证 UI 无延迟响应），再通过 `persistenceCoordinator` 延迟写入存储。这样用户感知不到任何输入卡顿。
 - `send(_ command: NodeCommand)` 在 `engine.dispatch` 后加了 100ms 等待再同步 `visibleNodes`，给 Engine 内部的 `loadNodes` 异步操作足够完成时间。M5 阶段可改用更优雅的响应式模式替代。
-- `onDisappear` 调用 `persistenceCoordinator.flush()` 确保页面退出时所有未保存变更立即写入，这是数据安全的关键保障。
+- `onDisappear` 调用 `persistenceCoordinator.flush()` 时，现在会真正等待本轮批量持久化完成，而不是只把保存请求异步发出去。这让退出页面或进入后台时的数据安全语义更可靠。
 
 ---
 
@@ -1942,6 +2043,188 @@ feat: implement NodeContentEditor as UITextView wrapper
 
 ---
 
+## M4-23b NodeTitleEditor
+
+**分支：** `feature/m4-node-editor-core`  
+**文件：** `Features/NodeEditor/Views/NodeTitleEditor.swift`
+
+```swift
+import SwiftUI
+import UIKit
+
+/// 专用于 Node 标题输入的 UITextField 包装。
+/// 单行输入，支持 Return / Backspace 空时 / Tab / Shift+Tab 键盘行为。
+struct NodeTitleEditor: UIViewRepresentable {
+
+    var text: String
+    var depth: Int
+    var onTextChanged: (String) -> Void
+    var onReturn: () -> Void
+    var onBackspaceWhenEmpty: () -> Void
+    var onTab: () -> Void
+    var onShiftTab: () -> Void
+
+    func makeUIView(context: Context) -> CustomTextField {
+        let field = CustomTextField()
+        field.backgroundColor = .clear
+        field.borderStyle = .none
+        field.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+        field.placeholder = depth == 0 ? "标题" : "节点"
+        field.delegate = context.coordinator
+        field.onBackspaceWhenEmpty = { context.coordinator.parent.onBackspaceWhenEmpty() }
+        return field
+    }
+
+    func updateUIView(_ uiView: CustomTextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        uiView.font = UIFont.preferredFont(forTextStyle: depth == 0 ? .headline : .body)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    // MARK: - 自定义 UITextField，拦截 Backspace
+
+    class CustomTextField: UITextField {
+        var onBackspaceWhenEmpty: (() -> Void)?
+
+        override func deleteBackward() {
+            if text?.isEmpty == true {
+                onBackspaceWhenEmpty?()
+            } else {
+                super.deleteBackward()
+            }
+        }
+    }
+
+    // MARK: - Coordinator
+
+    class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: NodeTitleEditor
+
+        init(_ parent: NodeTitleEditor) {
+            self.parent = parent
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            parent.onTextChanged(textField.text ?? "")
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            parent.onReturn()
+            return false
+        }
+    }
+}
+```
+
+**Git commit message：**
+
+```
+feat: build NodeTitleEditor as UITextField wrapper
+```
+
+**解释：**
+
+- 标题是单行输入，用 `UITextField` 比 `UITextView` 更合适：天然单行、`textFieldShouldReturn` 直接拦截 Return 键，不需要在 `shouldChangeTextIn` 里判断 `"\n"`。
+- Backspace 空时的拦截需要子类化 `UITextField` 并重写 `deleteBackward()`，因为 `UITextFieldDelegate` 没有提供对应回调。
+- `depth == 0` 时用 `.headline` 字重，子节点用 `.body`，与 `TypographyTokens` 的层级语义对齐。
+- `NodeRowView` 的标题行从 `NodeContentEditor` 换成 `NodeTitleEditor`，`NodeContentEditor` 只用于 Block 内容区。
+
+---
+
+## M4-23c BlockListView
+
+**分支：** `feature/m4-node-editor-core`  
+**文件：** `Features/NodeEditor/Views/BlockListView.swift`
+
+```swift
+import SwiftUI
+
+/// Node 内容区：顺序渲染该 Node 的所有 Block。
+/// MVP 阶段只有 .text 类型，POST 阶段扩展类型时在 switch 里添加对应 BlockView 即可。
+struct BlockListView: View {
+
+    let blocks: [EditorBlock]
+    let onContentChanged: (UUID, String) -> Void
+
+    var body: some View {
+        ForEach(blocks) { block in
+            switch block.type {
+            case .text:
+                NodeContentEditor(
+                    text: block.content,
+                    font: TypographyTokens.body,
+                    placeholder: "内容",
+                    onTextChanged: { onContentChanged(block.id, $0) },
+                    onReturn: { },
+                    onBackspaceWhenEmpty: { },
+                    onTab: { },
+                    onShiftTab: { }
+                )
+                .padding(.leading, 4)
+            }
+        }
+    }
+}
+```
+
+将 `NodeRowView` 中内联的 Block 渲染替换为 `BlockListView`：
+
+```swift
+// NodeRowView 中替换
+VStack(alignment: .leading, spacing: 4) {
+    HStack(spacing: 6) {
+        NodeTypeIndicator(depth: node.depth)
+        if !node.children.isEmpty {
+            NodeCollapseControl(isCollapsed: node.isCollapsed) {
+                onCommand(.toggleCollapse(nodeID: node.id))
+            }
+        }
+        NodeTitleEditor(              // 原来是 NodeContentEditor
+            text: node.title,
+            depth: node.depth,
+            onTextChanged: { onTitleChanged($0) },
+            onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
+            onBackspaceWhenEmpty: {
+                if node.depth > 0 {
+                    onCommand(.outdent(nodeID: node.id))
+                } else {
+                    onCommand(.delete(nodeID: node.id))
+                }
+            },
+            onTab: { onCommand(.indent(nodeID: node.id)) },
+            onShiftTab: { onCommand(.outdent(nodeID: node.id)) }
+        )
+        Spacer()
+        AddNodeButton { onCommand(.insertAfter(nodeID: node.id)) }
+    }
+
+    BlockListView(                    // 原来是内联 ForEach
+        blocks: node.blocks,
+        onContentChanged: onContentChanged
+    )
+    .padding(.leading, 20)
+}
+```
+
+**Git commit message：**
+
+```
+feat: extract BlockListView from NodeRowView
+```
+
+**解释：**
+
+- `BlockListView` 把 Block 渲染逻辑从 `NodeRowView` 中抽离，职责更清晰：`NodeRowView` 只负责行级布局，`BlockListView` 只负责内容区渲染。
+- `switch block.type` 为 POST 阶段扩展类型预留了结构，新增类型只需要加一个 `case`，不需要改 `NodeRowView`。
+- `NodeRowView` 同步把标题输入从 `NodeContentEditor` 换成 `NodeTitleEditor`，两个组件职责正式分离。
+
+---
+
 ## M4-24 NodeIndentationGuide
 
 **分支：** `feature/m4-node-ui-components`  
@@ -2084,7 +2367,7 @@ feat: build NodeTypeIndicator with depth-aware styling
 **文件：** `App/DependencyContainer.swift`（在 M3 基础上更新）
 
 ```swift
-import Foundation
+import Combine
 import SwiftData
 
 @MainActor
@@ -2095,11 +2378,12 @@ class DependencyContainer: ObservableObject {
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
 
-    init(modelContext: ModelContext) {
-        self.collectionRepository = CollectionRepository(context: modelContext)
-        self.pageRepository = PageRepository(context: modelContext)
-        self.nodeRepository = NodeRepository(context: modelContext)
-        self.blockRepository = BlockRepository(context: modelContext)
+    init(modelContainer: ModelContainer) {
+        let context = ModelContext(modelContainer)
+        self.collectionRepository = CollectionRepository(context: context)
+        self.pageRepository = PageRepository(context: context)
+        self.nodeRepository = NodeRepository(context: context)
+        self.blockRepository = BlockRepository(context: context)
     }
 
     // MARK: - ViewModel 工厂方法
@@ -2138,11 +2422,13 @@ feat: add NodeRepository and BlockRepository to DependencyContainer
 import Foundation
 
 struct DeletePageUseCase {
-    let pageRepository: PageRepositoryProtocol
+    let repository: PageRepositoryProtocol
     let nodeRepository: NodeRepositoryProtocol
     let blockRepository: BlockRepositoryProtocol
+    private let logger = ConsoleLogger()
 
     func execute(pageID: UUID) async throws {
+        logger.debug("开始删除 Page（含级联）, id=\(pageID)", function: #function)
         // 1. 获取所有 Node
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         // 2. 逐 Node 删除其关联 Block
@@ -2152,7 +2438,8 @@ struct DeletePageUseCase {
         // 3. 删除所有 Node
         try await nodeRepository.deleteAll(in: pageID)
         // 4. 删除 Page 本身
-        try await pageRepository.delete(by: pageID)
+        try await repository.delete(by: pageID)
+        logger.info("Page 删除成功（含 \(nodes.count) 个 Node）, id=\(pageID)", function: #function)
     }
 }
 ```
@@ -2165,9 +2452,10 @@ feat: complete DeletePageUseCase with block cascade deletion
 
 **解释：**
 
-- M3 的 `DeletePageUseCase` 只做了 `nodeRepository.deleteAll(in: pageID)` → `pageRepository.delete(by: pageID)` 两步，依赖 `NodeRepository.deleteAll` 内部处理 Block 清理。M4 `BlockRepository` 完整实现后，在此处显式补全 Block 的级联删除，删除逻辑透明可审。
-- 删除顺序：Block → Node → Page，从最内层到最外层，确保不留孤儿数据。
-- 新增 `blockRepository` 依赖，`DependencyContainer` 在构建 `DeletePageUseCase` 时传入，与 M4-20 中已注册的 `blockRepository` 配套。
+- M3 的 `DeletePageUseCase` 对 `nodeRepository.deleteAll` 使用了 `try?`，因为彼时 `NodeRepository` 尚未完整实现。M4 `NodeRepository` 与 `BlockRepository` 均完整实现后，`try?` 改为 `try await`，错误可正确向上传播。
+- 在 M3 基础上新增 `blockRepository` 依赖，显式补全 Block 的级联删除：先逐 Node 删其关联 Block，再统一删 Node，最后删 Page 本身。删除顺序 Block → Node → Page，从最内层到最外层，确保不留孤儿数据。
+- `pageRepository` 属性名统一为 `repository`，与 Collection、Page 其他 UseCase 的命名保持一致。
+- 添加 `ConsoleLogger` 日志，与其他 UseCase 保持一致。
 
 ---
 
@@ -2405,9 +2693,86 @@ feat: wire Shift+Tab to outdent via toolbar button
 
 ---
 
-## M4-34~50 单元测试与集成测试
+---
 
-**分支：** `feature/m4-tests`
+## M4-34 RootView 更新（接入 PageEditorView）
+
+**文件：** `App/AppRouter.swift`（更新 `AppRoute.nodeEditor` 关联值）
+
+```swift
+import Foundation
+
+enum AppRoute: Hashable {
+    case pageList(collectionID: UUID, collectionTitle: String)
+    case nodeEditor(pageID: UUID, pageTitle: String)   // 新增 pageTitle
+}
+```
+
+**文件：** `App/RootView.swift`（替换 `.nodeEditor` 占位 Text）
+
+```swift
+import SwiftUI
+
+struct RootView: View {
+    @StateObject private var router = AppRouter()
+    @EnvironmentObject private var dependencyContainer: DependencyContainer
+
+    var body: some View {
+        NavigationStack(path: $router.path) {
+            CollectionListScreen(
+                repository: dependencyContainer.collectionRepository
+            )
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+                case .pageList(let collectionID, let collectionTitle):
+                    PageListScreen(
+                        collectionID: collectionID,
+                        collectionTitle: collectionTitle,
+                        pageRepository: dependencyContainer.pageRepository,
+                        nodeRepository: dependencyContainer.nodeRepository
+                    )
+                case .nodeEditor(let pageID, let pageTitle):
+                    PageEditorView(
+                        viewModel: dependencyContainer.makePageEditorViewModel(
+                            pageID: pageID,
+                            pageTitle: pageTitle
+                        )
+                    )
+                }
+            }
+        }
+        .environmentObject(router)
+    }
+}
+```
+
+**文件：** `Features/Pages/Views/PageListScreen.swift`（更新 `router.navigate` 调用，传入 `pageTitle`）
+
+```swift
+// 将 M3 中的：
+router.navigate(to: .nodeEditor(pageID: page.id))
+
+// 改为：
+router.navigate(to: .nodeEditor(pageID: page.id, pageTitle: page.title))
+```
+
+**Git commit message：**
+
+```
+feat: wire PageEditorView into RootView navigation
+```
+
+**解释：**
+
+- M3 的 `AppRoute.nodeEditor` 只携带 `pageID`，但 `PageEditorView` 初始化时需要 `pageTitle` 用于 `navigationTitle`。若在 `PageEditorView` 内部再根据 `pageID` 发起查询来取标题，会增加一次异步 IO 且 `navigationTitle` 会有短暂空白。最简洁的做法是在 `AppRoute.nodeEditor` 关联值中直接携带 `pageTitle`，`PageListScreen` 在触发导航时已经持有 `page.title`，无额外开销。
+- `PageListScreen` 只改 `router.navigate` 这一行，其余代码不动，改动范围极小。
+- `dependencyContainer.makePageEditorViewModel(pageID:pageTitle:)` 是 M4-27 中已定义的工厂方法，这里直接调用，`RootView` 不需要感知 `NodeRepository` 和 `BlockRepository` 的细节。
+
+---
+
+## M4-35~50 单元测试与集成测试
+
+
 
 ---
 
@@ -3076,6 +3441,8 @@ M4 新增与修改的文件一览：
 ```
 Notte/
 ├── App/
+│   ├── AppRouter.swift                                ← 更新：AppRoute.nodeEditor 新增 pageTitle
+│   ├── RootView.swift                                 ← 更新：替换 .nodeEditor 占位为 PageEditorView
 │   └── DependencyContainer.swift                      ← 更新：新增 nodeRepository、blockRepository
 │
 ├── Features/
@@ -3102,6 +3469,8 @@ Notte/
 │           ├── PageEditorView.swift
 │           ├── NodeRowView.swift
 │           ├── NodeContentEditor.swift
+│           ├── NodeTitleEditor.swift                  ← 新增
+│           ├── BlockListView.swift                    ← 新增
 │           ├── NodeIndentationGuide.swift
 │           ├── NodeCollapseControl.swift
 │           ├── NodeTypeIndicator.swift

@@ -9,29 +9,35 @@ import SwiftUI
 import SwiftData
 
 struct PageListScreen: View {
+    @Binding var showCreateTrigger: Bool
     @StateObject private var viewModel: PageListViewModel
     @EnvironmentObject private var router: AppRouter
     @State private var editMode: EditMode = .inactive
     @State private var pageToDelete: Page?
 
     init(
+        showCreateTrigger: Binding<Bool> = .constant(false),
         collectionID: UUID,
         collectionTitle: String,
         pageRepository: PageRepositoryProtocol,
-        nodeRepository: NodeRepositoryProtocol
+        nodeRepository: NodeRepositoryProtocol,
+        blockRepository: BlockRepositoryProtocol
     ) {
+        self._showCreateTrigger = showCreateTrigger
         _viewModel = StateObject(
             wrappedValue: PageListViewModel(
                 collectionID: collectionID,
                 collectionTitle: collectionTitle,
                 pageRepository: pageRepository,
-                nodeRepository: nodeRepository
+                nodeRepository: nodeRepository,
+                blockRepository: blockRepository
             )
         )
     }
     
     var body: some View {
         contentView
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .navigationTitle(viewModel.collectionTitle)
             .navigationBarTitleDisplayMode(.large)
             .toolbar { toolbarContent }
@@ -52,6 +58,12 @@ struct PageListScreen: View {
             .task {
                 await viewModel.loadPages()
             }
+            .onChange(of: showCreateTrigger) { _, triggered in
+                if triggered {
+                    viewModel.isShowingCreateSheet = true
+                    showCreateTrigger = false
+                }
+            }
     }
 
     private var contentView: some View {
@@ -70,14 +82,6 @@ struct PageListScreen: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel.isShowingCreateSheet = true
-            } label: {
-                Image(systemName: "plus")
-                    .foregroundStyle(ColorTokens.accent)
-            }
-        }
         ToolbarItem(placement: .topBarLeading) {
             EditButton()
                 .tint(ColorTokens.accent)
@@ -92,7 +96,7 @@ struct PageListScreen: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard editMode == .inactive else { return }
-                        router.navigate(to: .nodeEditor(pageID: page.id))
+                        router.navigate(to: .nodeEditor(pageID: page.id, pageTitle: page.title))
                     }
                     .contextMenu {
                         PageContextMenu(
@@ -125,6 +129,7 @@ struct PageListScreen: View {
                     }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
             }
             .onMove { from, to in
                 guard let sourceIndex = from.first else { return }
@@ -138,8 +143,9 @@ struct PageListScreen: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(-25)
+        .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
+        .padding(.top, SpacingTokens.sm)
     }
     
     private var loadingView: some View {
@@ -195,13 +201,15 @@ private struct PageErrorAlertModifier: ViewModifier {
     let context = ModelContext(container)
     let pageRepo = PageRepository(context: context)
     let nodeRepo = NodeRepository(context: context)
+    let blockRepo = BlockRepository(context: context)
 
     NavigationStack {
         PageListScreen(
             collectionID: collectionID,
             collectionTitle: "我的笔记",
             pageRepository: pageRepo,
-            nodeRepository: nodeRepo
+            nodeRepository: nodeRepo,
+            blockRepository: blockRepo
         )
     }
     .task {

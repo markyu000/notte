@@ -1,0 +1,67 @@
+{
+  "title": "SwiftUI 学习",
+  "iconName": "swift",
+  "colorToken": null,
+  "pages": [
+    {
+      "title": "SwiftUI 基础",
+      "nodes": [
+        {
+          "title": "什么是 SwiftUI",
+          "depth": 0,
+          "blocks": [
+            { "type": "text", "content": "Apple 推出的声明式 UI 框架，跨 iOS / iPadOS / macOS / watchOS / tvOS。" }
+          ],
+          "children": [
+            { "title": "声明式语法", "depth": 1, "blocks": [{ "type": "text", "content": "用 body 描述视图应该长什么样，而不是怎么变化。" }] },
+            { "title": "View 协议", "depth": 1, "blocks": [{ "type": "text", "content": "所有 View 都遵守 View 协议，必须提供 body。" }] }
+          ]
+        },
+        {
+          "title": "状态管理",
+          "depth": 0,
+          "children": [
+            { "title": "@State", "depth": 1, "blocks": [{ "type": "text", "content": "用于值类型的局部状态。" }] },
+            { "title": "@Binding", "depth": 1, "blocks": [{ "type": "text", "content": "双向绑定父视图传入的状态。" }] },
+            { "title": "@StateObject / @ObservedObject", "depth": 1, "blocks": [{ "type": "text", "content": "用于引用类型的可观察对象。" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "布局系统",
+      "nodes": [
+        {
+          "title": "HStack / VStack / ZStack",
+          "depth": 0,
+          "blocks": [{ "type": "text", "content": "三种基础容器，决定子视图的排列方向。" }]
+        },
+        {
+          "title": "Spacer 与 Divider",
+          "depth": 0,
+          "blocks": [{ "type": "text", "content": "Spacer 填充剩余空间，Divider 在容器内自动绘制分隔线。" }]
+        },
+        {
+          "title": "frame 与 padding",
+          "depth": 0,
+          "blocks": [{ "type": "text", "content": "frame 设置尺寸约束，padding 添加内边距。" }]
+        }
+      ]
+    },
+    {
+      "title": "数据流",
+      "nodes": [
+        {
+          "title": "Environment 对象",
+          "depth": 0,
+          "blocks": [{ "type": "text", "content": "用于跨层级注入共享对象，避免参数透传。" }]
+        },
+        {
+          "title": "SwiftData 集成",
+          "depth": 0,
+          "blocks": [{ "type": "text", "content": "iOS 17+ 提供，与 SwiftUI 深度整合。" }]
+        }
+      ]
+    }
+  ]
+}

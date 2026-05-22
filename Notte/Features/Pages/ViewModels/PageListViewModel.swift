@@ -38,7 +38,8 @@ class PageListViewModel: ObservableObject {
         collectionID: UUID,
         collectionTitle: String,
         pageRepository: PageRepositoryProtocol,
-        nodeRepository: NodeRepositoryProtocol
+        nodeRepository: NodeRepositoryProtocol,
+        blockRepository: BlockRepositoryProtocol
     ) {
         self.collectionID = collectionID
         self.collectionTitle = collectionTitle
@@ -49,7 +50,8 @@ class PageListViewModel: ObservableObject {
         self.renameUseCase = RenamePageUseCase(repository: pageRepository)
         self.deleteUseCase = DeletePageUseCase(
             repository: pageRepository,
-            nodeRepository: nodeRepository
+            nodeRepository: nodeRepository,
+            blockRepository: blockRepository
         )
         self.duplicateUseCase = DuplicatePageUseCase(repository: pageRepository)
         self.reorderUseCase = ReorderPagesUseCase(repository: pageRepository)

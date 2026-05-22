@@ -9,16 +9,26 @@ import SwiftUI
 import SwiftData
 
 struct CollectionListScreen: View {
+    @Binding var showCreateTrigger: Bool
     @StateObject private var viewModel: CollectionListViewModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var dependencyContainer: DependencyContainer
     @State private var editMode: EditMode = .inactive
     @State private var collectionToDelete: Collection?
+    @State private var isShowingSettings = false
+
+    let pendingAction: RootView.PostOnboardingAction?
+    let onActionConsumed: () -> Void
 
     init(
+        showCreateTrigger: Binding<Bool> = .constant(false),
         repository: CollectionRepositoryProtocol,
         pageRepository: PageRepositoryProtocol,
-        nodeRepository: NodeRepositoryProtocol
+        nodeRepository: NodeRepositoryProtocol,
+        pendingAction: RootView.PostOnboardingAction? = nil,
+        onActionConsumed: @escaping () -> Void = {}
     ) {
+        self._showCreateTrigger = showCreateTrigger
         _viewModel = StateObject(
             wrappedValue: CollectionListViewModel(
                 repository: repository,
@@ -26,30 +36,21 @@ struct CollectionListScreen: View {
                 nodeRepository: nodeRepository
             )
         )
+        self.pendingAction = pendingAction
+        self.onActionConsumed = onActionConsumed
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.collections.isEmpty {
-                    CollectionEmptyState {
-                        viewModel.isShowingCreateSheet = true
-                    }
-                } else {
-                    collectionList
-                }
-            }
-            .navigationTitle("Notte")
+            contentView
+                .navigationTitle("Notte")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        viewModel.isShowingCreateSheet = true
+                        isShowingSettings = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "gearshape")
                             .foregroundStyle(ColorTokens.accent)
                     }
                 }
@@ -62,6 +63,9 @@ struct CollectionListScreen: View {
             .environment(\.editMode, $editMode)
             .sheet(isPresented: $viewModel.isShowingCreateSheet) {
                 CollectionCreateSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
             }
             .sheet(
                 isPresented: Binding(
@@ -97,6 +101,37 @@ struct CollectionListScreen: View {
             }
             .task {
                 await viewModel.loadCollections()
+                switch pendingAction {
+                case .createFirst:
+                    viewModel.handlePendingCreateFirst()
+                case .importSamples:
+                    await viewModel.importSampleData(using: dependencyContainer.makeExampleDataFactory())
+                case nil:
+                    break
+                }
+                onActionConsumed()
+            }
+            .onChange(of: showCreateTrigger) { _, triggered in
+                if triggered {
+                    viewModel.isShowingCreateSheet = true
+                    showCreateTrigger = false
+                }
+            }
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    private var contentView: some View {
+        Group {
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.collections.isEmpty {
+                CollectionEmptyState {
+                    viewModel.isShowingCreateSheet = true
+                }
+            } else {
+                collectionList
             }
         }
     }
@@ -132,21 +167,6 @@ struct CollectionListScreen: View {
                                 }
                             )
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                collectionToDelete = collection
-                            } label: {
-                                Label("删除", systemImage: "trash")
-                            }
-                            
-                            Button {
-                                viewModel.renamingCollectionID = collection.id
-                                viewModel.renameTitle = collection.title
-                            } label: {
-                                Label("重命名", systemImage: "pencil")
-                            }
-                            .tint(ColorTokens.accent)
-                        }
                     
                     // 在最后一个 pinned collection 后添加分割线
                     if isLastPinnedCollection(at: index) {
@@ -166,6 +186,24 @@ struct CollectionListScreen: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        collectionToDelete = collection
+                    } label: {
+                        Label("删除", systemImage: "trash")
+                    }
+//                    .labelStyle(.titleAndIcon)
+
+                    Button {
+                        viewModel.renamingCollectionID = collection.id
+                        viewModel.renameTitle = collection.title
+                    } label: {
+                        Label("重命名", systemImage: "pencil")
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .tint(ColorTokens.accent)
+                }
             }
             .onMove { from, to in
                 guard let sourceIndex = from.first else { return }
@@ -181,8 +219,9 @@ struct CollectionListScreen: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(-30)
+        .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
+        .padding(.top, SpacingTokens.sm)
     }
     
     /// 判断指定索引的 collection 是否是最后一个 pinned collection
@@ -208,6 +247,7 @@ struct CollectionListScreen: View {
     let repo = try! CollectionRepository(context: context)
     let pageRepo = PageRepository(context: context)
     let nodeRepo = NodeRepository(context: context)
+    let dependencyContainer = DependencyContainer(modelContainer: container)
 
     CollectionListScreen(
         repository: repo,
@@ -220,4 +260,5 @@ struct CollectionListScreen: View {
         try! await createUsecase.execute(title: "实例2")
     }
     .environmentObject(AppRouter())
+    .environmentObject(dependencyContainer)
 }
