@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 
 struct RootView: View {
+    @EnvironmentObject private var syncLogger: CloudKitSyncLogger
     @StateObject private var router = AppRouter()
     @EnvironmentObject private var dependencyContainer: DependencyContainer
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
@@ -32,6 +33,14 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.45), value: hasCompletedOnboarding)
+        .overlay(alignment: .top) {
+            if syncLogger.syncFailed {
+                SyncFailureBanner()
+                    .padding(.top, SpacingTokens.sm)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(duration: 0.3), value: syncLogger.syncFailed)
     }
 
     private var shouldShowFAB: Bool {

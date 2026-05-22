@@ -167,21 +167,6 @@ struct CollectionListScreen: View {
                                 }
                             )
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                collectionToDelete = collection
-                            } label: {
-                                Label("删除", systemImage: "trash")
-                            }
-                            
-                            Button {
-                                viewModel.renamingCollectionID = collection.id
-                                viewModel.renameTitle = collection.title
-                            } label: {
-                                Label("重命名", systemImage: "pencil")
-                            }
-                            .tint(ColorTokens.accent)
-                        }
                     
                     // 在最后一个 pinned collection 后添加分割线
                     if isLastPinnedCollection(at: index) {
@@ -201,6 +186,24 @@ struct CollectionListScreen: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        collectionToDelete = collection
+                    } label: {
+                        Label("删除", systemImage: "trash")
+                    }
+//                    .labelStyle(.titleAndIcon)
+
+                    Button {
+                        viewModel.renamingCollectionID = collection.id
+                        viewModel.renameTitle = collection.title
+                    } label: {
+                        Label("重命名", systemImage: "pencil")
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .tint(ColorTokens.accent)
+                }
             }
             .onMove { from, to in
                 guard let sourceIndex = from.first else { return }
@@ -216,8 +219,9 @@ struct CollectionListScreen: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(-30)
+        .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
+        .padding(.top, SpacingTokens.sm)
     }
     
     /// 判断指定索引的 collection 是否是最后一个 pinned collection

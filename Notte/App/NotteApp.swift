@@ -18,6 +18,7 @@ struct NotteApp: App {
                 RootView()
                     .environmentObject(appBootstrap)
                     .environmentObject(appBootstrap.dependencyContainer!)
+                    .environmentObject(appBootstrap.syncLogger)
             } else {
                 ProgressView("启动中...")
             }

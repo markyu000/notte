@@ -31,7 +31,7 @@ struct PageCard: View {
             Spacer()
         }
         .padding(.vertical, SpacingTokens.sm)
-        .padding(.horizontal, SpacingTokens.md)
+        .padding(.horizontal, SpacingTokens.xl)
     }
 }
 
@@ -45,5 +45,22 @@ struct PageCard: View {
         sortIndex: 1000,
         isArchived: false
     ))
-    .padding()
+    PageCard(page: Page(
+        id: UUID(),
+        collectionID: UUID(),
+        title: "SwiftUI 学习笔记",
+        createdAt: Date(),
+        updatedAt: Date(),
+        sortIndex: 1000,
+        isArchived: false
+    ))
+    PageCard(page: Page(
+        id: UUID(),
+        collectionID: UUID(),
+        title: "SwiftUI 学习笔记",
+        createdAt: Date(),
+        updatedAt: Date(),
+        sortIndex: 1000,
+        isArchived: false
+    ))
 }
