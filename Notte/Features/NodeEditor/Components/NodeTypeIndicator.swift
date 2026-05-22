@@ -29,7 +29,7 @@ struct NodeTypeIndicator: View {
     private var bulletIcon: some View {
         Image(systemName: hasChildren && isCollapsed ? "circle.fill" : "circle")
             .font(.system(size: 8, weight: .bold))
-            .foregroundStyle(ColorTokens.textSecondary)
+            .foregroundStyle(ColorTokens.accent)
             .frame(width: 16, height: 16)
             .contentShape(Rectangle())
     }
