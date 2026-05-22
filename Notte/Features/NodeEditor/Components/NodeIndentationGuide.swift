@@ -12,7 +12,7 @@ struct NodeIndentationGuide: View {
 
     let depth: Int
 
-    private let indentWidth: CGFloat = 20
+    private let indentWidth: CGFloat = 16
     private let lineWidth: CGFloat = 1
 
     var body: some View {

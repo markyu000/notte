@@ -7,28 +7,48 @@
 
 import SwiftUI
 
-/// 节点类型指示器。MVP 阶段只渲染 text 类型；类型切换属于 POST。
+/// 节点类型指示器。有子节点时兼做折叠/展开按钮：
+/// 折叠 → circle.fill，展开 → circle，无子节点 → circle（不可点击）。
 struct NodeTypeIndicator: View {
 
-    let depth: Int
+    let hasChildren: Bool
+    let isCollapsed: Bool
+    let onToggle: (() -> Void)?
 
     var body: some View {
-        Image(systemName: bullet(for: depth))
-            .font(.system(size: 8, weight: .bold))
-            .foregroundStyle(ColorTokens.textSecondary)
-            .frame(width: 12, height: 12)
+        if hasChildren, let onToggle {
+            Button(action: onToggle) {
+                bulletIcon
+            }
+            .buttonStyle(.plain)
+        } else {
+            bulletIcon
+        }
     }
 
-    private func bullet(for depth: Int) -> String {
-        depth == 0 ? "circle.fill" : "circle"
+    private var bulletIcon: some View {
+        Image(systemName: hasChildren && isCollapsed ? "circle.fill" : "circle")
+            .font(.system(size: 8, weight: .bold))
+            .foregroundStyle(ColorTokens.textSecondary)
+            .frame(width: 16, height: 16)
+            .contentShape(Rectangle())
     }
 }
 
 #Preview {
-    HStack(spacing: 16) {
-        NodeTypeIndicator(depth: 0)
-        NodeTypeIndicator(depth: 1)
-        NodeTypeIndicator(depth: 2)
+    VStack(alignment: .leading, spacing: 12) {
+        HStack(spacing: 8) {
+            NodeTypeIndicator(hasChildren: false, isCollapsed: false, onToggle: nil)
+            Text("无子节点").font(.caption)
+        }
+        HStack(spacing: 8) {
+            NodeTypeIndicator(hasChildren: true, isCollapsed: false, onToggle: {})
+            Text("有子节点·展开").font(.caption)
+        }
+        HStack(spacing: 8) {
+            NodeTypeIndicator(hasChildren: true, isCollapsed: true, onToggle: {})
+            Text("有子节点·折叠").font(.caption)
+        }
     }
     .padding()
 }

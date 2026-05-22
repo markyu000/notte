@@ -30,15 +30,14 @@ struct NodeRowView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    // 类型指示器
-                    NodeTypeIndicator(depth: node.depth)
-                    
-                    // 折叠控件（有子节点时显示）
-                    if !node.children.isEmpty {
-                        NodeCollapseControl(isCollapsed: node.isCollapsed) {
+                    // 类型指示器（有子节点时兼做折叠/展开按钮）
+                    NodeTypeIndicator(
+                        hasChildren: !node.children.isEmpty,
+                        isCollapsed: node.isCollapsed,
+                        onToggle: node.children.isEmpty ? nil : {
                             onCommand(.toggleCollapse(nodeID: node.id))
                         }
-                    }
+                    )
 
                     // 标题输入框
                     NodeTitleEditor(
@@ -64,7 +63,7 @@ struct NodeRowView: View {
                     onContentChanged: onContentChanged,
                     onFocused: { onFocused(node.id) }
                 )
-                .padding(.leading, node.children.isEmpty ? 16 : 38)
+                .padding(.leading, 22)
             }
         }
         .padding(.vertical, 6)
