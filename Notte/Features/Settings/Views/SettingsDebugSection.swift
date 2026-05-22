@@ -73,4 +73,15 @@ struct SettingsDebugSection: View {
         modelContext.processPendingChanges()
     }
 }
+
+#Preview {
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    List {
+        SettingsDebugSection()
+    }
+    .listStyle(.insetGrouped)
+    .environmentObject(DependencyContainer(modelContainer: container))
+    .environmentObject(CloudKitSyncLogger())
+    .modelContainer(container)
+}
 #endif

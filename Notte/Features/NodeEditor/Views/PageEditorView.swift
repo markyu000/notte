@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct PageEditorView: View {
 
@@ -195,5 +196,22 @@ private extension AnyTransition {
                 identity: NodeSlideModifier(offset: 0, opacity: 1)
             )
         )
+    }
+}
+
+#Preview {
+    let pageID = UUID()
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    let context = ModelContext(container)
+    let nodeRepo = NodeRepository(context: context)
+    let blockRepo = BlockRepository(context: context)
+    let viewModel = PageEditorViewModel(
+        pageID: pageID,
+        pageTitle: "示例页面",
+        nodeRepository: nodeRepo,
+        blockRepository: blockRepo
+    )
+    NavigationStack {
+        PageEditorView(viewModel: viewModel)
     }
 }

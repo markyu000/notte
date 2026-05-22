@@ -30,3 +30,17 @@ struct NodeIndentationGuide: View {
         }
     }
 }
+
+#Preview {
+    VStack(alignment: .leading, spacing: 8) {
+        ForEach(0..<4, id: \.self) { depth in
+            HStack {
+                NodeIndentationGuide(depth: depth)
+                Text("depth \(depth)")
+                    .font(.caption)
+            }
+        }
+    }
+    .padding()
+    .frame(width: 200, alignment: .leading)
+}

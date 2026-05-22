@@ -5,6 +5,7 @@
 //  Created by 余哲源 on 2026/4/11.
 //
 import SwiftUI
+import SwiftData
 
 struct PageRenameSheet: View {
     @ObservedObject var viewModel: PageListViewModel
@@ -54,4 +55,21 @@ struct PageRenameSheet: View {
         }
         .presentationDetents([.height(220)])
     }
+}
+
+#Preview {
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    let context = ModelContext(container)
+    let pageRepo = PageRepository(context: context)
+    let nodeRepo = NodeRepository(context: context)
+    let blockRepo = BlockRepository(context: context)
+    let viewModel = PageListViewModel(
+        collectionID: UUID(),
+        collectionTitle: "我的笔记",
+        pageRepository: pageRepo,
+        nodeRepository: nodeRepo,
+        blockRepository: blockRepo
+    )
+    PageRenameSheet(viewModel: viewModel)
+        .onAppear { viewModel.renameTitle = "原始页面名称" }
 }

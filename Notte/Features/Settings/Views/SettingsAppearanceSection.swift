@@ -23,3 +23,10 @@ struct SettingsAppearanceSection: View {
         }
     }
 }
+
+#Preview {
+    List {
+        SettingsAppearanceSection()
+    }
+    .listStyle(.insetGrouped)
+}

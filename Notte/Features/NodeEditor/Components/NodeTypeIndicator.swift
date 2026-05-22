@@ -23,3 +23,12 @@ struct NodeTypeIndicator: View {
         depth == 0 ? "circle.fill" : "circle"
     }
 }
+
+#Preview {
+    HStack(spacing: 16) {
+        NodeTypeIndicator(depth: 0)
+        NodeTypeIndicator(depth: 1)
+        NodeTypeIndicator(depth: 2)
+    }
+    .padding()
+}

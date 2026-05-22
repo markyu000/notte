@@ -30,3 +30,24 @@ struct PageContextMenu: View {
         }
     }
 }
+
+#Preview {
+    let page = Page(
+        id: UUID(),
+        collectionID: UUID(),
+        title: "SwiftUI 学习笔记",
+        createdAt: Date(),
+        updatedAt: Date(),
+        sortIndex: 1000,
+        isArchived: false
+    )
+    Menu("操作") {
+        PageContextMenu(
+            page: page,
+            onRename: {},
+            onDelete: {},
+            onDuplicate: {}
+        )
+    }
+    .padding()
+}

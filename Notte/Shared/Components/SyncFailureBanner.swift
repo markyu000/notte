@@ -20,3 +20,8 @@ struct SyncFailureBanner: View {
             .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
     }
 }
+
+#Preview {
+    SyncFailureBanner()
+        .padding()
+}

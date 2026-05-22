@@ -77,3 +77,42 @@ struct NodeRowView: View {
         .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 }
+
+#Preview {
+    let node = EditorNode(
+        id: UUID(),
+        title: "示例节点",
+        depth: 0,
+        sortIndex: 1000,
+        children: [
+            EditorNode(
+                id: UUID(),
+                title: "子节点",
+                depth: 1,
+                sortIndex: 1000
+            )
+        ],
+        blocks: [
+            EditorBlock(id: UUID(), type: .text, content: "节点内容文字", sortIndex: 1000)
+        ]
+    )
+    VStack(spacing: 0) {
+        NodeRowView(
+            node: node,
+            isFocused: true,
+            onTitleChanged: { _ in },
+            onContentChanged: { _, _ in },
+            onCommand: { _ in },
+            onFocused: { _ in }
+        )
+        NodeRowView(
+            node: EditorNode(id: UUID(), title: "未聚焦节点", depth: 0, sortIndex: 2000),
+            isFocused: false,
+            onTitleChanged: { _ in },
+            onContentChanged: { _, _ in },
+            onCommand: { _ in },
+            onFocused: { _ in }
+        )
+    }
+    .padding(.horizontal)
+}

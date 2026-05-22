@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
@@ -40,4 +41,11 @@ struct SettingsView: View {
             }
         }
     }
+}
+
+#Preview {
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    SettingsView()
+        .environmentObject(DependencyContainer(modelContainer: container))
+        .environmentObject(CloudKitSyncLogger())
 }

@@ -29,3 +29,11 @@ struct NodeCollapseControl: View {
         .buttonStyle(.plain)
     }
 }
+
+#Preview {
+    HStack(spacing: 20) {
+        NodeCollapseControl(isCollapsed: true, onTap: {})
+        NodeCollapseControl(isCollapsed: false, onTap: {})
+    }
+    .padding()
+}

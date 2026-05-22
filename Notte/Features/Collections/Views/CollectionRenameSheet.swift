@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct CollectionRenameSheet: View {
     @ObservedObject var viewModel: CollectionListViewModel
@@ -55,4 +56,19 @@ struct CollectionRenameSheet: View {
         }
         .presentationDetents([.height(220)])
     }
+}
+
+#Preview {
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    let context = ModelContext(container)
+    let repo = try! CollectionRepository(context: context)
+    let pageRepo = PageRepository(context: context)
+    let nodeRepo = NodeRepository(context: context)
+    let viewModel = CollectionListViewModel(
+        repository: repo,
+        pageRepository: pageRepo,
+        nodeRepository: nodeRepo
+    )
+    CollectionRenameSheet(viewModel: viewModel)
+        .onAppear { viewModel.renameTitle = "原始名称" }
 }

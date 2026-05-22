@@ -81,3 +81,11 @@ struct SettingsSyncSection: View {
         return "上次同步：\(formatter.localizedString(for: date, relativeTo: Date()))"
     }
 }
+
+#Preview {
+    List {
+        SettingsSyncSection()
+    }
+    .listStyle(.insetGrouped)
+    .environmentObject(CloudKitSyncLogger())
+}

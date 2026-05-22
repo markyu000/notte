@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 /// Node 内容区：顺序渲染该 Node 的所有 Block。
 /// MVP 阶段只有 .text 类型，POST 阶段扩展类型时在 switch 里添加对应 BlockView 即可。
@@ -34,4 +35,19 @@ struct BlockListView: View {
             }
         }
     }
+}
+
+#Preview {
+    let blocks = [
+        EditorBlock(id: UUID(), type: .text, content: "第一段内容", sortIndex: 1000),
+        EditorBlock(id: UUID(), type: .text, content: "第二段内容", sortIndex: 2000)
+    ]
+    VStack(alignment: .leading) {
+        BlockListView(
+            blocks: blocks,
+            onContentChanged: { _, _ in },
+            onFocused: {}
+        )
+    }
+    .padding()
 }
