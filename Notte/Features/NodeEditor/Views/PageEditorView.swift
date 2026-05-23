@@ -36,7 +36,8 @@ struct PageEditorView: View {
                                     .foregroundStyle(ColorTokens.textSecondary)
                             )
                     } else {
-                        ForEach(viewModel.visibleNodes) { node in
+                        let nodeCount = viewModel.visibleNodes.count
+                        ForEach(Array(viewModel.visibleNodes.enumerated()), id: \.element.id) { index, node in
                             NodeRowView(
                                 node: node,
                                 isFocused: viewModel.focusedNodeID == node.id
@@ -63,12 +64,13 @@ struct PageEditorView: View {
                             .id(node.id)
                             .transition(.nodeExpand)
                             .animation(
-                                .spring(duration: 0.28).delay(
+                                .spring(duration: 0.35).delay(
                                     viewModel.nodeAnimationDelays[node.id] ?? 0
                                 ),
                                 value: viewModel.visibleNodes.map(\.id)
                             )
-                            .zIndex(Double(100 - node.depth))
+                            // 列表靠前的节点 zIndex 略高，确保折叠时先移动的节点藏到后面
+                            .zIndex(Double(100 - node.depth) + Double(nodeCount - index) * 0.01)
                         }
 
                         ColorTokens.backgroundPrimary
@@ -192,9 +194,15 @@ private struct NodeSlideModifier: ViewModifier {
 
 private extension AnyTransition {
     static var nodeExpand: AnyTransition {
-        .modifier(
-            active: NodeSlideModifier(offset: -36, opacity: 0),
-            identity: NodeSlideModifier(offset: 0, opacity: 1)
+        .asymmetric(
+            insertion: .modifier(
+                active: NodeSlideModifier(offset: -36, opacity: 0),
+                identity: NodeSlideModifier(offset: 0, opacity: 1)
+            ),
+            removal: .modifier(
+                active: NodeSlideModifier(offset: -12, opacity: 0),
+                identity: NodeSlideModifier(offset: 0, opacity: 1)
+            )
         )
     }
 }

@@ -95,7 +95,7 @@ class PageEditorViewModel: ObservableObject {
                 let descendants = visibleDescendants(of: nodeID)
                 var delays: [UUID: Double] = [:]
                 for (i, desc) in descendants.reversed().enumerated() {
-                    delays[desc.id] = Double(i) * 0.04
+                    delays[desc.id] = Double(i) * 0.06
                 }
                 nodeAnimationDelays = delays
             }
@@ -122,7 +122,7 @@ class PageEditorViewModel: ObservableObject {
                 if !appearing.isEmpty {
                     var delays = nodeAnimationDelays
                     for (i, node) in appearing.enumerated() {
-                        delays[node.id] = Double(i) * 0.04
+                        delays[node.id] = Double(i) * 0.06
                     }
                     nodeAnimationDelays = delays
                 }
