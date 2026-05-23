@@ -10,12 +10,9 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var syncLogger: CloudKitSyncLogger
-    @StateObject private var router = AppRouter()
     @EnvironmentObject private var dependencyContainer: DependencyContainer
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     @State private var pendingAction: PostOnboardingAction?
-    @State private var collectionCreateTrigger = false
-    @State private var pageCreateTrigger = false
 
     enum PostOnboardingAction { case createFirst, importSamples }
 
@@ -28,7 +25,7 @@ struct RootView: View {
                 )
                 .transition(.opacity.combined(with: .scale(scale: 1.04)))
             } else {
-                mainNavigation
+                MainNavigationView(pendingAction: $pendingAction)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
             }
         }
@@ -42,14 +39,19 @@ struct RootView: View {
         }
         .animation(.spring(duration: 0.3), value: syncLogger.syncFailed)
     }
+}
 
-    private var shouldShowFAB: Bool {
-        if router.path.isEmpty { return true }
-        if case .pageList = router.path.last { return true }
-        return false
-    }
+// MARK: - MainNavigationView
 
-    private var mainNavigation: some View {
+/// 独立 struct，使 router.path 变化时只重渲染自身，不触发 RootView 重渲染。
+private struct MainNavigationView: View {
+    @EnvironmentObject private var dependencyContainer: DependencyContainer
+    @StateObject private var router = AppRouter()
+    @Binding var pendingAction: RootView.PostOnboardingAction?
+    @State private var collectionCreateTrigger = false
+    @State private var pageCreateTrigger = false
+
+    var body: some View {
         NavigationStack(path: $router.path) {
             CollectionListScreen(
                 showCreateTrigger: $collectionCreateTrigger,
@@ -81,14 +83,22 @@ struct RootView: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if shouldShowFAB {
-                fab
-                    .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .bottomTrailing)))
+            ZStack {
+                if shouldShowFAB {
+                    fab
+                        .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .bottomTrailing)))
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: shouldShowFAB)
         }
-        .animation(.easeInOut(duration: 0.2), value: shouldShowFAB)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .environmentObject(router)
+    }
+
+    private var shouldShowFAB: Bool {
+        if router.path.isEmpty { return true }
+        if case .pageList = router.path.last { return true }
+        return false
     }
 
     private var fab: some View {

@@ -16,6 +16,7 @@ class PageListViewModel: ObservableObject {
     // MARK: - 数据状态
     @Published var pages: [Page] = []
     @Published var isLoading: Bool = false
+    @Published private(set) var hasLoadedOnce: Bool = false
     @Published var error: AppError?
 
     // MARK: - 创建弹窗状态
@@ -59,10 +60,11 @@ class PageListViewModel: ObservableObject {
 
     // MARK: - 操作方法
     func loadPages() async {
-        isLoading = true
+        if !hasLoadedOnce { isLoading = true }
         defer { isLoading = false }
         do {
             pages = try await fetchUseCase.execute(collectionID: collectionID)
+            hasLoadedOnce = true
         } catch {
             self.error = error as? AppError
         }
