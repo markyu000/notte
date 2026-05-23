@@ -63,12 +63,11 @@ struct PageEditorView: View {
                             )
                             .id(node.id)
                             .transition(.nodeExpand)
-                            .animation(
-                                .spring(duration: 0.35).delay(
-                                    viewModel.nodeAnimationDelays[node.id] ?? 0
-                                ),
-                                value: viewModel.visibleNodes.map(\.id)
-                            )
+                            .transaction(value: viewModel.visibleNodes.map(\.id)) { t in
+                                // 用 transaction 直接覆盖动画，避免被父级 withAnimation 覆盖
+                                let delay = viewModel.nodeAnimationDelays[node.id] ?? 0
+                                t.animation = .spring(duration: 0.35).delay(delay)
+                            }
                             // 列表靠前的节点 zIndex 略高，确保折叠时先移动的节点藏到后面
                             .zIndex(Double(100 - node.depth) + Double(nodeCount - index) * 0.01)
                         }
@@ -191,7 +190,28 @@ private struct NodeSlideModifier: ViewModifier {
     }
 }
 
+// 折叠时从底部向上裁剪，模拟被上方元素擦除的效果
+private struct NodeCollapseClipShape: Shape {
+    var fraction: CGFloat  // 1 = 完整显示，0 = 完全隐藏（从底部开始消失）
+    var animatableData: CGFloat {
+        get { fraction }
+        set { fraction = newValue }
+    }
+    func path(in rect: CGRect) -> Path {
+        Path(CGRect(x: 0, y: 0, width: rect.width, height: rect.height * fraction))
+    }
+}
+
+private struct NodeCollapseModifier: ViewModifier {
+    let fraction: CGFloat
+    func body(content: Content) -> some View {
+        content.clipShape(NodeCollapseClipShape(fraction: fraction))
+    }
+}
+
 private extension AnyTransition {
+    // 展开：子节点从父节点下方向下滑入
+    // 折叠：子节点被从底部向上裁剪掉（模拟同级节点向上擦除）
     static var nodeExpand: AnyTransition {
         .asymmetric(
             insertion: .modifier(
@@ -199,8 +219,8 @@ private extension AnyTransition {
                 identity: NodeSlideModifier(offset: 0, opacity: 1)
             ),
             removal: .modifier(
-                active: NodeSlideModifier(offset: -12, opacity: 0),
-                identity: NodeSlideModifier(offset: 0, opacity: 1)
+                active: NodeCollapseModifier(fraction: 0),
+                identity: NodeCollapseModifier(fraction: 1)
             )
         )
     }
