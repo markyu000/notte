@@ -110,7 +110,14 @@ class PageEditorViewModel: ObservableObject {
 
             let previousIDs = Set(visibleNodes.map(\.id))
             await engine.dispatch(command)
-            visibleNodes = engine.editorNodes
+            if case .toggleCollapse = command {
+                // 折叠/展开由 per-node animation 控制，不加父级动画
+                visibleNodes = engine.editorNodes
+            } else {
+                withAnimation(.spring(duration: 0.3)) {
+                    visibleNodes = engine.editorNodes
+                }
+            }
             error = engine.error
             if error == nil, visibleNodes != previousNodes {
                 persistenceCoordinator.markStructuralChange()

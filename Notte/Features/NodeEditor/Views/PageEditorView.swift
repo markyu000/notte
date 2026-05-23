@@ -77,7 +77,6 @@ struct PageEditorView: View {
                             .frame(height: 200)
                     }
                 }
-                .animation(.spring(duration: 0.3), value: viewModel.visibleNodes.map(\.id))
                 .padding(.horizontal, 16)
             }
             .onChange(of: viewModel.focusedNodeID) { _, newID in
