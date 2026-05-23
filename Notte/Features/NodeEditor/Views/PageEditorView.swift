@@ -62,6 +62,12 @@ struct PageEditorView: View {
                             )
                             .id(node.id)
                             .transition(.nodeExpand)
+                            .animation(
+                                .spring(duration: 0.28).delay(
+                                    viewModel.nodeAnimationDelays[node.id] ?? 0
+                                ),
+                                value: viewModel.visibleNodes.map(\.id)
+                            )
                             .zIndex(Double(100 - node.depth))
                         }
 
@@ -186,15 +192,9 @@ private struct NodeSlideModifier: ViewModifier {
 
 private extension AnyTransition {
     static var nodeExpand: AnyTransition {
-        .asymmetric(
-            insertion: .modifier(
-                active: NodeSlideModifier(offset: 44, opacity: 0),
-                identity: NodeSlideModifier(offset: 0, opacity: 1)
-            ),
-            removal: .modifier(
-                active: NodeSlideModifier(offset: -44, opacity: 0),
-                identity: NodeSlideModifier(offset: 0, opacity: 1)
-            )
+        .modifier(
+            active: NodeSlideModifier(offset: -36, opacity: 0),
+            identity: NodeSlideModifier(offset: 0, opacity: 1)
         )
     }
 }

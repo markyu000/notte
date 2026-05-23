@@ -18,6 +18,7 @@ class PageEditorViewModel: ObservableObject {
     let pageTitle: String
 
     @Published var visibleNodes: [EditorNode] = []
+    @Published var nodeAnimationDelays: [UUID: Double] = [:]
     @Published var focusedNodeID: UUID?
     @Published var pendingFocusNodeID: UUID?
     @Published var error: AppError?
@@ -87,6 +88,18 @@ class PageEditorViewModel: ObservableObject {
         }
         Task {
             let previousNodes = visibleNodes
+
+            // 折叠前预设延迟：让子节点从下到上依次消失
+            if case .toggleCollapse(let nodeID) = command,
+               visibleNodes.first(where: { $0.id == nodeID })?.isCollapsed == false {
+                let descendants = visibleDescendants(of: nodeID)
+                var delays: [UUID: Double] = [:]
+                for (i, desc) in descendants.reversed().enumerated() {
+                    delays[desc.id] = Double(i) * 0.04
+                }
+                nodeAnimationDelays = delays
+            }
+
             // 结构性命令前先 flush，防止 pending title 与新状态竞争
             switch command {
             case .insertAfter, .insertChild, .delete, .indent, .outdent, .moveUp, .moveDown:
@@ -94,13 +107,25 @@ class PageEditorViewModel: ObservableObject {
             default:
                 break
             }
-            
+
             let previousIDs = Set(visibleNodes.map(\.id))
             await engine.dispatch(command)
             visibleNodes = engine.editorNodes
             error = engine.error
             if error == nil, visibleNodes != previousNodes {
                 persistenceCoordinator.markStructuralChange()
+            }
+
+            // 展开后设置延迟：让子节点从上到下依次出现
+            if case .toggleCollapse = command {
+                let appearing = visibleNodes.filter { !previousIDs.contains($0.id) }
+                if !appearing.isEmpty {
+                    var delays = nodeAnimationDelays
+                    for (i, node) in appearing.enumerated() {
+                        delays[node.id] = Double(i) * 0.04
+                    }
+                    nodeAnimationDelays = delays
+                }
             }
 
             switch command {
@@ -119,6 +144,18 @@ class PageEditorViewModel: ObservableObject {
                 break
             }
         }
+    }
+
+    private func visibleDescendants(of nodeID: UUID) -> [EditorNode] {
+        guard let parentIdx = visibleNodes.firstIndex(where: { $0.id == nodeID }) else { return [] }
+        let parentDepth = visibleNodes[parentIdx].depth
+        var result: [EditorNode] = []
+        var idx = parentIdx + 1
+        while idx < visibleNodes.count && visibleNodes[idx].depth > parentDepth {
+            result.append(visibleNodes[idx])
+            idx += 1
+        }
+        return result
     }
 
     func send(_ command: BlockCommand) {
