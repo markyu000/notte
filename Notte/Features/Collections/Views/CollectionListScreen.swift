@@ -214,7 +214,7 @@ struct CollectionListScreen: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
-        .padding(.top, SpacingTokens.sm)
+        .contentMargins(.top, SpacingTokens.sm, for: .scrollContent)
     }
     
     /// 判断指定索引的 collection 是否是最后一个 pinned collection

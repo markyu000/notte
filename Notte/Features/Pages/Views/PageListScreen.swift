@@ -143,7 +143,7 @@ struct PageListScreen: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
-        .padding(.top, SpacingTokens.sm)
+        .contentMargins(.top, SpacingTokens.sm, for: .scrollContent)
     }
     
 }
