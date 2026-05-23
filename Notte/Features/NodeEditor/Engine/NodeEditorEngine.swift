@@ -22,6 +22,7 @@ class NodeEditorEngine: ObservableObject {
     let blockService: BlockEditingService
 
     @Published var editorNodes: [EditorNode] = []
+    @Published var rootNodes: [EditorNode] = []
     @Published var error: AppError?
 
     init(

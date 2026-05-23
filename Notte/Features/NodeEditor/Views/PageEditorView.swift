@@ -36,7 +36,6 @@ struct PageEditorView: View {
                                     .foregroundStyle(ColorTokens.textSecondary)
                             )
                     } else {
-                        let nodeCount = viewModel.visibleNodes.count
                         ForEach(Array(viewModel.visibleNodes.enumerated()), id: \.element.id) { index, node in
                             NodeRowView(
                                 node: node,
@@ -62,14 +61,17 @@ struct PageEditorView: View {
                                 }
                             )
                             .id(node.id)
-                            .transition(.nodeExpand)
+                            .transition(nodeExpandTransition(childIndex: index))
+                            // depth 越深 zIndex 越低，子节点渲染在父节点下层
+                            .zIndex(Double(1000 - index) - Double(node.depth) * 1000.0)
+                            // 折叠时 b 慢速跟进，展开时 b 快速下移让出空间
                             .transaction(value: viewModel.visibleNodes.map(\.id)) { t in
-                                // 用 transaction 直接覆盖动画，避免被父级 withAnimation 覆盖
-                                let delay = viewModel.nodeAnimationDelays[node.id] ?? 0
-                                t.animation = .spring(duration: 0.35).delay(delay)
+                                if viewModel.isCollapsingAnimation {
+                                    t.animation = .spring(response: 0.5, dampingFraction: 0.9)
+                                } else {
+                                    t.animation = .spring(response: 0.2, dampingFraction: 0.85)
+                                }
                             }
-                            // 列表靠前的节点 zIndex 略高，确保折叠时先移动的节点藏到后面
-                            .zIndex(Double(100 - node.depth) + Double(nodeCount - index) * 0.01)
                         }
 
                         ColorTokens.backgroundPrimary
@@ -180,49 +182,30 @@ struct PageEditorView: View {
     private func handleAddRoot() {
         viewModel.createTopLevelNode()
     }
-}
 
-private struct NodeSlideModifier: ViewModifier {
-    let offset: CGFloat
-    let opacity: Double
-    func body(content: Content) -> some View {
-        content.offset(y: offset).opacity(opacity)
-    }
-}
-
-// 折叠时从底部向上裁剪，模拟被上方元素擦除的效果
-private struct NodeCollapseClipShape: Shape {
-    var fraction: CGFloat  // 1 = 完整显示，0 = 完全隐藏（从底部开始消失）
-    var animatableData: CGFloat {
-        get { fraction }
-        set { fraction = newValue }
-    }
-    func path(in rect: CGRect) -> Path {
-        Path(CGRect(x: 0, y: 0, width: rect.width, height: rect.height * fraction))
-    }
-}
-
-private struct NodeCollapseModifier: ViewModifier {
-    let fraction: CGFloat
-    func body(content: Content) -> some View {
-        content.clipShape(NodeCollapseClipShape(fraction: fraction))
-    }
-}
-
-private extension AnyTransition {
-    // 展开：子节点从父节点下方向下滑入
-    // 折叠：子节点被从底部向上裁剪掉（模拟同级节点向上擦除）
-    static var nodeExpand: AnyTransition {
-        .asymmetric(
+    // 根据子节点与父节点的距离计算偏移：所有子节点从父节点位置出现/消失
+    private func nodeExpandTransition(childIndex: Int) -> AnyTransition {
+        let parentIdx = viewModel.collapsingParentIndex
+        let estimatedRowHeight: CGFloat = 44
+        let offsetY = -CGFloat(childIndex - parentIdx) * estimatedRowHeight
+        return .asymmetric(
             insertion: .modifier(
-                active: NodeSlideModifier(offset: -36, opacity: 0),
-                identity: NodeSlideModifier(offset: 0, opacity: 1)
+                active: NodeCollapseOffsetModifier(offsetY: offsetY, opacity: 0),
+                identity: NodeCollapseOffsetModifier(offsetY: 0, opacity: 1)
             ),
             removal: .modifier(
-                active: NodeCollapseModifier(fraction: 0),
-                identity: NodeCollapseModifier(fraction: 1)
+                active: NodeCollapseOffsetModifier(offsetY: offsetY, opacity: 0),
+                identity: NodeCollapseOffsetModifier(offsetY: 0, opacity: 1)
             )
         )
+    }
+}
+
+private struct NodeCollapseOffsetModifier: ViewModifier {
+    let offsetY: CGFloat
+    let opacity: Double
+    func body(content: Content) -> some View {
+        content.offset(y: offsetY).opacity(opacity)
     }
 }
 

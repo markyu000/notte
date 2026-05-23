@@ -18,7 +18,8 @@ class PageEditorViewModel: ObservableObject {
     let pageTitle: String
 
     @Published var visibleNodes: [EditorNode] = []
-    @Published var nodeAnimationDelays: [UUID: Double] = [:]
+    @Published var isCollapsingAnimation: Bool = false
+    @Published var collapsingParentIndex: Int = 0
     @Published var focusedNodeID: UUID?
     @Published var pendingFocusNodeID: UUID?
     @Published var error: AppError?
@@ -52,7 +53,7 @@ class PageEditorViewModel: ObservableObject {
             Task { @MainActor [self] in self.onDisappear() }
         }
     }
-    
+
     func createTopLevelNode() {
         Task {
             do {
@@ -89,15 +90,19 @@ class PageEditorViewModel: ObservableObject {
         Task {
             let previousNodes = visibleNodes
 
-            // 折叠前预设延迟：让子节点从下到上依次消失
-            if case .toggleCollapse(let nodeID) = command,
-               visibleNodes.first(where: { $0.id == nodeID })?.isCollapsed == false {
-                let descendants = visibleDescendants(of: nodeID)
-                var delays: [UUID: Double] = [:]
-                for (i, desc) in descendants.reversed().enumerated() {
-                    delays[desc.id] = Double(i) * 0.06
+            // toggleCollapse 单独处理：每个子节点独占一段动画，严格顺序
+            if case .toggleCollapse(let nodeID) = command {
+                let isCollapsed = visibleNodes.first(where: { $0.id == nodeID })?.isCollapsed ?? false
+                if !isCollapsed {
+                    await collapseSequentially(nodeID: nodeID)
+                } else {
+                    await expandSequentially(nodeID: nodeID)
                 }
-                nodeAnimationDelays = delays
+                error = engine.error
+                if error == nil, visibleNodes != previousNodes {
+                    persistenceCoordinator.markStructuralChange()
+                }
+                return
             }
 
             // 结构性命令前先 flush，防止 pending title 与新状态竞争
@@ -118,18 +123,6 @@ class PageEditorViewModel: ObservableObject {
                 persistenceCoordinator.markStructuralChange()
             }
 
-            // 展开后设置延迟：让子节点从上到下依次出现
-            if case .toggleCollapse = command {
-                let appearing = visibleNodes.filter { !previousIDs.contains($0.id) }
-                if !appearing.isEmpty {
-                    var delays = nodeAnimationDelays
-                    for (i, node) in appearing.enumerated() {
-                        delays[node.id] = Double(i) * 0.06
-                    }
-                    nodeAnimationDelays = delays
-                }
-            }
-
             switch command {
             case .insertAfter, .insertChild:
                 if let new = visibleNodes.first(where: { !previousIDs.contains($0.id) }) {
@@ -145,6 +138,26 @@ class PageEditorViewModel: ObservableObject {
             default:
                 break
             }
+        }
+    }
+
+    // MARK: - 折叠/展开
+
+    private func collapseSequentially(nodeID: UUID) async {
+        isCollapsingAnimation = true
+        collapsingParentIndex = visibleNodes.firstIndex(where: { $0.id == nodeID }) ?? 0
+        await engine.dispatch(.toggleCollapse(nodeID: nodeID))
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            visibleNodes = engine.editorNodes
+        }
+    }
+
+    private func expandSequentially(nodeID: UUID) async {
+        isCollapsingAnimation = false
+        collapsingParentIndex = visibleNodes.firstIndex(where: { $0.id == nodeID }) ?? 0
+        await engine.dispatch(.toggleCollapse(nodeID: nodeID))
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            visibleNodes = engine.editorNodes
         }
     }
 
