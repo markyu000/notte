@@ -11,19 +11,32 @@ struct NodeRowView: View {
 
     let node: EditorNode
     let isFocused: Bool
+    /// 仅当 pendingFocusNodeID == node.id 时为 true，触发标题编辑器 becomeFirstResponder。
+    /// 与 isFocused（节点高亮）分离，避免 Block 内容区获焦时标题抢焦点。
+    let shouldFocusTitle: Bool
     let onTitleChanged: (String) -> Void
     let onContentChanged: (UUID, String) -> Void
     let onCommand: (NodeCommand) -> Void
     let onFocused: (UUID) -> Void
+
+    /// 控制 Block 内容区是否展开（无内容且未聚焦时为 false，完全不占空间）
+    @State private var showBlockArea = false
+    /// 一次性聚焦请求：标题回车时写 true，NodeContentEditor 消费后重置
+    @State private var requestBlockFocus = false
+
     private let logger = ConsoleLogger()
 
     private var debugLog: Void {
         logger.debug("渲染节点「\(node.title)」，children 数量：\(node.children.count)", function: #function)
     }
 
+    private var hasBlockContent: Bool {
+        node.blocks.contains { !$0.content.isEmpty }
+    }
+
     var body: some View {
         let _ = debugLog
-        
+
         HStack(alignment: .top, spacing: 0) {
             // 左侧缩进导轨
             NodeIndentationGuide(depth: node.depth)
@@ -39,13 +52,19 @@ struct NodeRowView: View {
                         }
                     )
 
-                    // 标题输入框
+                    // 标题输入框：回车跳转到 Block 内容区而非新建节点
                     NodeTitleEditor(
                         text: node.title,
                         depth: node.depth,
-                        isFocused: isFocused,
+                        isFocused: shouldFocusTitle,
                         onTextChanged: { onTitleChanged($0) },
-                        onReturn: { onCommand(.insertAfter(nodeID: node.id)) },
+                        onReturn: {
+                            // 先用动画展开内容区，再设聚焦请求（两步分开避免动画上下文干扰 becomeFirstResponder）
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                showBlockArea = true
+                            }
+                            requestBlockFocus = true
+                        },
                         onBackspaceWhenEmpty: { },
                         onTab: { onCommand(.indent(nodeID: node.id)) },
                         onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
@@ -57,13 +76,29 @@ struct NodeRowView: View {
                     Spacer()
                 }
 
-                // Block 内容区（MVP 只有 text 类型）
-                BlockListView(                    // 原来是内联 ForEach
-                    blocks: node.blocks,
-                    onContentChanged: onContentChanged,
-                    onFocused: { onFocused(node.id) }
-                )
-                .padding(.leading, 22)
+                // Block 内容区：无内容且 showBlockArea = false 时完全隐藏不占空间；
+                // showBlockArea 或 hasBlockContent 为 true 时显示。
+                // 展开由 withAnimation 驱动（标题回车），收起由 onFocusLost 内的 withAnimation 驱动。
+                if showBlockArea || hasBlockContent {
+                    BlockListView(
+                        blocks: node.blocks,
+                        requestFocus: $requestBlockFocus,
+                        onContentChanged: onContentChanged,
+                        onFocusGained: {
+                            showBlockArea = true
+                            onFocused(node.id)
+                        },
+                        onFocusLost: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                showBlockArea = false
+                                // hasBlockContent 由 computed property 实时求值；
+                                // 若有内容，if 条件仍为 true，视图不会消失
+                            }
+                        }
+                    )
+                    .padding(.leading, 22)
+                    .transition(.opacity)
+                }
             }
         }
         .padding(.vertical, 6)
@@ -99,6 +134,7 @@ struct NodeRowView: View {
         NodeRowView(
             node: node,
             isFocused: true,
+            shouldFocusTitle: false,
             onTitleChanged: { _ in },
             onContentChanged: { _, _ in },
             onCommand: { _ in },
@@ -107,6 +143,7 @@ struct NodeRowView: View {
         NodeRowView(
             node: EditorNode(id: UUID(), title: "未聚焦节点", depth: 0, sortIndex: 2000),
             isFocused: false,
+            shouldFocusTitle: false,
             onTitleChanged: { _ in },
             onContentChanged: { _, _ in },
             onCommand: { _ in },

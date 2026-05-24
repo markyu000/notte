@@ -13,8 +13,10 @@ import SwiftData
 struct BlockListView: View {
 
     let blocks: [EditorBlock]
+    @Binding var requestFocus: Bool
     let onContentChanged: (UUID, String) -> Void
-    let onFocused: () -> Void
+    let onFocusGained: () -> Void
+    let onFocusLost: () -> Void
 
     var body: some View {
         ForEach(blocks) { block in
@@ -24,12 +26,11 @@ struct BlockListView: View {
                     text: block.content,
                     font: TypographyTokens.body,
                     placeholder: "内容",
+                    requestFocus: $requestFocus,
                     onTextChanged: { onContentChanged(block.id, $0) },
-                    onReturn: { },
                     onBackspaceWhenEmpty: { },
-                    onTab: { },
-                    onShiftTab: { },
-                    onFocus: onFocused
+                    onFocusGained: onFocusGained,
+                    onFocusLost: onFocusLost
                 )
                 .padding(.leading, 4)
             }
@@ -38,6 +39,7 @@ struct BlockListView: View {
 }
 
 #Preview {
+    @Previewable @State var requestFocus = false
     let blocks = [
         EditorBlock(id: UUID(), type: .text, content: "第一段内容", sortIndex: 1000),
         EditorBlock(id: UUID(), type: .text, content: "第二段内容", sortIndex: 2000)
@@ -45,8 +47,10 @@ struct BlockListView: View {
     VStack(alignment: .leading) {
         BlockListView(
             blocks: blocks,
+            requestFocus: $requestFocus,
             onContentChanged: { _, _ in },
-            onFocused: {}
+            onFocusGained: {},
+            onFocusLost: {}
         )
     }
     .padding()

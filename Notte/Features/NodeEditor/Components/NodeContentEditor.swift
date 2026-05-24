@@ -8,20 +8,24 @@
 import SwiftUI
 import UIKit
 
-/// UITextView 的 SwiftUI 包装，用于 Node 标题和 Block 内容的输入。
-/// 支持自定义键盘行为：Return、Backspace（空时）、Tab、Shift+Tab。
+/// UITextView 的 SwiftUI 包装，用于 Block 内容的多行输入。
+/// 回车键插入换行；Backspace 在空内容时触发 onBackspaceWhenEmpty。
+///
+/// requestFocus：一次性聚焦请求（父视图写 true），updateUIView 消费后异步重置为 false，
+/// 同时将光标移到末尾。用户直接点击 UITextView 时不会触发此路径，因此不会出现双光标。
+/// 聚焦/失焦事件通过 onFocusGained / onFocusLost 回调通知父视图，
+/// 调用方在 onFocusLost 里用 withAnimation 驱动收起动画。
 struct NodeContentEditor: UIViewRepresentable {
 
     var text: String
     var font: Font
     var placeholder: String
+    @Binding var requestFocus: Bool
 
     var onTextChanged: (String) -> Void
-    var onReturn: () -> Void
     var onBackspaceWhenEmpty: () -> Void
-    var onTab: () -> Void
-    var onShiftTab: () -> Void
-    var onFocus: () -> Void
+    var onFocusGained: () -> Void
+    var onFocusLost: () -> Void
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -37,16 +41,29 @@ struct NodeContentEditor: UIViewRepresentable {
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
         let width = proposal.width ?? uiView.bounds.width
         let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: fitting.height)
+        return CGSize(width: width, height: max(fitting.height, uiView.font?.lineHeight ?? 20))
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
-        if text.isEmpty {
-            uiView.text = placeholder
-            uiView.textColor = UIColor(ColorTokens.textSecondary)
-        } else if uiView.text != text {
-            uiView.text = text
-            uiView.textColor = UIColor(ColorTokens.textPrimary)
+        context.coordinator.parent = self
+        // 非编辑状态下才同步文本/占位符，避免打断用户输入
+        if !uiView.isFirstResponder {
+            if text.isEmpty {
+                uiView.text = placeholder
+                uiView.textColor = UIColor(ColorTokens.textSecondary)
+            } else if uiView.text != text {
+                uiView.text = text
+                uiView.textColor = UIColor(ColorTokens.textPrimary)
+            }
+        }
+        // 消费一次性聚焦请求：仅标题回车等程序化场景会进入此分支
+        if requestFocus && !uiView.isFirstResponder {
+            uiView.becomeFirstResponder()
+            let end = uiView.endOfDocument
+            uiView.selectedTextRange = uiView.textRange(from: end, to: end)
+            // 用捕获的 binding 异步重置，避免在 updateUIView 调用期间直接写 State
+            let binding = $requestFocus
+            DispatchQueue.main.async { binding.wrappedValue = false }
         }
     }
 
@@ -62,21 +79,26 @@ struct NodeContentEditor: UIViewRepresentable {
         }
 
         func textViewDidChange(_ textView: UITextView) {
-            // 占位符状态下不上报内容变更
             guard textView.textColor != UIColor(ColorTokens.textSecondary) else { return }
             parent.onTextChanged(textView.text ?? "")
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
-            // 开始编辑时清除占位符
             if textView.textColor == UIColor(ColorTokens.textSecondary) {
                 textView.text = ""
                 textView.textColor = UIColor(ColorTokens.textPrimary)
             }
-            let onFocus = parent.onFocus
-            DispatchQueue.main.async {
-                onFocus()
+            let cb = parent.onFocusGained
+            DispatchQueue.main.async { cb() }
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            if textView.text.isEmpty {
+                textView.text = parent.placeholder
+                textView.textColor = UIColor(ColorTokens.textSecondary)
             }
+            let cb = parent.onFocusLost
+            DispatchQueue.main.async { cb() }
         }
 
         func textView(
@@ -84,18 +106,14 @@ struct NodeContentEditor: UIViewRepresentable {
             shouldChangeTextIn range: NSRange,
             replacementText text: String
         ) -> Bool {
-            // Return 键：新建节点
-            if text == "\n" {
-                parent.onReturn()
-                return false
-            }
-            // Backspace 且文本为空：触发反缩进或删除
+            // Backspace 且文本为空：上报给父视图处理
             if text.isEmpty,
                let current = textView.text,
                current.isEmpty || textView.textColor == UIColor(ColorTokens.textSecondary) {
                 parent.onBackspaceWhenEmpty()
                 return false
             }
+            // 其余情况（包括换行）正常插入
             return true
         }
     }

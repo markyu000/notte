@@ -41,6 +41,7 @@ struct PageEditorView: View {
                                 node: node,
                                 isFocused: viewModel.focusedNodeID == node.id
                                     || viewModel.pendingFocusNodeID == node.id,
+                                shouldFocusTitle: viewModel.pendingFocusNodeID == node.id,
                                 onTitleChanged: { title in
                                     viewModel.onTitleChanged(
                                         nodeID: node.id,
