@@ -32,7 +32,7 @@ struct SettingsView: View {
                         dismiss()
                     } label: {
                         Image(systemName: "checkmark")
-                            .font(.body.weight(.semibold))
+                            .font(.body.weight(.regular))
                             .foregroundStyle(.black)
                     }
                     .buttonStyle(.glassProminent)
