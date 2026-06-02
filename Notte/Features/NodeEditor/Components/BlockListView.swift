@@ -17,6 +17,11 @@ struct BlockListView: View {
     let onContentChanged: (UUID, String) -> Void
     let onFocusGained: () -> Void
     let onFocusLost: () -> Void
+    var onTab: () -> Void = {}
+    var onShiftTab: () -> Void = {}
+    var onMoveUp: () -> Void = {}
+    var onMoveDown: () -> Void = {}
+    var onDelete: () -> Void = {}
 
     var body: some View {
         ForEach(blocks) { block in
@@ -30,7 +35,12 @@ struct BlockListView: View {
                     onTextChanged: { onContentChanged(block.id, $0) },
                     onBackspaceWhenEmpty: { },
                     onFocusGained: onFocusGained,
-                    onFocusLost: onFocusLost
+                    onFocusLost: onFocusLost,
+                    onTab: onTab,
+                    onShiftTab: onShiftTab,
+                    onMoveUp: onMoveUp,
+                    onMoveDown: onMoveDown,
+                    onDelete: onDelete
                 )
                 .padding(.leading, 4)
             }

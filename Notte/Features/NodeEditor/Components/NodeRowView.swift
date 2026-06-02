@@ -94,7 +94,12 @@ struct NodeRowView: View {
                                 // hasBlockContent 由 computed property 实时求值；
                                 // 若有内容，if 条件仍为 true，视图不会消失
                             }
-                        }
+                        },
+                        onTab: { onCommand(.indent(nodeID: node.id)) },
+                        onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
+                        onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
+                        onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
+                        onDelete: { onCommand(.delete(nodeID: node.id)) }
                     )
                     .padding(.leading, 22)
                     .transition(.opacity)

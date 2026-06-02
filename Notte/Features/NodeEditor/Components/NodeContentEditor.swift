@@ -26,6 +26,11 @@ struct NodeContentEditor: UIViewRepresentable {
     var onBackspaceWhenEmpty: () -> Void
     var onFocusGained: () -> Void
     var onFocusLost: () -> Void
+    var onTab: () -> Void = {}
+    var onShiftTab: () -> Void = {}
+    var onMoveUp: () -> Void = {}
+    var onMoveDown: () -> Void = {}
+    var onDelete: () -> Void = {}
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -35,7 +40,46 @@ struct NodeContentEditor: UIViewRepresentable {
         textView.textContainer.lineFragmentPadding = 0
         textView.font = UIFont.preferredFont(forTextStyle: .body)
         textView.delegate = context.coordinator
+        textView.inputAccessoryView = makeInputAccessoryView(coordinator: context.coordinator)
         return textView
+    }
+
+    private func makeInputAccessoryView(coordinator: Coordinator) -> UIToolbar {
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        toolbar.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 54)
+        let deleteItem = UIBarButtonItem(
+            image: UIImage(systemName: "trash"),
+            style: .plain,
+            target: coordinator,
+            action: #selector(Coordinator.didTapDelete)
+        )
+        deleteItem.tintColor = .systemRed
+        toolbar.items = [
+            UIBarButtonItem(
+                image: UIImage(systemName: "decrease.indent"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapOutdent)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "increase.indent"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapIndent)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "arrow.up"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapMoveUp)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "arrow.down"),
+                style: .plain, target: coordinator,
+                action: #selector(Coordinator.didTapMoveDown)
+            ),
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            deleteItem
+        ]
+        return toolbar
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
@@ -100,6 +144,12 @@ struct NodeContentEditor: UIViewRepresentable {
             let cb = parent.onFocusLost
             DispatchQueue.main.async { cb() }
         }
+
+        @objc func didTapIndent() { parent.onTab() }
+        @objc func didTapOutdent() { parent.onShiftTab() }
+        @objc func didTapMoveUp() { parent.onMoveUp() }
+        @objc func didTapMoveDown() { parent.onMoveDown() }
+        @objc func didTapDelete() { parent.onDelete() }
 
         func textView(
             _ textView: UITextView,
