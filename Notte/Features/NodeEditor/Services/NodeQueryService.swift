@@ -30,7 +30,9 @@ struct NodeQueryService {
                         id: $0.id,
                         type: $0.type,
                         content: $0.content,
-                        sortIndex: $0.sortIndex
+                        sortIndex: $0.sortIndex,
+                        imageWidthRatio: $0.imageWidthRatio,
+                        imageAlignment: $0.imageAlignment
                     )
                 }
             editorNodes[node.id] = EditorNode(

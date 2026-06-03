@@ -14,16 +14,23 @@ struct EditorBlock: Identifiable, Equatable {
     var type: BlockType
     var content: String
     var sortIndex: Double
-    
+    /// 图片私有渲染属性（仅 image 类型有意义），不写入 .md
+    var imageWidthRatio: ImageWidthRatio?
+    var imageAlignment: BlockAlignment?
+
     init(
         id: UUID,
         type: BlockType = .text,
         content: String = "",
-        sortIndex: Double
+        sortIndex: Double,
+        imageWidthRatio: ImageWidthRatio? = nil,
+        imageAlignment: BlockAlignment? = nil
     ) {
         self.id = id
         self.type = type
         self.content = content
         self.sortIndex = sortIndex
+        self.imageWidthRatio = imageWidthRatio
+        self.imageAlignment = imageAlignment
     }
 }
