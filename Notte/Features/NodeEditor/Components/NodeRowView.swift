@@ -107,12 +107,9 @@ struct NodeRowView: View {
         .padding(.leading, CGFloat(node.depth) * indentPerLevel)
         .padding(.vertical, 6)
         .frame(minHeight: 44)
-        .background(
-            isFocused
-            ? ColorTokens.backgroundSecondary
-            : ColorTokens.backgroundPrimary
-        )
-        .animation(.easeInOut(duration: 0.15), value: isFocused)
+        // 普通文本 Node 聚焦只显示光标，不再换底色；背景色块今后只属于特殊 BlockType（如 code）
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
