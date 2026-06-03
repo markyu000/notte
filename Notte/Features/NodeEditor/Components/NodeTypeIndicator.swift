@@ -30,13 +30,19 @@ struct NodeTypeIndicator: View {
     }
 
     var body: some View {
-        slotContent
-            .frame(width: Self.slotWidth, height: 16, alignment: .leading)
+        // Color.clear 作为确定存在的固定槽位底，保证任何节点（含 leaf）都恒定预留 22pt，
+        // 圆点 overlay 其上。不能把 .frame 直接加在条件 @ViewBuilder 上——leaf 时内容为
+        // EmptyView，.frame(width:) 会塌缩成 0，导致同层级标题错位、缩进乱套。
+        Color.clear
+            .frame(width: Self.slotWidth, height: 16)
+            .overlay(alignment: .leading) {
+                bulletContent
+            }
             .animation(.easeInOut(duration: 0.15), value: showsBullet)
     }
 
     @ViewBuilder
-    private var slotContent: some View {
+    private var bulletContent: some View {
         if hasChildren, let onToggle {
             Button(action: onToggle) {
                 bulletIcon
@@ -47,7 +53,7 @@ struct NodeTypeIndicator: View {
         } else if hasChildren {
             bulletIcon.opacity(showsBullet ? 1 : 0)
         }
-        // leaf：空槽位，圆点永不渲染，仅保证对齐
+        // leaf：槽位由 Color.clear 占位，圆点永不渲染
     }
 
     private var bulletIcon: some View {
