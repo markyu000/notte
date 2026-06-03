@@ -26,6 +26,9 @@ struct NodeRowView: View {
 
     private let logger = ConsoleLogger()
 
+    /// 每一级深度的左侧缩进量。层级仅靠缩进 + 标题字号落差表达，不再画竖线。
+    private let indentPerLevel: CGFloat = 16
+
     private var debugLog: Void {
         logger.debug("渲染节点「\(node.title)」，children 数量：\(node.children.count)", function: #function)
     }
@@ -37,75 +40,71 @@ struct NodeRowView: View {
     var body: some View {
         let _ = debugLog
 
-        HStack(alignment: .top, spacing: 0) {
-            // 左侧缩进导轨
-            NodeIndentationGuide(depth: node.depth)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                // 类型指示器（有子节点时兼做折叠/展开按钮）
+                NodeTypeIndicator(
+                    hasChildren: !node.children.isEmpty,
+                    isCollapsed: node.isCollapsed,
+                    onToggle: node.children.isEmpty ? nil : {
+                        onCommand(.toggleCollapse(nodeID: node.id))
+                    }
+                )
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    // 类型指示器（有子节点时兼做折叠/展开按钮）
-                    NodeTypeIndicator(
-                        hasChildren: !node.children.isEmpty,
-                        isCollapsed: node.isCollapsed,
-                        onToggle: node.children.isEmpty ? nil : {
-                            onCommand(.toggleCollapse(nodeID: node.id))
-                        }
-                    )
-
-                    // 标题输入框：回车跳转到 Block 内容区而非新建节点
-                    NodeTitleEditor(
-                        text: node.title,
-                        depth: node.depth,
-                        isFocused: shouldFocusTitle,
-                        onTextChanged: { onTitleChanged($0) },
-                        onReturn: {
-                            // 先用动画展开内容区，再设聚焦请求（两步分开避免动画上下文干扰 becomeFirstResponder）
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                                showBlockArea = true
-                            }
-                            requestBlockFocus = true
-                        },
-                        onBackspaceWhenEmpty: { },
-                        onTab: { onCommand(.indent(nodeID: node.id)) },
-                        onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
-                        onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
-                        onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
-                        onDelete: { onCommand(.delete(nodeID: node.id)) },
-                        onFocus: { onFocused(node.id) }
-                    )
-                    Spacer()
-                }
-
-                // Block 内容区：无内容且 showBlockArea = false 时完全隐藏不占空间；
-                // showBlockArea 或 hasBlockContent 为 true 时显示。
-                // 展开由 withAnimation 驱动（标题回车），收起由 onFocusLost 内的 withAnimation 驱动。
-                if showBlockArea || hasBlockContent {
-                    BlockListView(
-                        blocks: node.blocks,
-                        requestFocus: $requestBlockFocus,
-                        onContentChanged: onContentChanged,
-                        onFocusGained: {
+                // 标题输入框：回车跳转到 Block 内容区而非新建节点
+                NodeTitleEditor(
+                    text: node.title,
+                    depth: node.depth,
+                    isFocused: shouldFocusTitle,
+                    onTextChanged: { onTitleChanged($0) },
+                    onReturn: {
+                        // 先用动画展开内容区，再设聚焦请求（两步分开避免动画上下文干扰 becomeFirstResponder）
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
                             showBlockArea = true
-                            onFocused(node.id)
-                        },
-                        onFocusLost: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                                showBlockArea = false
-                                // hasBlockContent 由 computed property 实时求值；
-                                // 若有内容，if 条件仍为 true，视图不会消失
-                            }
-                        },
-                        onTab: { onCommand(.indent(nodeID: node.id)) },
-                        onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
-                        onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
-                        onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
-                        onDelete: { onCommand(.delete(nodeID: node.id)) }
-                    )
-                    .padding(.leading, 22)
-                    .transition(.opacity)
-                }
+                        }
+                        requestBlockFocus = true
+                    },
+                    onBackspaceWhenEmpty: { },
+                    onTab: { onCommand(.indent(nodeID: node.id)) },
+                    onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
+                    onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
+                    onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
+                    onDelete: { onCommand(.delete(nodeID: node.id)) },
+                    onFocus: { onFocused(node.id) }
+                )
+                Spacer()
+            }
+
+            // Block 内容区：无内容且 showBlockArea = false 时完全隐藏不占空间；
+            // showBlockArea 或 hasBlockContent 为 true 时显示。
+            // 展开由 withAnimation 驱动（标题回车），收起由 onFocusLost 内的 withAnimation 驱动。
+            if showBlockArea || hasBlockContent {
+                BlockListView(
+                    blocks: node.blocks,
+                    requestFocus: $requestBlockFocus,
+                    onContentChanged: onContentChanged,
+                    onFocusGained: {
+                        showBlockArea = true
+                        onFocused(node.id)
+                    },
+                    onFocusLost: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                            showBlockArea = false
+                            // hasBlockContent 由 computed property 实时求值；
+                            // 若有内容，if 条件仍为 true，视图不会消失
+                        }
+                    },
+                    onTab: { onCommand(.indent(nodeID: node.id)) },
+                    onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
+                    onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
+                    onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
+                    onDelete: { onCommand(.delete(nodeID: node.id)) }
+                )
+                .padding(.leading, 22)
+                .transition(.opacity)
             }
         }
+        .padding(.leading, CGFloat(node.depth) * indentPerLevel)
         .padding(.vertical, 6)
         .frame(minHeight: 44)
         .background(
