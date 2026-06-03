@@ -16,14 +16,17 @@ struct NodeTypeIndicator: View {
     let onToggle: (() -> Void)?
 
     var body: some View {
-        if hasChildren, let onToggle {
-            Button(action: onToggle) {
+        if hasChildren {
+            if let onToggle {
+                Button(action: onToggle) {
+                    bulletIcon
+                }
+                .buttonStyle(.plain)
+            } else {
                 bulletIcon
             }
-            .buttonStyle(.plain)
-        } else {
-            bulletIcon
         }
+        // leaf 节点不显示任何符号，避免与正文左缘对齐成列表轨
     }
 
     private var bulletIcon: some View {

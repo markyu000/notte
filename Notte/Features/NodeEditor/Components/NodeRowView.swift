@@ -37,6 +37,12 @@ struct NodeRowView: View {
         node.blocks.contains { !$0.content.isEmpty }
     }
 
+    /// Block 内容区相对节点左缘的缩进：有 bullet 的节点让正文对齐标题文字（bullet 16 + 间距 6）；
+    /// leaf 无 bullet 时正文贴左，避免形成列表轨。
+    private var blockLeadingInset: CGFloat {
+        node.children.isEmpty ? 0 : 22
+    }
+
     var body: some View {
         let _ = debugLog
 
@@ -101,7 +107,7 @@ struct NodeRowView: View {
                     onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
                     onDelete: { onCommand(.delete(nodeID: node.id)) }
                 )
-                .padding(.leading, 22)
+                .padding(.leading, blockLeadingInset)
                 .transition(.opacity)
             }
         }
