@@ -17,6 +17,7 @@ struct NodeRowView: View {
     let onTitleChanged: (String) -> Void
     let onContentChanged: (UUID, String) -> Void
     let onCommand: (NodeCommand) -> Void
+    let onBlockCommand: (BlockCommand) -> Void
     let onFocused: (UUID) -> Void
 
     /// Block 内容区的瞬时展开状态（标题回车 / 正文获焦时为 true）。
@@ -134,7 +135,10 @@ struct NodeRowView: View {
             onShiftTab: { onCommand(.outdent(nodeID: node.id)) },
             onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
             onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
-            onDelete: { onCommand(.delete(nodeID: node.id)) }
+            onDelete: { onCommand(.delete(nodeID: node.id)) },
+            isSelected: isFocused,
+            onMoveBlockUp: { onBlockCommand(.moveBlockUp(blockID: $0)) },
+            onMoveBlockDown: { onBlockCommand(.moveBlockDown(blockID: $0)) }
         )
         .padding(.leading, blockLeadingInset)
         .transition(.opacity)
@@ -167,6 +171,7 @@ struct NodeRowView: View {
             onTitleChanged: { _ in },
             onContentChanged: { _, _ in },
             onCommand: { _ in },
+            onBlockCommand: { _ in },
             onFocused: { _ in }
         )
         NodeRowView(
@@ -176,6 +181,7 @@ struct NodeRowView: View {
             onTitleChanged: { _ in },
             onContentChanged: { _, _ in },
             onCommand: { _ in },
+            onBlockCommand: { _ in },
             onFocused: { _ in }
         )
     }

@@ -57,6 +57,9 @@ struct PageEditorView: View {
                                 onCommand: { command in
                                     viewModel.send(command)
                                 },
+                                onBlockCommand: { command in
+                                    viewModel.send(command)
+                                },
                                 onFocused: { id in
                                     viewModel.didFocusNode(id)
                                 }

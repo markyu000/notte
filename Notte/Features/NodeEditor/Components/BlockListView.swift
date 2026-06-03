@@ -22,29 +22,91 @@ struct BlockListView: View {
     var onMoveUp: () -> Void = {}
     var onMoveDown: () -> Void = {}
     var onDelete: () -> Void = {}
+    /// 所属节点是否处于选中态。仅选中且多块时才显示拖动手柄。
+    var isSelected: Bool = false
+    var onMoveBlockUp: (UUID) -> Void = { _ in }
+    var onMoveBlockDown: (UUID) -> Void = { _ in }
+
+    /// 当前被「拎起」的块；拖动态/选中态时其边界浮现，静止阅读时隐形。
+    @State private var liftedBlockID: UUID?
+
+    /// 拖动净位移超过该阈值才触发一格移动（朴素一维移动，不做精确帧测量）。
+    private let dragThreshold: CGFloat = 24
+
+    /// 单块节点没有可换位的邻居，无需显示拖动手柄，保持普通文本的文档流外观。
+    private var showDragAffordance: Bool {
+        isSelected && blocks.count > 1
+    }
 
     var body: some View {
         ForEach(blocks) { block in
-            switch block.type {
-            case .text:
-                NodeContentEditor(
-                    text: block.content,
-                    font: TypographyTokens.body,
-                    placeholder: "内容",
-                    requestFocus: $requestFocus,
-                    onTextChanged: { onContentChanged(block.id, $0) },
-                    onBackspaceWhenEmpty: { },
-                    onFocusGained: onFocusGained,
-                    onFocusLost: onFocusLost,
-                    onTab: onTab,
-                    onShiftTab: onShiftTab,
-                    onMoveUp: onMoveUp,
-                    onMoveDown: onMoveDown,
-                    onDelete: onDelete
-                )
-                .padding(.leading, 4)
-            }
+            blockRow(block)
         }
+    }
+
+    @ViewBuilder
+    private func blockRow(_ block: EditorBlock) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            if showDragAffordance {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .frame(width: 16, height: 24)
+                    .contentShape(Rectangle())
+                    .gesture(liftGesture(for: block.id))
+            }
+            blockContent(block)
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(ColorTokens.separator, lineWidth: 1)
+                .opacity(liftedBlockID == block.id ? 1 : 0)
+        )
+        .animation(.easeInOut(duration: 0.15), value: liftedBlockID)
+    }
+
+    @ViewBuilder
+    private func blockContent(_ block: EditorBlock) -> some View {
+        switch block.type {
+        case .text:
+            NodeContentEditor(
+                text: block.content,
+                font: TypographyTokens.body,
+                placeholder: "内容",
+                requestFocus: $requestFocus,
+                onTextChanged: { onContentChanged(block.id, $0) },
+                onBackspaceWhenEmpty: { },
+                onFocusGained: onFocusGained,
+                onFocusLost: onFocusLost,
+                onTab: onTab,
+                onShiftTab: onShiftTab,
+                onMoveUp: onMoveUp,
+                onMoveDown: onMoveDown,
+                onDelete: onDelete
+            )
+        }
+    }
+
+    /// 长按拎起 → 上下拖动 → 松手落下。仅一维（顺序），无二维坐标。
+    private func liftGesture(for blockID: UUID) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.25)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onChanged { value in
+                if case .second = value {
+                    liftedBlockID = blockID
+                }
+            }
+            .onEnded { value in
+                liftedBlockID = nil
+                if case .second(_, let drag?) = value {
+                    if drag.translation.height < -dragThreshold {
+                        onMoveBlockUp(blockID)
+                    } else if drag.translation.height > dragThreshold {
+                        onMoveBlockDown(blockID)
+                    }
+                }
+            }
     }
 }
 
@@ -60,7 +122,8 @@ struct BlockListView: View {
             requestFocus: $requestFocus,
             onContentChanged: { _, _ in },
             onFocusGained: {},
-            onFocusLost: {}
+            onFocusLost: {},
+            isSelected: true
         )
     }
     .padding()
