@@ -40,7 +40,8 @@ struct NodeRowView: View {
     var body: some View {
         let _ = debugLog
 
-        VStack(alignment: .leading, spacing: 4) {
+        // 标题与其 Block 用极小间距贴合，节点之间用较大上边距分隔，形成文档流
+        VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
                 // 类型指示器（有子节点时兼做折叠/展开按钮）
                 NodeTypeIndicator(
@@ -105,7 +106,8 @@ struct NodeRowView: View {
             }
         }
         .padding(.leading, CGFloat(node.depth) * indentPerLevel)
-        .padding(.vertical, 6)
+        .padding(.top, 10)
+        .padding(.bottom, 2)
         .frame(minHeight: 44)
         // 普通文本 Node 聚焦只显示光标，不再换底色；背景色块今后只属于特殊 BlockType（如 code）
         .frame(maxWidth: .infinity, alignment: .leading)
