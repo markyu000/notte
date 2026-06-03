@@ -11,15 +11,14 @@ import SwiftUI
 /// 无论圆点是否显示，槽位宽度恒定，正文始终从槽位之后的同一 x 起笔，
 /// 保证同层级所有节点左缘严格对齐、缩进基线稳定。
 ///
-/// 圆点显隐规则：
+/// 圆点显隐规则：槽位永远占位，圆点仅在 isRevealed 时浮现。
 /// - leaf（无子节点）：永不显示，但槽位仍占位。
-/// - 折叠态父节点：恒显（circle.fill），指示「此处有折叠内容」。
-/// - 展开态父节点：仅在 isRevealed（聚焦等）时于固定槽位内浮现。
+/// - 父节点（无论展开 / 折叠）：仅在 isRevealed（聚焦等）时于固定槽位内浮现，静止时不显示。
 struct NodeTypeIndicator: View {
 
     let hasChildren: Bool
     let isCollapsed: Bool
-    /// 是否让圆点浮现（如节点聚焦 / 待聚焦）。展开态父节点据此显隐。
+    /// 是否让圆点浮现（如节点聚焦 / 待聚焦）。父节点据此显隐，静止时不显示。
     var isRevealed: Bool = false
     let onToggle: (() -> Void)?
 
@@ -27,7 +26,7 @@ struct NodeTypeIndicator: View {
     static let slotWidth: CGFloat = 22
 
     private var showsBullet: Bool {
-        hasChildren && (isCollapsed || isRevealed)
+        hasChildren && isRevealed
     }
 
     var body: some View {
@@ -75,8 +74,12 @@ struct NodeTypeIndicator: View {
             Text("展开·聚焦浮现").font(.caption)
         }
         HStack(spacing: 0) {
-            NodeTypeIndicator(hasChildren: true, isCollapsed: true, onToggle: {})
-            Text("折叠·恒显").font(.caption)
+            NodeTypeIndicator(hasChildren: true, isCollapsed: true, isRevealed: false, onToggle: {})
+            Text("折叠·未聚焦（圆点隐，槽位在）").font(.caption)
+        }
+        HStack(spacing: 0) {
+            NodeTypeIndicator(hasChildren: true, isCollapsed: true, isRevealed: true, onToggle: {})
+            Text("折叠·聚焦浮现（circle.fill）").font(.caption)
         }
     }
     .padding()
