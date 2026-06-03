@@ -39,10 +39,10 @@ struct NodeRowView: View {
         node.blocks.contains { !$0.content.isEmpty }
     }
 
-    /// Block 内容区相对节点左缘的缩进：有 bullet 的节点让正文对齐标题文字（bullet 16 + 间距 6）；
-    /// leaf 无 bullet 时正文贴左，避免形成列表轨。
+    /// 正文左缘缩进 = 固定折叠槽位宽度。无论节点有无圆点（leaf / 空标题段落同样），
+    /// 正文都从槽位之后的同一 x 起笔，保证同层级所有节点左缘严格对齐。
     private var blockLeadingInset: CGFloat {
-        node.children.isEmpty ? 0 : 22
+        NodeTypeIndicator.slotWidth
     }
 
     /// 标题行是否渲染。空标题且无子节点、未聚焦时隐藏，节点呈现为纯正文段落（隐形容器）。
@@ -82,11 +82,13 @@ struct NodeRowView: View {
 
     @ViewBuilder
     private var titleRow: some View {
-        HStack(spacing: 6) {
-            // 类型指示器（有子节点时兼做折叠/展开按钮）
+        // 折叠控件占固定槽位（含右侧间距），故 HStack 间距为 0；正文紧贴槽位之后
+        HStack(spacing: 0) {
+            // 折叠控件：固定槽位；leaf 空槽位仅占位，父节点圆点按需在槽内浮现
             NodeTypeIndicator(
                 hasChildren: !node.children.isEmpty,
                 isCollapsed: node.isCollapsed,
+                isRevealed: isFocused || shouldFocusTitle,
                 onToggle: node.children.isEmpty ? nil : {
                     onCommand(.toggleCollapse(nodeID: node.id))
                 }
