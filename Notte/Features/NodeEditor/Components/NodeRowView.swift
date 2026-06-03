@@ -71,9 +71,11 @@ struct NodeRowView: View {
         .padding(.top, 10)
         .padding(.bottom, 2)
         .frame(minHeight: 44)
-        // 普通文本 Node 聚焦只显示光标，不再换底色；背景色块今后只属于特殊 BlockType（如 code）
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+        // 聚焦时不换底色（不再有聚焦盒）；但保留静态不透明背景：
+        // 折叠/展开时子节点 zIndex 低于父节点，靠父行不透明背景遮挡，才能呈现「从父节点下方滑出」。
+        .background(ColorTokens.backgroundPrimary)
     }
 
     // MARK: - 子视图
