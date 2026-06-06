@@ -229,6 +229,15 @@ class PageEditorViewModel: ObservableObject {
             error = engine.error
         }
     }
+    
+    // MARK: - Node层级限制
+    
+    var canAddChildToFocusedNode: Bool {
+        guard let focusedNodeID,
+              let node = visibleNodes.first(where: { $0.id == focusedNodeID })
+        else { return false }
+        return node.depth < EditorNode.maxDepth
+    }
 
     // MARK: - 退出时强制保存
 

@@ -20,6 +20,8 @@ struct EditorNode: Identifiable, Equatable {
     var isVisible: Bool
     var children: [EditorNode]
     var blocks: [EditorBlock]
+    static let maxLevel = 5
+    static let maxDepth = maxLevel - 1
     
     init(
         id: UUID,

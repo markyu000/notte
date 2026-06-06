@@ -126,7 +126,7 @@ struct PageEditorView: View {
                     } label: {
                         Label("添加子节点", systemImage: "arrow.turn.down.right")
                     }
-                    .disabled(viewModel.focusedNodeID == nil)
+                    .disabled(!viewModel.canAddChildToFocusedNode)
 
                     Button {
                         handleAddRoot()
