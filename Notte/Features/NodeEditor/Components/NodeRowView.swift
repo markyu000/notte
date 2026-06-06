@@ -47,7 +47,7 @@ struct NodeRowView: View {
 
     /// 当前节点是否还能缩进（depth 未达上限）。供键盘工具栏禁用缩进按钮。
     private var canIndent: Bool {
-        NodeHierarchyPolicy.canAddChild(parentDepth: node.depth)
+        NodeHierarchyPolicy.canIndent(subtreeMaxDepth: node.subtreeMaxDepth)
     }
 
     /// 标题行是否渲染。空标题且无子节点、未聚焦时隐藏，节点呈现为纯正文段落（隐形容器）。

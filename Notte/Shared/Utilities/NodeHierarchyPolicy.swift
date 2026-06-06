@@ -23,4 +23,10 @@ enum NodeHierarchyPolicy {
     static func canAddChild(parentDepth: Int) -> Bool {
         parentDepth < maxDepth
     }
+
+    /// 给定子树(含自身)的最大 depth,判断整棵子树能否再缩进一级。
+    /// 缩进会让整个子树 depth +1,故最深节点 +1 后不得超过 maxDepth。
+    static func canIndent(subtreeMaxDepth: Int) -> Bool {
+        subtreeMaxDepth < maxDepth
+    }
 }

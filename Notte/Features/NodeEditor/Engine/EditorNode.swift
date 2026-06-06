@@ -42,4 +42,9 @@ struct EditorNode: Identifiable, Equatable {
         self.children = children
         self.blocks = blocks
     }
+
+    /// 子树（含自身）的最大 depth。缩进时整棵子树一起下移，用它判断是否越界。
+    var subtreeMaxDepth: Int {
+        max(depth, children.map(\.subtreeMaxDepth).max() ?? depth)
+    }
 }
