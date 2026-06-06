@@ -119,7 +119,7 @@ struct PageEditorView: View {
                     } label: {
                         Label("添加同级节点", systemImage: "text.append")
                     }
-                    .disabled(viewModel.focusedNodeID == nil)
+                    .disabled(!viewModel.hasFocusedNode)
 
                     Button {
                         handleAddChild()

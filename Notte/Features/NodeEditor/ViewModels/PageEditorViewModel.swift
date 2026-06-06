@@ -239,6 +239,10 @@ class PageEditorViewModel: ObservableObject {
         return node.depth < EditorNode.maxDepth
     }
 
+    // MARK: - Node聚焦判断
+
+    var hasFocusedNode: Bool { focusedNodeID != nil }
+
     // MARK: - 退出时强制保存
 
     func onDisappear() {
