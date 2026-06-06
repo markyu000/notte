@@ -199,7 +199,7 @@ struct NodeMutationService {
             // 没有前一个同级节点，无法缩进
             return
         }
-        guard newParent.depth + 1 <= 5 else {
+        guard newParent.depth + 1 <= EditorNode.maxDepth else {
             // 已达最大深度（6 级，depth 0-5），无法继续缩进
             return
         }
