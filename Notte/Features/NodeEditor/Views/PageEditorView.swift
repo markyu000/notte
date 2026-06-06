@@ -82,7 +82,8 @@ struct PageEditorView: View {
                             .frame(height: 200)
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.leading, 10)
+                .padding(.trailing, 20)
             }
             .onChange(of: viewModel.focusedNodeID) { _, newID in
                 guard let id = newID else { return }
