@@ -9,6 +9,10 @@ This project uses OpenWolf for context management. Read and follow .wolf/OPENWOL
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language
+
+无论何时，永远用简体中文回复我。
+
 ## Build & Test Commands
 
 ```bash
