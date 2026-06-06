@@ -96,6 +96,7 @@ struct NodeMutationService {
         guard let parentNode = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
+        guard NodeHierarchyPolicy.canAddChild(parentDepth: parentNode.depth) else { throw NodeError.maxDepthExceeded }
         let existingChildren = queryService.children(of: nodeID, in: nodes)
         let lastChildIndex = existingChildren.map(\.sortIndex).max()
         let newSortIndex = lastChildIndex.map { SortIndexPolicy.indexAfter(last: $0) }
@@ -199,7 +200,7 @@ struct NodeMutationService {
             // 没有前一个同级节点，无法缩进
             return
         }
-        guard newParent.depth + 1 <= EditorNode.maxDepth else {
+        guard NodeHierarchyPolicy.canAddChild(parentDepth: newParent.depth) else {
             // 已达最大深度（5 级，depth 0-4），无法继续缩进
             return
         }

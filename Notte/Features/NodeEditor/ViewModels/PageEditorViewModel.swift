@@ -236,7 +236,7 @@ class PageEditorViewModel: ObservableObject {
         guard let focusedNodeID,
               let node = visibleNodes.first(where: { $0.id == focusedNodeID })
         else { return false }
-        return node.depth < EditorNode.maxDepth
+        return NodeHierarchyPolicy.canAddChild(parentDepth: node.depth)
     }
 
     // MARK: - Node聚焦判断
