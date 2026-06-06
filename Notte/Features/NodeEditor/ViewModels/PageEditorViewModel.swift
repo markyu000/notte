@@ -214,12 +214,16 @@ class PageEditorViewModel: ObservableObject {
 
     func didFocusNode(_ nodeID: UUID) {
         guard focusedNodeID != nodeID || pendingFocusNodeID != nil else { return }
-        focusedNodeID = nodeID
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+            focusedNodeID = nodeID
+        }
         pendingFocusNodeID = nil
     }
 
     func saveChanges() {
-        focusedNodeID = nil
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+            focusedNodeID = nil
+        }
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         Task {
             await persistenceCoordinator.flush()

@@ -62,6 +62,7 @@ struct NodeRowView: View {
         VStack(alignment: .leading, spacing: 2) {
             if showTitleRow {
                 titleRow
+                    .transition(.opacity)
             }
             if showBlockArea {
                 blockArea
