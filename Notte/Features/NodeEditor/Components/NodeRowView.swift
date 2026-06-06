@@ -45,6 +45,11 @@ struct NodeRowView: View {
         NodeTypeIndicator.slotWidth
     }
 
+    /// 当前节点是否还能缩进（depth 未达上限）。供键盘工具栏禁用缩进按钮。
+    private var canIndent: Bool {
+        NodeHierarchyPolicy.canAddChild(parentDepth: node.depth)
+    }
+
     /// 标题行是否渲染。空标题且无子节点、未聚焦时隐藏，节点呈现为纯正文段落（隐形容器）。
     private var showTitleRow: Bool {
         !node.title.isEmpty || !node.children.isEmpty || shouldFocusTitle || isFocused
@@ -114,7 +119,8 @@ struct NodeRowView: View {
                 onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
                 onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
                 onDelete: { onCommand(.delete(nodeID: node.id)) },
-                onFocus: { onFocused(node.id) }
+                onFocus: { onFocused(node.id) },
+                canIndent: canIndent
             )
             Spacer()
         }
@@ -141,6 +147,7 @@ struct NodeRowView: View {
             onMoveUp: { onCommand(.moveUp(nodeID: node.id)) },
             onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
             onDelete: { onCommand(.delete(nodeID: node.id)) },
+            canIndent: canIndent,
             isSelected: isFocused,
             onMoveBlockUp: { onBlockCommand(.moveBlockUp(blockID: $0)) },
             onMoveBlockDown: { onBlockCommand(.moveBlockDown(blockID: $0)) }

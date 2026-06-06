@@ -31,6 +31,7 @@ struct NodeContentEditor: UIViewRepresentable {
     var onMoveUp: () -> Void = {}
     var onMoveDown: () -> Void = {}
     var onDelete: () -> Void = {}
+    var canIndent: Bool = true
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -55,17 +56,20 @@ struct NodeContentEditor: UIViewRepresentable {
             action: #selector(Coordinator.didTapDelete)
         )
         deleteItem.tintColor = .systemRed
+        let indentItem = UIBarButtonItem(
+            image: UIImage(systemName: "increase.indent"),
+            style: .plain, target: coordinator,
+            action: #selector(Coordinator.didTapIndent)
+        )
+        indentItem.isEnabled = canIndent
+        coordinator.indentItem = indentItem
         toolbar.items = [
             UIBarButtonItem(
                 image: UIImage(systemName: "decrease.indent"),
                 style: .plain, target: coordinator,
                 action: #selector(Coordinator.didTapOutdent)
             ),
-            UIBarButtonItem(
-                image: UIImage(systemName: "increase.indent"),
-                style: .plain, target: coordinator,
-                action: #selector(Coordinator.didTapIndent)
-            ),
+            indentItem,
             UIBarButtonItem(
                 image: UIImage(systemName: "arrow.up"),
                 style: .plain, target: coordinator,
@@ -90,6 +94,7 @@ struct NodeContentEditor: UIViewRepresentable {
 
     func updateUIView(_ uiView: UITextView, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.indentItem?.isEnabled = canIndent
         // 非编辑状态下才同步文本/占位符，避免打断用户输入
         if !uiView.isFirstResponder {
             if text.isEmpty {
@@ -117,6 +122,7 @@ struct NodeContentEditor: UIViewRepresentable {
 
     class Coordinator: NSObject, UITextViewDelegate {
         var parent: NodeContentEditor
+        var indentItem: UIBarButtonItem?
 
         init(_ parent: NodeContentEditor) {
             self.parent = parent

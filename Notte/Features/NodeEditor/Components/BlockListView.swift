@@ -22,6 +22,7 @@ struct BlockListView: View {
     var onMoveUp: () -> Void = {}
     var onMoveDown: () -> Void = {}
     var onDelete: () -> Void = {}
+    var canIndent: Bool = true
     /// 所属节点是否处于选中态。仅选中且多块时才显示拖动手柄。
     var isSelected: Bool = false
     var onMoveBlockUp: (UUID) -> Void = { _ in }
@@ -83,7 +84,8 @@ struct BlockListView: View {
                 onShiftTab: onShiftTab,
                 onMoveUp: onMoveUp,
                 onMoveDown: onMoveDown,
-                onDelete: onDelete
+                onDelete: onDelete,
+                canIndent: canIndent
             )
         }
     }
