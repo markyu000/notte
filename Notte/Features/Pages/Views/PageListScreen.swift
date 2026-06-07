@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct PageListScreen: View {
+    private let collectionTitle: String
     @Binding var showCreateTrigger: Bool
     @StateObject private var viewModel: PageListViewModel
     @EnvironmentObject private var router: AppRouter
@@ -23,6 +24,7 @@ struct PageListScreen: View {
         nodeRepository: NodeRepositoryProtocol,
         blockRepository: BlockRepositoryProtocol
     ) {
+        self.collectionTitle = collectionTitle
         self._showCreateTrigger = showCreateTrigger
         _viewModel = StateObject(
             wrappedValue: PageListViewModel(
@@ -34,12 +36,22 @@ struct PageListScreen: View {
             )
         )
     }
-    
+
     var body: some View {
-        contentView
+        pageList
             .ignoresSafeArea(.keyboard, edges: .bottom)
-            .navigationTitle(viewModel.collectionTitle)
+            .navigationTitle(collectionTitle)
             .navigationBarTitleDisplayMode(.large)
+            .overlay {
+                if !viewModel.hasLoadedOnce {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.pages.isEmpty {
+                    PageEmptyState {
+                        viewModel.isShowingCreateSheet = true
+                    }
+                }
+            }
             .toolbar { toolbarContent }
             .environment(\.editMode, $editMode)
             .sheet(isPresented: $viewModel.isShowingCreateSheet) {
@@ -64,20 +76,6 @@ struct PageListScreen: View {
                     showCreateTrigger = false
                 }
             }
-    }
-
-    private var contentView: some View {
-        Group {
-            if viewModel.isLoading {
-                loadingView
-            } else if viewModel.pages.isEmpty {
-                PageEmptyState {
-                    viewModel.isShowingCreateSheet = true
-                }
-            } else {
-                pageList
-            }
-        }
     }
 
     @ToolbarContentBuilder
@@ -145,13 +143,9 @@ struct PageListScreen: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
-        .padding(.top, SpacingTokens.sm)
+        .contentMargins(.top, SpacingTokens.sm, for: .scrollContent)
     }
     
-    private var loadingView: some View {
-        ProgressView()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 }
 
 // MARK: - Alert Modifiers

@@ -22,6 +22,7 @@ class NodeEditorEngine: ObservableObject {
     let blockService: BlockEditingService
 
     @Published var editorNodes: [EditorNode] = []
+    @Published var rootNodes: [EditorNode] = []
     @Published var error: AppError?
 
     init(
@@ -101,6 +102,10 @@ class NodeEditorEngine: ObservableObject {
                 try await blockService.updateContent(blockID: blockID, content: content)
             case .reorderBlock(let blockID, let newSortIndex):
                 try await blockService.reorderBlock(blockID: blockID, newSortIndex: newSortIndex)
+            case .moveBlockUp(let blockID):
+                try await blockService.moveUp(blockID: blockID)
+            case .moveBlockDown(let blockID):
+                try await blockService.moveDown(blockID: blockID)
             }
             await loadNodes()
         } catch {

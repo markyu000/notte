@@ -15,4 +15,7 @@ struct Block: Identifiable, Hashable {
     var sortIndex: Double
     var createdAt: Date
     var updatedAt: Date
+    /// 图片私有渲染属性（仅 image 类型有意义），不写入 .md
+    var imageWidthRatio: ImageWidthRatio? = nil
+    var imageAlignment: BlockAlignment? = nil
 }

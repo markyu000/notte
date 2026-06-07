@@ -53,4 +53,9 @@ struct SyncLogSheet: View {
         }
     }
 }
+
+#Preview {
+    let logger = CloudKitSyncLogger()
+    SyncLogSheet(logger: logger)
+}
 #endif

@@ -39,7 +39,9 @@ class BlockRepository: BlockRepositoryProtocol {
             content: block.content,
             sortIndex: block.sortIndex,
             createdAt: block.createdAt,
-            updatedAt: block.updatedAt
+            updatedAt: block.updatedAt,
+            imageWidthRatio: block.imageWidthRatio?.rawValue,
+            imageAlignment: block.imageAlignment?.rawValue
         )
         context.insert(model)
         try context.save()
@@ -58,6 +60,8 @@ class BlockRepository: BlockRepositoryProtocol {
         model.content = block.content
         model.sortIndex = block.sortIndex
         model.updatedAt = block.updatedAt
+        model.imageWidthRatio = block.imageWidthRatio?.rawValue
+        model.imageAlignment = block.imageAlignment?.rawValue
         try context.save()
     }
 

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct PageCreateSheet: View {
     @ObservedObject var viewModel: PageListViewModel
@@ -47,4 +48,20 @@ struct PageCreateSheet: View {
         }
         .presentationDetents([.height(220)])
     }
+}
+
+#Preview {
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    let context = ModelContext(container)
+    let pageRepo = PageRepository(context: context)
+    let nodeRepo = NodeRepository(context: context)
+    let blockRepo = BlockRepository(context: context)
+    let viewModel = PageListViewModel(
+        collectionID: UUID(),
+        collectionTitle: "我的笔记",
+        pageRepository: pageRepo,
+        nodeRepository: nodeRepo,
+        blockRepository: blockRepo
+    )
+    PageCreateSheet(viewModel: viewModel)
 }

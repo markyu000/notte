@@ -1,4 +1,5 @@
 *.DS_STORE
+.wolf
 *.png
 Notte.xcodeproj/project.xcworkspace/xcuserdata/*
 Notte.xcodeproj/project.xcworkspace/xcuserdata/
