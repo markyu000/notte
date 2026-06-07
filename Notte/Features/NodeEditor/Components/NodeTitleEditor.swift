@@ -26,6 +26,7 @@ struct NodeTitleEditor: UIViewRepresentable {
     var onMoveDown: () -> Void
     var onDelete: () -> Void
     var onFocus: () -> Void
+    var canIndent: Bool = true
 
     func makeUIView(context: Context) -> CustomTextField {
         let field = CustomTextField()
@@ -56,6 +57,7 @@ struct NodeTitleEditor: UIViewRepresentable {
 
     func updateUIView(_ uiView: CustomTextField, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.indentItem?.isEnabled = canIndent
         if uiView.text != text {
             uiView.text = text
         }
@@ -76,17 +78,20 @@ struct NodeTitleEditor: UIViewRepresentable {
             action: #selector(Coordinator.didTapDelete)
         )
         deleteItem.tintColor = .systemRed
+        let indentItem = UIBarButtonItem(
+            image: UIImage(systemName: "increase.indent"),
+            style: .plain, target: coordinator,
+            action: #selector(Coordinator.didTapIndent)
+        )
+        indentItem.isEnabled = canIndent
+        coordinator.indentItem = indentItem
         toolbar.items = [
             UIBarButtonItem(
                 image: UIImage(systemName: "decrease.indent"),
                 style: .plain, target: coordinator,
                 action: #selector(Coordinator.didTapOutdent)
             ),
-            UIBarButtonItem(
-                image: UIImage(systemName: "increase.indent"),
-                style: .plain, target: coordinator,
-                action: #selector(Coordinator.didTapIndent)
-            ),
+            indentItem,
             UIBarButtonItem(
                 image: UIImage(systemName: "arrow.up"),
                 style: .plain, target: coordinator,
@@ -125,6 +130,7 @@ struct NodeTitleEditor: UIViewRepresentable {
 
     class Coordinator: NSObject, UITextFieldDelegate {
         var parent: NodeTitleEditor
+        var indentItem: UIBarButtonItem?
 
         init(_ parent: NodeTitleEditor) {
             self.parent = parent

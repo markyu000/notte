@@ -34,3 +34,23 @@ struct CollectionContextMenu: View {
         }
     }
 }
+
+#Preview {
+    let collection = Collection(
+        id: UUID(),
+        title: "示例 Collection",
+        createdAt: Date(),
+        updatedAt: Date(),
+        sortIndex: 1000,
+        isPinned: false
+    )
+    Menu("操作") {
+        CollectionContextMenu(
+            collection: collection,
+            onRename: {},
+            onPin: {},
+            onDelete: {}
+        )
+    }
+    .padding()
+}

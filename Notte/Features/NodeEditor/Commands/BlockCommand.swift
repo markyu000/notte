@@ -19,4 +19,8 @@ enum BlockCommand {
     case updateContent(blockID: UUID, content: String)
     /// 调整 Block 的排序位置
     case reorderBlock(blockID: UUID, newSortIndex: Double)
+    /// 与同节点内前一个 Block 互换位置（朴素块移动）
+    case moveBlockUp(blockID: UUID)
+    /// 与同节点内后一个 Block 互换位置（朴素块移动）
+    case moveBlockDown(blockID: UUID)
 }

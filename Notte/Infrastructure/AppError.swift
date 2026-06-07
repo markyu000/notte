@@ -12,6 +12,7 @@ enum AppError: LocalizedError {
     case validationFailure(String)
     case unknown(Error)
     case syncFailed(Error)
+    case nodeError(NodeError)
     
     var errorDescription: String? {
         switch self {
@@ -23,6 +24,8 @@ enum AppError: LocalizedError {
             return "未知错误：\(e.localizedDescription)"
         case .syncFailed(let e):
             return "同步失败： \(e)"
+        case .nodeError(let e):
+            return "违反Node规则: \(e)"
         }
     }
 }

@@ -9,7 +9,6 @@ import Foundation
 import SwiftUI
 import Combine
 import UIKit
-import UIKit
 
 @MainActor
 class PageEditorViewModel: ObservableObject {
@@ -18,6 +17,8 @@ class PageEditorViewModel: ObservableObject {
     let pageTitle: String
 
     @Published var visibleNodes: [EditorNode] = []
+    @Published var isCollapsingAnimation: Bool = false
+    @Published var collapsingParentIndex: Int = 0
     @Published var focusedNodeID: UUID?
     @Published var pendingFocusNodeID: UUID?
     @Published var error: AppError?
@@ -51,7 +52,7 @@ class PageEditorViewModel: ObservableObject {
             Task { @MainActor [self] in self.onDisappear() }
         }
     }
-    
+
     func createTopLevelNode() {
         Task {
             do {
@@ -87,6 +88,22 @@ class PageEditorViewModel: ObservableObject {
         }
         Task {
             let previousNodes = visibleNodes
+
+            // toggleCollapse 单独处理：每个子节点独占一段动画，严格顺序
+            if case .toggleCollapse(let nodeID) = command {
+                let isCollapsed = visibleNodes.first(where: { $0.id == nodeID })?.isCollapsed ?? false
+                if !isCollapsed {
+                    await collapseSequentially(nodeID: nodeID)
+                } else {
+                    await expandSequentially(nodeID: nodeID)
+                }
+                error = engine.error
+                if error == nil, visibleNodes != previousNodes {
+                    persistenceCoordinator.markStructuralChange()
+                }
+                return
+            }
+
             // 结构性命令前先 flush，防止 pending title 与新状态竞争
             switch command {
             case .insertAfter, .insertChild, .delete, .indent, .outdent, .moveUp, .moveDown:
@@ -94,10 +111,12 @@ class PageEditorViewModel: ObservableObject {
             default:
                 break
             }
-            
+
             let previousIDs = Set(visibleNodes.map(\.id))
             await engine.dispatch(command)
-            visibleNodes = engine.editorNodes
+            withAnimation(.spring(duration: 0.35)) {
+                visibleNodes = engine.editorNodes
+            }
             error = engine.error
             if error == nil, visibleNodes != previousNodes {
                 persistenceCoordinator.markStructuralChange()
@@ -119,6 +138,38 @@ class PageEditorViewModel: ObservableObject {
                 break
             }
         }
+    }
+
+    // MARK: - 折叠/展开
+
+    private func collapseSequentially(nodeID: UUID) async {
+        isCollapsingAnimation = true
+        collapsingParentIndex = visibleNodes.firstIndex(where: { $0.id == nodeID }) ?? 0
+        await engine.dispatch(.toggleCollapse(nodeID: nodeID))
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            visibleNodes = engine.editorNodes
+        }
+    }
+
+    private func expandSequentially(nodeID: UUID) async {
+        isCollapsingAnimation = false
+        collapsingParentIndex = visibleNodes.firstIndex(where: { $0.id == nodeID }) ?? 0
+        await engine.dispatch(.toggleCollapse(nodeID: nodeID))
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            visibleNodes = engine.editorNodes
+        }
+    }
+
+    private func visibleDescendants(of nodeID: UUID) -> [EditorNode] {
+        guard let parentIdx = visibleNodes.firstIndex(where: { $0.id == nodeID }) else { return [] }
+        let parentDepth = visibleNodes[parentIdx].depth
+        var result: [EditorNode] = []
+        var idx = parentIdx + 1
+        while idx < visibleNodes.count && visibleNodes[idx].depth > parentDepth {
+            result.append(visibleNodes[idx])
+            idx += 1
+        }
+        return result
     }
 
     func send(_ command: BlockCommand) {
@@ -162,18 +213,35 @@ class PageEditorViewModel: ObservableObject {
 
     func didFocusNode(_ nodeID: UUID) {
         guard focusedNodeID != nodeID || pendingFocusNodeID != nil else { return }
-        focusedNodeID = nodeID
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.82)) {
+            focusedNodeID = nodeID
+        }
         pendingFocusNodeID = nil
     }
 
     func saveChanges() {
-        focusedNodeID = nil
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.82)) {
+            focusedNodeID = nil
+        }
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         Task {
             await persistenceCoordinator.flush()
             error = engine.error
         }
     }
+    
+    // MARK: - Node层级限制
+    
+    var canAddChildToFocusedNode: Bool {
+        guard let focusedNodeID,
+              let node = visibleNodes.first(where: { $0.id == focusedNodeID })
+        else { return false }
+        return NodeHierarchyPolicy.canAddChild(parentDepth: node.depth)
+    }
+
+    // MARK: - Node聚焦判断
+
+    var hasFocusedNode: Bool { focusedNodeID != nil }
 
     // MARK: - 退出时强制保存
 

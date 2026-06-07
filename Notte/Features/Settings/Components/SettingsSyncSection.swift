@@ -11,9 +11,6 @@ struct SettingsSyncSection: View {
     @EnvironmentObject private var syncLogger: CloudKitSyncLogger
     @AppStorage("iCloudSyncEnabled") private var iCloudSyncEnabled: Bool = true
 
-    // 视图出现时的初始值，用于判断用户本次是否修改过开关
-    @State private var initialValue: Bool? = nil
-
     private var syncToggleBinding: Binding<Bool> {
         Binding(
             get: { iCloudSyncEnabled },
@@ -45,7 +42,7 @@ struct SettingsSyncSection: View {
         } header: {
             Text("iCloud 同步")
         } footer: {
-            if let initial = initialValue, iCloudSyncEnabled != initial {
+            if iCloudSyncEnabled != PersistenceController.effectiveICloudSyncEnabled {
                 Text("更改将在重启后生效。")
                     .foregroundStyle(.orange)
             } else if iCloudSyncEnabled {
@@ -54,7 +51,6 @@ struct SettingsSyncSection: View {
                 Text("iCloud 同步已关闭，数据仅保存在本设备。")
             }
         }
-        .onAppear { initialValue = iCloudSyncEnabled }
     }
 
     private var iconName: String {
@@ -80,4 +76,12 @@ struct SettingsSyncSection: View {
         formatter.unitsStyle = .abbreviated
         return "上次同步：\(formatter.localizedString(for: date, relativeTo: Date()))"
     }
+}
+
+#Preview {
+    List {
+        SettingsSyncSection()
+    }
+    .listStyle(.insetGrouped)
+    .environmentObject(CloudKitSyncLogger())
 }

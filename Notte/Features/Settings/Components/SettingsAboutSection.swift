@@ -35,3 +35,10 @@ struct SettingsAboutSection: View {
         }
     }
 }
+
+#Preview {
+    List {
+        SettingsAboutSection(version: "1.0.0 (42)")
+    }
+    .listStyle(.insetGrouped)
+}

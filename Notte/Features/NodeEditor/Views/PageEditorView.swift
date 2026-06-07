@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct PageEditorView: View {
 
@@ -35,11 +36,12 @@ struct PageEditorView: View {
                                     .foregroundStyle(ColorTokens.textSecondary)
                             )
                     } else {
-                        ForEach(viewModel.visibleNodes) { node in
+                        ForEach(Array(viewModel.visibleNodes.enumerated()), id: \.element.id) { index, node in
                             NodeRowView(
                                 node: node,
                                 isFocused: viewModel.focusedNodeID == node.id
                                     || viewModel.pendingFocusNodeID == node.id,
+                                shouldFocusTitle: viewModel.pendingFocusNodeID == node.id,
                                 onTitleChanged: { title in
                                     viewModel.onTitleChanged(
                                         nodeID: node.id,
@@ -55,21 +57,33 @@ struct PageEditorView: View {
                                 onCommand: { command in
                                     viewModel.send(command)
                                 },
+                                onBlockCommand: { command in
+                                    viewModel.send(command)
+                                },
                                 onFocused: { id in
                                     viewModel.didFocusNode(id)
                                 }
                             )
                             .id(node.id)
-                            .transition(.nodeExpand)
-                            .zIndex(Double(100 - node.depth))
+                            .transition(nodeExpandTransition(childIndex: index))
+                            // depth 越深 zIndex 越低，子节点渲染在父节点下层
+                            .zIndex(Double(1000 - index) - Double(node.depth) * 1000.0)
+                            // 折叠时 b 慢速跟进，展开时 b 快速下移让出空间
+                            .transaction(value: viewModel.visibleNodes.map(\.id)) { t in
+                                if viewModel.isCollapsingAnimation {
+                                    t.animation = .spring(response: 0.5, dampingFraction: 0.9)
+                                } else {
+                                    t.animation = .spring(response: 0.2, dampingFraction: 0.85)
+                                }
+                            }
                         }
 
                         ColorTokens.backgroundPrimary
                             .frame(height: 200)
                     }
                 }
-                .animation(.spring(duration: 0.3), value: viewModel.visibleNodes.map(\.id))
-                .padding(.horizontal, 16)
+                .padding(.leading, 10)
+                .padding(.trailing, 20)
             }
             .onChange(of: viewModel.focusedNodeID) { _, newID in
                 guard let id = newID else { return }
@@ -105,14 +119,14 @@ struct PageEditorView: View {
                     } label: {
                         Label("添加同级节点", systemImage: "text.append")
                     }
-                    .disabled(viewModel.focusedNodeID == nil)
+                    .disabled(!viewModel.hasFocusedNode)
 
                     Button {
                         handleAddChild()
                     } label: {
                         Label("添加子节点", systemImage: "arrow.turn.down.right")
                     }
-                    .disabled(viewModel.focusedNodeID == nil)
+                    .disabled(!viewModel.canAddChildToFocusedNode)
 
                     Button {
                         handleAddRoot()
@@ -173,27 +187,46 @@ struct PageEditorView: View {
     private func handleAddRoot() {
         viewModel.createTopLevelNode()
     }
-}
 
-private struct NodeSlideModifier: ViewModifier {
-    let offset: CGFloat
-    let opacity: Double
-    func body(content: Content) -> some View {
-        content.offset(y: offset).opacity(opacity)
+    // 根据子节点与父节点的距离计算偏移：所有子节点从父节点位置出现/消失
+    private func nodeExpandTransition(childIndex: Int) -> AnyTransition {
+        let parentIdx = viewModel.collapsingParentIndex
+        let estimatedRowHeight: CGFloat = 44
+        let offsetY = -CGFloat(childIndex - parentIdx) * estimatedRowHeight
+        return .asymmetric(
+            insertion: .modifier(
+                active: NodeCollapseOffsetModifier(offsetY: offsetY, opacity: 0),
+                identity: NodeCollapseOffsetModifier(offsetY: 0, opacity: 1)
+            ),
+            removal: .modifier(
+                active: NodeCollapseOffsetModifier(offsetY: offsetY, opacity: 0),
+                identity: NodeCollapseOffsetModifier(offsetY: 0, opacity: 1)
+            )
+        )
     }
 }
 
-private extension AnyTransition {
-    static var nodeExpand: AnyTransition {
-        .asymmetric(
-            insertion: .modifier(
-                active: NodeSlideModifier(offset: 44, opacity: 0),
-                identity: NodeSlideModifier(offset: 0, opacity: 1)
-            ),
-            removal: .modifier(
-                active: NodeSlideModifier(offset: -44, opacity: 0),
-                identity: NodeSlideModifier(offset: 0, opacity: 1)
-            )
-        )
+private struct NodeCollapseOffsetModifier: ViewModifier {
+    let offsetY: CGFloat
+    let opacity: Double
+    func body(content: Content) -> some View {
+        content.offset(y: offsetY).opacity(opacity)
+    }
+}
+
+#Preview {
+    let pageID = UUID()
+    let container = try! PersistenceController.makeContainer(inMemory: true)
+    let context = ModelContext(container)
+    let nodeRepo = NodeRepository(context: context)
+    let blockRepo = BlockRepository(context: context)
+    let viewModel = PageEditorViewModel(
+        pageID: pageID,
+        pageTitle: "示例页面",
+        nodeRepository: nodeRepo,
+        blockRepository: blockRepo
+    )
+    NavigationStack {
+        PageEditorView(viewModel: viewModel)
     }
 }

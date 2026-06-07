@@ -41,10 +41,19 @@ struct CollectionListScreen: View {
     }
 
     var body: some View {
-        NavigationStack {
-            contentView
-                .navigationTitle("Notte")
+        collectionList
+            .navigationTitle("Notte")
             .navigationBarTitleDisplayMode(.large)
+            .overlay {
+                if !viewModel.hasLoadedOnce {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.collections.isEmpty {
+                    CollectionEmptyState {
+                        viewModel.isShowingCreateSheet = true
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -117,23 +126,7 @@ struct CollectionListScreen: View {
                     showCreateTrigger = false
                 }
             }
-        }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-    }
-
-    private var contentView: some View {
-        Group {
-            if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.collections.isEmpty {
-                CollectionEmptyState {
-                    viewModel.isShowingCreateSheet = true
-                }
-            } else {
-                collectionList
-            }
-        }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     private var collectionList: some View {
@@ -221,7 +214,7 @@ struct CollectionListScreen: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .background(ColorTokens.backgroundPrimary)
-        .padding(.top, SpacingTokens.sm)
+        .contentMargins(.top, SpacingTokens.sm, for: .scrollContent)
     }
     
     /// 判断指定索引的 collection 是否是最后一个 pinned collection

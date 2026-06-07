@@ -50,6 +50,42 @@ struct BlockEditingService {
 }
 
 extension BlockEditingService {
+    /// 与同节点内前一个 Block 互换 sortIndex（朴素一维上移）。
+    func moveUp(blockID: UUID) async throws {
+        try await swapWithNeighbor(blockID: blockID, offset: -1)
+    }
+
+    /// 与同节点内后一个 Block 互换 sortIndex（朴素一维下移）。
+    func moveDown(blockID: UUID) async throws {
+        try await swapWithNeighbor(blockID: blockID, offset: 1)
+    }
+
+    /// 在同节点的 Block 列表中，将目标块与相邻块互换 sortIndex。
+    /// offset = -1 与前一个互换，+1 与后一个互换；越界则静默返回。
+    private func swapWithNeighbor(blockID: UUID, offset: Int) async throws {
+        logger.debug("块移动, blockID=\(blockID), offset=\(offset)", function: #function)
+        guard let block = try await blockRepository.fetch(by: blockID) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        let siblings = try await blockRepository.fetchAll(in: block.nodeID)
+            .sorted { $0.sortIndex < $1.sortIndex }
+        guard let index = siblings.firstIndex(where: { $0.id == blockID }) else { return }
+        let neighborIndex = index + offset
+        guard siblings.indices.contains(neighborIndex) else { return }
+
+        var current = siblings[index]
+        var neighbor = siblings[neighborIndex]
+        let currentSortIndex = current.sortIndex
+        current.sortIndex = neighbor.sortIndex
+        neighbor.sortIndex = currentSortIndex
+        current.updatedAt = Date()
+        neighbor.updatedAt = Date()
+
+        try await blockRepository.update(current)
+        try await blockRepository.update(neighbor)
+        logger.info("块移动成功, blockID=\(blockID)", function: #function)
+    }
+
     func reorderBlock(blockID: UUID, newSortIndex: Double) async throws {
         logger.debug("调整 Block 排序, blockID=\(blockID), newSortIndex=\(newSortIndex)", function: #function)
         guard var block = try await blockRepository.fetch(by: blockID) else {
