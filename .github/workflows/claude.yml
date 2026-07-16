@@ -23,36 +23,27 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "claude[bot]@users.noreply.github.com"
+          git config --global user.name "claude[bot]"
 
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-
-          # Optional: Customize the trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
-
-          # Optional: Trigger when specific user is assigned to an issue
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           assignee_trigger: "claude-bot"
-
-          # Optional: Configure Claude's behavior with CLI arguments
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: |
-            --model claude-sonnet-4
+            --model claude-opus-4-1-20250805
             --max-turns 10
-            --allowedTools "Bash(xcodebuild), Bash(sift build), Bash(swift test), Bash(swift package resolve)"
-            --system-prompt "所有提交、PR、Issue都严格依照git规范文档的要求"
-
-          # Optional: Advanced settings configuration
-          # settings: |
-          #   {
-          #     "env": {
-          #       "NODE_ENV": "test"
-          #     }
-          #   }
+            --allowedTools "Bash(xcodebuild), Bash(swift build), Bash(swift test), Bash(swift package resolve)"
+            --system-prompt "Follow our coding standards. Ensure all new code has tests. Use TypeScript for new files."
