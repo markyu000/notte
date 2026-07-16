@@ -43,14 +43,6 @@ class PageEditorViewModel: ObservableObject {
         )
         self.engine = engine
         self.persistenceCoordinator = NodePersistenceCoordinator(engine: engine)
-        self.willResignActiveObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.willResignActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor [self] in self.onDisappear() }
-        }
     }
 
     func createTopLevelNode() {
@@ -251,10 +243,10 @@ class PageEditorViewModel: ObservableObject {
             error = engine.error
         }
     }
-
-    deinit {
-        if let willResignActiveObserver {
-            NotificationCenter.default.removeObserver(willResignActiveObserver)
-        }
+    
+    // MARK: - 包装Coodinator flushNow函数
+    func flushNow() async {
+        await persistenceCoordinator.flushNow()
+        error = engine.error
     }
 }

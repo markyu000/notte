@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct PageEditorView: View {
 
@@ -14,6 +15,7 @@ struct PageEditorView: View {
     @ObservedObject private var persistenceCoordinator:
         NodePersistenceCoordinator
     @State private var showAddMenu = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: PageEditorViewModel) {
         self.viewModel = viewModel
@@ -96,6 +98,17 @@ struct PageEditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.loadPage()
+        }
+        .onchange(of: scenePhase) { _, newPhase in
+            if newPhase == .inactive || newPhase == .background {
+                let taskID = UIApplication.shared.beginBackgroundTask(withName: "Tine.flushOnBackground") {
+                    // 后台时间耗尽回调（不需要额外操作，flush 已幂等）
+                }
+                Task {
+                    await viewModel.flushNow()
+                    UIApplication.shared.endBackgroundTask(taskID)
+                }
+            }
         }
         .onDisappear {
             viewModel.onDisappear()
