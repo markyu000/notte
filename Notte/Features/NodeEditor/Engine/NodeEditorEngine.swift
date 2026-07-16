@@ -80,8 +80,6 @@ class NodeEditorEngine: ObservableObject {
                 try await mutationService.outdent(nodeID: nodeID, in: pageID)
             case .toggleCollapse(let nodeID):
                 try await mutationService.toggleCollapse(nodeID: nodeID)
-            case .updateTitle(let nodeID, let title):
-                try await mutationService.updateTitle(nodeID: nodeID, title: title)
             }
             await loadNodes()
         } catch {

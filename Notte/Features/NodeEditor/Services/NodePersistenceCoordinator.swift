@@ -26,6 +26,8 @@ class NodePersistenceCoordinator: ObservableObject {
     private let engine: NodeEditorEngine
     private var pendingBlockUpdates: [UUID: String] = [:]
     private var pendingTitleUpdates: [UUID: String] = [:]
+    
+    private var saveTask: Task<Void, Never>?
 
     init(engine: NodeEditorEngine) {
         self.engine = engine
@@ -37,12 +39,14 @@ class NodePersistenceCoordinator: ObservableObject {
         pendingBlockUpdates[blockID] = content
         hasUnsavedChanges = true
         saveState = .unsaved
+        scheduleDebouncedFlush()
     }
 
     func scheduleTitleUpdate(nodeID: UUID, title: String) {
         pendingTitleUpdates[nodeID] = title
         hasUnsavedChanges = true
         saveState = .unsaved
+        scheduleDebouncedFlush()
     }
 
     func markStructuralChange() {
@@ -84,6 +88,25 @@ class NodePersistenceCoordinator: ObservableObject {
             saveState = .unsaved
             hasUnsavedChanges = true
         }
+    }
+    
+    
+    // MARK: - 保存Debounce
+    private func scheduleDebouncedFlush() {
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            await flush()
+        }
+    }
+    
+    // MARK: - 强制保存
+    /// 绕过 debounce ，立即同步写完所有 dirty，用于进后台等硬提交点
+    func flushNow() async {
+        saveTask?.cancel()
+        saveTask = nil
+        await flush()
     }
 }
 

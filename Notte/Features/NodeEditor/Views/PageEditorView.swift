@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct PageEditorView: View {
 
@@ -14,6 +15,7 @@ struct PageEditorView: View {
     @ObservedObject private var persistenceCoordinator:
         NodePersistenceCoordinator
     @State private var showAddMenu = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: PageEditorViewModel) {
         self.viewModel = viewModel
@@ -23,63 +25,44 @@ struct PageEditorView: View {
     }
 
     var body: some View {
+        scrollContent
+            .navigationTitle(viewModel.pageTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await viewModel.loadPage()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                handleScenePhaseChange(newPhase)
+            }
+            .onDisappear {
+                viewModel.onDisappear()
+            }
+            .alert(
+                "错误",
+                isPresented: Binding(
+                    get: { viewModel.error != nil },
+                    set: { if !$0 { viewModel.error = nil } }
+                )
+            ) {
+                Button("好") { viewModel.error = nil }
+            } message: {
+                Text(viewModel.error?.localizedDescription ?? "")
+            }
+            .toolbar {
+                editorToolbar
+            }
+    }
+
+    // MARK: - 主体内容
+
+    private var scrollContent: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if viewModel.visibleNodes.isEmpty {
-                        // 空状态：通过顶部按钮创建第一个顶级节点
-                        ColorTokens.backgroundPrimary
-                            .frame(maxWidth: .infinity, minHeight: 400)
-                            .overlay(
-                                Text("点击左上角加号创建顶级节点")
-                                    .font(TypographyTokens.body)
-                                    .foregroundStyle(ColorTokens.textSecondary)
-                            )
+                        emptyState
                     } else {
-                        ForEach(Array(viewModel.visibleNodes.enumerated()), id: \.element.id) { index, node in
-                            NodeRowView(
-                                node: node,
-                                isFocused: viewModel.focusedNodeID == node.id
-                                    || viewModel.pendingFocusNodeID == node.id,
-                                shouldFocusTitle: viewModel.pendingFocusNodeID == node.id,
-                                onTitleChanged: { title in
-                                    viewModel.onTitleChanged(
-                                        nodeID: node.id,
-                                        title: title
-                                    )
-                                },
-                                onContentChanged: { blockID, content in
-                                    viewModel.onContentChanged(
-                                        blockID: blockID,
-                                        content: content
-                                    )
-                                },
-                                onCommand: { command in
-                                    viewModel.send(command)
-                                },
-                                onBlockCommand: { command in
-                                    viewModel.send(command)
-                                },
-                                onFocused: { id in
-                                    viewModel.didFocusNode(id)
-                                }
-                            )
-                            .id(node.id)
-                            .transition(nodeExpandTransition(childIndex: index))
-                            // depth 越深 zIndex 越低，子节点渲染在父节点下层
-                            .zIndex(Double(1000 - index) - Double(node.depth) * 1000.0)
-                            // 折叠时 b 慢速跟进，展开时 b 快速下移让出空间
-                            .transaction(value: viewModel.visibleNodes.map(\.id)) { t in
-                                if viewModel.isCollapsingAnimation {
-                                    t.animation = .spring(response: 0.5, dampingFraction: 0.9)
-                                } else {
-                                    t.animation = .spring(response: 0.2, dampingFraction: 0.85)
-                                }
-                            }
-                        }
-
-                        ColorTokens.backgroundPrimary
-                            .frame(height: 200)
+                        nodeList
                     }
                 }
                 .padding(.leading, 10)
@@ -92,67 +75,122 @@ struct PageEditorView: View {
                 }
             }
         }
-        .navigationTitle(viewModel.pageTitle)
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            await viewModel.loadPage()
-        }
-        .onDisappear {
-            viewModel.onDisappear()
-        }
-        .alert(
-            "错误",
-            isPresented: Binding(
-                get: { viewModel.error != nil },
-                set: { if !$0 { viewModel.error = nil } }
+    }
+
+    // 空状态：通过顶部按钮创建第一个顶级节点
+    private var emptyState: some View {
+        ColorTokens.backgroundPrimary
+            .frame(maxWidth: .infinity, minHeight: 400)
+            .overlay(
+                Text("点击左上角加号创建顶级节点")
+                    .font(TypographyTokens.body)
+                    .foregroundStyle(ColorTokens.textSecondary)
             )
-        ) {
-            Button("好") { viewModel.error = nil }
-        } message: {
-            Text(viewModel.error?.localizedDescription ?? "")
+    }
+
+    @ViewBuilder
+    private var nodeList: some View {
+        ForEach(Array(viewModel.visibleNodes.enumerated()), id: \.element.id) { index, node in
+            nodeRow(index: index, node: node)
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Menu {
-                    Button {
-                        handleAddSibling()
-                    } label: {
-                        Label("添加同级节点", systemImage: "text.append")
-                    }
-                    .disabled(!viewModel.hasFocusedNode)
 
-                    Button {
-                        handleAddChild()
-                    } label: {
-                        Label("添加子节点", systemImage: "arrow.turn.down.right")
-                    }
-                    .disabled(!viewModel.canAddChildToFocusedNode)
+        ColorTokens.backgroundPrimary
+            .frame(height: 200)
+    }
 
-                    Button {
-                        handleAddRoot()
-                    } label: {
-                        Label("添加根节点", systemImage: "text.alignleft")
-                    }
+    private func nodeRow(index: Int, node: EditorNode) -> some View {
+        NodeRowView(
+            node: node,
+            isFocused: viewModel.focusedNodeID == node.id
+                || viewModel.pendingFocusNodeID == node.id,
+            shouldFocusTitle: viewModel.pendingFocusNodeID == node.id,
+            onTitleChanged: { title in
+                viewModel.onTitleChanged(nodeID: node.id, title: title)
+            },
+            onContentChanged: { blockID, content in
+                viewModel.onContentChanged(blockID: blockID, content: content)
+            },
+            onCommand: { command in
+                viewModel.send(command)
+            },
+            onBlockCommand: { command in
+                viewModel.send(command)
+            },
+            onFocused: { id in
+                viewModel.didFocusNode(id)
+            }
+        )
+        .id(node.id)
+        .transition(nodeExpandTransition(childIndex: index))
+        // depth 越深 zIndex 越低，子节点渲染在父节点下层
+        .zIndex(Double(1000 - index) - Double(node.depth) * 1000.0)
+        // 折叠时 b 慢速跟进，展开时 b 快速下移让出空间
+        .transaction(value: viewModel.visibleNodes.map(\.id)) { t in
+            if viewModel.isCollapsingAnimation {
+                t.animation = .spring(response: 0.5, dampingFraction: 0.9)
+            } else {
+                t.animation = .spring(response: 0.2, dampingFraction: 0.85)
+            }
+        }
+    }
+
+    // MARK: - 工具栏
+
+    @ToolbarContentBuilder
+    private var editorToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Menu {
+                Button {
+                    handleAddSibling()
                 } label: {
-                    Image(systemName: "plus")
-                        .foregroundStyle(ColorTokens.textPrimary)
-                } primaryAction: {
-                    handleSmartAdd()
+                    Label("添加同级节点", systemImage: "text.append")
                 }
-            }
-            if viewModel.focusedNodeID != nil || persistenceCoordinator.hasUnsavedChanges {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.saveChanges()
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(Color.black)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(ColorTokens.accent)
-                    .disabled(persistenceCoordinator.saveState == .saving)
+                .disabled(!viewModel.hasFocusedNode)
+
+                Button {
+                    handleAddChild()
+                } label: {
+                    Label("添加子节点", systemImage: "arrow.turn.down.right")
                 }
+                .disabled(!viewModel.canAddChildToFocusedNode)
+
+                Button {
+                    handleAddRoot()
+                } label: {
+                    Label("添加根节点", systemImage: "text.alignleft")
+                }
+            } label: {
+                Image(systemName: "plus")
+                    .foregroundStyle(ColorTokens.textPrimary)
+            } primaryAction: {
+                handleSmartAdd()
             }
+        }
+        if viewModel.focusedNodeID != nil || persistenceCoordinator.hasUnsavedChanges {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.saveChanges()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.black)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ColorTokens.accent)
+                .disabled(persistenceCoordinator.saveState == .saving)
+            }
+        }
+    }
+
+    // MARK: - 场景阶段处理
+
+    private func handleScenePhaseChange(_ newPhase: ScenePhase) {
+        guard newPhase == .inactive || newPhase == .background else { return }
+        let taskID = UIApplication.shared.beginBackgroundTask(withName: "Tine.flushOnBackground") {
+            // 后台时间耗尽回调（不需要额外操作，flush 已幂等）
+        }
+        Task {
+            await viewModel.flushNow()
+            UIApplication.shared.endBackgroundTask(taskID)
         }
     }
 

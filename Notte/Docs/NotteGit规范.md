@@ -2,7 +2,7 @@
 
 > 适用阶段：MVP 全程及后续迭代  
 > 适用规模：1 人主导开发，最多 2 人协作  
-> 最后更新：2026-03
+> 最后更新：2026-07
 
 ---
 
@@ -11,12 +11,13 @@
 1. [分支结构](#1-分支结构)
 2. [分支命名规则](#2-分支命名规则)
 3. [工作流程](#3-工作流程)
-4. [Commit 规范](#4-commit-规范)
-5. [PR / 合并规则](#5-pr--合并规则)
-6. [版本 Tag 规范](#6-版本-tag-规范)
-7. [.gitignore 要求](#7-gitignore-要求)
-8. [死规则](#8-死规则)
-9. [常用命令速查](#9-常用命令速查)
+4. [Issue 规范](#4-issue-规范)
+5. [Commit 规范](#5-commit-规范)
+6. [PR / 合并规则](#6-pr--合并规则)
+7. [版本 Tag 规范](#7-版本-tag-规范)
+8. [.gitignore 要求](#8-gitignore-要求)
+9. [死规则](#9-死规则)
+10. [常用命令速查](#10-常用命令速查)
 
 ---
 
@@ -37,7 +38,7 @@ main
 
 - **性质**：永远稳定，代表可对外展示的版本。
 - **来源**：只接受从 `develop` 合并，禁止直接 push。
-- **动作**：每次合并后打一个版本 tag（见第 6 节）。
+- **动作**：每次合并后打一个版本 tag（见第 7 节）。
 - **保护**：建议在 GitHub 开启 branch protection，强制 PR 合并。
 
 ### develop
@@ -120,7 +121,107 @@ develop ──●──●──●───────────────
 
 ---
 
-## 4. Commit 规范
+## 4. Issue 规范
+
+Issue 是所有开发工作的起点：**先有 issue，再有分支，最后有 PR**。分支名、commit footer、PR 关联都围绕 issue 编号展开，本节只约定与 git 直接相关的部分。
+
+> 完整的 Labels 分类、Milestone 列表、看板列、Issue 模板正文，以 `NotteMVP开发计划.md` 第 4 节「GitHub Project 完整配置方案」为准，本文档不重复定义，避免两处分叉。
+
+### 4.1 什么时候必须开 issue
+
+| 情况 | 是否开 issue |
+|---|---|
+| 一个完整功能模块 / 阶段目标 | **必须**，且关联对应 Milestone |
+| 测试或使用中发现的 bug | **必须**，用 Bug 模板 |
+| 需求变更、范围调整 | **必须**，默认打 `scope/post-mvp` 进 Backlog（见功能范围文档第 9 节） |
+| 需要先决策 / 先设计的事项 | **必须**，打 `status/needs-decision` 或 `status/needs-design` |
+| 拼写、单行注释、格式化等琐碎改动 | 可不开，直接 commit（`chore` / `docs` / `style`） |
+
+原则：**只要工作量超过半天，或需要被追踪、被排期、被关联到某个 Milestone，就开 issue。** 临时琐碎改动不必强开。
+
+### 4.2 Issue 标题格式
+
+```
+[模块] 动词开头的简短描述
+```
+
+- 模块前缀对应 `area/*` 标签（如 `[node-editor]`、`[sync]`、`[collection]`）。
+- 描述用中文或英文均可，但要能一眼看懂做什么，不写 `优化一下`、`有个 bug` 这类模糊标题。
+
+**示例**：
+
+```
+[node-editor] 支持 Node 折叠状态持久化
+[collection] 修复删除最后一个 Collection 后列表不刷新
+[sync] CloudKit 冲突合并策略确认
+[release] 准备 M8 TestFlight 构建物料
+```
+
+### 4.3 每个 Issue 的最少标签
+
+创建后至少补齐以下三类标签，否则不进入 Ready：
+
+| 标签类 | 要求 | 示例 |
+|---|---|---|
+| `type/*` | 必填，且唯一 | `type/feature`、`type/bug` |
+| `area/*` | 必填，可多个 | `area/node-editor` |
+| `priority/*` | 必填 | `priority/p1` |
+| `scope/*` | 建议填 | `scope/mvp` / `scope/post-mvp` |
+| Milestone | 进入 Planned 前必须指派 | M0 ~ M8 |
+
+`platform/*` 和 `status/*` 按需补充。用 Issue 模板创建时，`type` 和 `scope` 已带默认值，只需再补 `area` 和 `priority`。
+
+### 4.4 Issue ↔ 分支 ↔ Commit ↔ PR 的关联
+
+四者通过 issue 编号串起来，保证任何一次改动都能追溯到需求来源：
+
+```
+Issue #42 [node-editor] 支持 Node 折叠状态持久化
+   │
+   ├── 分支：feature/node-collapse-persistence
+   │
+   ├── commit footer：Refs #42（开发过程中）
+   │
+   └── PR 描述：Closes #42（合并即自动关闭 issue）
+```
+
+**关联关键字**（写在 commit footer 或 PR 描述中）：
+
+| 关键字 | 作用 |
+|---|---|
+| `Closes #42` / `Fixes #42` | PR 合并到默认分支时**自动关闭** issue |
+| `Refs #42` / `Related: #42` | 只关联、不关闭 |
+| `Depends on: #40` | 声明依赖，被依赖项未完成前不应开始 |
+
+- 分支名不强制包含 issue 编号，但描述部分应与 issue 主题一致，便于对应。
+- 一个 PR 尽量只 `Closes` 一个主 issue；若确实关闭多个，逐行分开写 `Closes #x`。
+- `Closes` 只写在**最终会合并进 develop/main** 的 PR 里，不要写在中途的 wip commit 上。
+
+### 4.5 Issue 在看板上的流转
+
+对应 `NotteMVP开发计划.md` 的 8 列看板，git 动作触发的状态迁移如下：
+
+```
+Ready ──(开始开发/建分支)──► In Progress ──(提 PR)──► In Review ──(合并)──► QA ──(验收通过)──► Done
+                                  │
+                              (遇阻塞)
+                                  ▼
+                               Blocked（标注阻塞原因 + status/blocked）
+```
+
+- 建议在 GitHub Project → Workflows 开启自动化：PR 提交自动移入 **In Review**，PR 合并自动关闭 issue 并移入 **Done**（详见开发计划第 4.7 节）。
+- 手动补位：开始动手前把 issue 拖到 **In Progress** 并 assign 给自己；单人开发时这一步也别省，方便回顾当时在做什么。
+
+### 4.6 关闭 Issue 的规则
+
+- **通过 PR 关闭**（首选）：PR 描述写 `Closes #x`，合并即关闭，保留代码与 issue 的关联记录。
+- **手动关闭**：仅用于「不涉及代码」的 issue（如决策记录、文档对齐），关闭时留一句结论说明。
+- **不修复**：打 `status/wontfix`，写明原因后关闭，不要静默删除 issue。
+- 不允许开着 PR 已合并、但 issue 还挂在 In Progress 的「幽灵 issue」——定期清理看板。
+
+---
+
+## 5. Commit 规范
 
 采用 [Conventional Commits](https://www.conventionalcommits.org/) 简化版。
 
@@ -146,7 +247,6 @@ develop ──●──●──●───────────────
 | `docs` | 文档、注释、README | `docs: update mvp scope in readme` |
 | `chore` | 依赖更新、构建配置、杂务 | `chore: update swift package dependencies` |
 | `wip` | 开发中临时存档 | `wip: node editor engine skeleton` |
-| `merge` | 合并时描述被合并分支内容、目的 | `merge: complete the whole mvp features` |
 
 ### 规范细则
 
@@ -184,7 +284,7 @@ Add feature           ← 首字母大写、加了句号
 
 ---
 
-## 5. PR / 合并规则
+## 6. PR / 合并规则
 
 ### 5.1 单人开发时的 PR
 
@@ -238,7 +338,7 @@ Closes #xx（如有）
 
 ---
 
-## 6. 版本 Tag 规范
+## 7. 版本 Tag 规范
 
 ### 格式
 
@@ -282,7 +382,7 @@ git push origin --tags
 
 ---
 
-## 7. .gitignore 要求
+## 8. .gitignore 要求
 
 Notte 项目 `.gitignore` 必须包含以下内容：
 
@@ -335,7 +435,7 @@ Secrets.swift
 
 ---
 
-## 8. 死规则
+## 9. 死规则
 
 以下规则不允许在任何情况下破例：
 
@@ -346,10 +446,12 @@ Secrets.swift
 5. **不提交 Xcode 自动生成的用户数据**。`.gitignore` 配好就不会有问题。
 6. **tag 只在 main 上打**。不在 develop 或 feature 分支上打版本 tag。
 7. **凭据和密钥不进仓库**。包括 CloudKit container identifier 以外的任何敏感配置。
+8. **需求变更必须先开 issue**。不允许静默扩展 MVP 范围，未经决策的功能一律不开发（见功能范围文档第 9 节）。
+9. **PR 必须关联 issue**。除琐碎改动外，PR 描述都要写 `Closes #x` 或 `Refs #x`，不允许无来源的孤立改动。
 
 ---
 
-## 9. 常用命令速查
+## 10. 常用命令速查
 
 ### 日常开发
 
