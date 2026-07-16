@@ -1,7 +1,7 @@
 # depth 去持久化重构实施方案
 
 **状态** 全部决策项已拍定，可进入实现
-**Version** v1.4（maxDepth 语义确认沿用现有代码 `maxLevel=5`/`maxDepth=4`，不改动；CloudKit 确认当前恒为 `.none` 且从未打过 Release；本地数据迁移策略确认选 (a) 直接删字段、不加 SchemaV2/MigrationStage）
+**Version** v1.5（`subtreeHeight` 算法改为顺树向下一趟遍历，替换掉"对每个子孙分别往上数"的旧版本，复杂度从 O(子树大小 × 子树链深) 降到 O(n) 建表 + O(子树大小) 遍历；此前 v1.4 拍定的 maxDepth 语义、CloudKit 现状、本地数据迁移策略 (a) 均不变）
 **Tech Stack** SwiftUI + SwiftData + CloudKit
 **关联文档** [Notte数据存储方案.md](./Notte数据存储方案.md) §2「depth 不进持久层」（设计原则已定案）、Notte数据模型定义.md
 
@@ -98,8 +98,7 @@ static let maxDepth = maxLevel - 1   // = 4
 **方案**：新增两个纯函数，都从 `parentNodeID` 关系派生，不依赖任何持久化的绝对 depth：
 
 ```swift
-// 单点查询：沿 parentNodeID 链向上走到根，返回跳数。
-// 每次调用重建一次 [UUID: Node] 字典（O(n)），随后沿链上溯 O(链深)。
+// 单点查询：沿 parentNodeID 链向上走到根，返回跳数。O(链深)。
 func depth(of nodeID: UUID, in nodes: [Node]) -> Int {
     let byID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
     var d = 0, cur = byID[nodeID]?.parentNodeID
@@ -107,20 +106,20 @@ func depth(of nodeID: UUID, in nodes: [Node]) -> Int {
     return d
 }
 
-// 子树相对高度：nodeID 的子孙里，相对 nodeID 的最大跳数差。无子孙则为 0。
-// 对每个子孙都要沿链走到 nodeID 才停，整体是 O(子树大小 × 子树链深)，不是 O(子树大小)。
+// 子树相对高度：从 nodeID 顺着树往下走到最深的叶子，边走边计数层级，取最大值。
+// 与 buildTree 同一套思路（先按 parentNodeID 分组，再递归 DFS 往下），
+// 只走一趟下行遍历，不需要对每个子孙再单独往上走一次。
+// 建分组表 O(n) + 遍历子树 O(子树大小)，比"对每个子孙分别往上数"更省。
 func subtreeHeight(of nodeID: UUID, in nodes: [Node]) -> Int {
-    let desc = descendants(of: nodeID, in: nodes)
-    guard !desc.isEmpty else { return 0 }
-    let byID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
-    func relativeDepth(_ id: UUID) -> Int {
-        var d = 0, cur = byID[id]?.parentNodeID
-        while let cid = cur, cid != nodeID { d += 1; cur = byID[cid]?.parentNodeID }
-        return d + 1
+    let childrenByParent = Dictionary(grouping: nodes, by: \.parentNodeID)
+    func maxDepth(from id: UUID) -> Int {
+        (childrenByParent[id] ?? []).map { 1 + maxDepth(from: $0.id) }.max() ?? 0
     }
-    return desc.map(relativeDepth).max() ?? 0
+    return maxDepth(from: nodeID)
 }
 ```
+
+现有代码里 `indent` 的深度校验（`NodeMutationService.swift:203-206`）其实已经是这个"顺树往下找、判断"的路数——`descendants(of:)` 本身就是从 `nodeID` 往下的 BFS，只是现在因为 `depth` 还持久化在每个节点上，走到子孙节点后可以直接 `.map(\.depth)` 白读现成值，不需要现场计数。重构后没有持久化 depth 可读，`subtreeHeight` 就是把"读现成值"换成"边往下走边数层级"，遍历路径（顺树往下找到最深处）本身没变。
 
 `indent` 里的校验从"看节点自己"改成：
 
@@ -244,4 +243,4 @@ CloudKit 生产 schema 字段只能加不能删——一旦 `depth` 被写进生
 - **迁移风险**：即使选了 [§5](#5-swiftdata-迁移策略) (a)（直接删字段、不加迁移 stage），删除已上线的非可选存储属性后仍建议在模拟器上删 app 重装实测一遍，确认没有残留崩溃或异常，不能只凭经验判断"删了就没事"。
 - **CloudKit 时机**：[§5.1](#51-cloudkit-时机当前窗口是开着的但未来要注意) 已确认当前无负担，但要赶在项目第一次打 Release 构建之前完成，不能无限期拖延。
 - **深度校验反例覆盖**：[§3.1](#31-indent-深度校验子树相对高度不是节点自身深度) 描述的"子树比节点自身深"场景必须有专门测试用例覆盖（`NodeMutationServiceIndentTests` 里补一条子树多层嵌套、indent 后触顶的用例，用 `maxDepth=4` 构造边界），不能只靠通用 indent 测试碰运气覆盖到。
-- **性能**：`buildTree` 单 Page 几十到几百节点，O(n)。`depth(of:)` 单次调用是"重建字典 O(n) + 沿链上溯 O(链深)"；`subtreeHeight(of:)` 是"重建字典 O(n) + 对每个子孙沿链走到目标节点"，整体 O(子树大小 × 子树链深)，不是简单的 O(子树大小)；`indent` 一次校验里这两个函数各自独立重建一次字典，等于两次 O(n)。即便如此，单 Page 几十到几百节点量级下仍远小于 SwiftUI diff 成本，无需额外优化，但描述要如实，不能简化成"O(链深)/O(子树大小)"。
+- **性能**：`buildTree` 单 Page 几十到几百节点，O(n)。`depth(of:)` 单次调用是"建 `[UUID: Node]` 字典 O(n) + 沿链上溯 O(链深)"；`subtreeHeight(of:)` 改成顺树往下一趟遍历（`Dictionary(grouping:by:)` 建 `parentID → children` 分组表 O(n) + 递归 DFS 往下 O(子树大小)），不再是"对每个子孙分别往上数"那个更贵的版本。`indent` 一次校验里这两个函数各自独立建一次表，等于两次 O(n)。单 Page 几十到几百节点量级下远小于 SwiftUI diff 成本，无需额外优化。
