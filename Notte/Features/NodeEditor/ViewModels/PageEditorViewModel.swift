@@ -247,7 +247,7 @@ class PageEditorViewModel: ObservableObject {
 
     func onDisappear() {
         Task {
-            await persistenceCoordinator.flush()
+            await persistenceCoordinator.flushNow()
             error = engine.error
         }
     }
