@@ -27,6 +27,4 @@ enum NodeCommand {
     case outdent(nodeID: UUID)
     /// 切换折叠/展开状态
     case toggleCollapse(nodeID: UUID)
-    /// 更新节点标题
-    case updateTitle(nodeID: UUID, title: String)
 }

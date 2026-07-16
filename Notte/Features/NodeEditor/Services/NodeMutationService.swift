@@ -281,19 +281,6 @@ struct NodeMutationService {
         logger.info("折叠状态更新成功, nodeID=\(nodeID)", function: #function)
     }
 
-    // MARK: - 标题
-
-    func updateTitle(nodeID: UUID, title: String) async throws {
-        logger.debug("更新节点标题, nodeID=\(nodeID)", function: #function)
-        guard var node = try await nodeRepository.fetch(by: nodeID) else {
-            throw AppError.repositoryError(RepositoryError.notFound)
-        }
-        node.title = title
-        node.updatedAt = Date()
-        try await nodeRepository.update(node)
-        logger.info("节点标题更新成功, nodeID=\(nodeID)", function: #function)
-    }
-    
     func insertFirst(in pageID: UUID) async throws -> Node {
         try await insertTopLevel(in: pageID)
     }
