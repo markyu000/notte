@@ -100,6 +100,14 @@ class NodePersistenceCoordinator: ObservableObject {
             await flush()
         }
     }
+    
+    // MARK: - 强制保存
+    /// 绕过 debounce ，立即同步写完所有 dirty，用于进后台等硬提交点
+    func flushNow() async {
+        saveTask?.cancel()
+        saveTask = nil
+        await flush()
+    }
 }
 
 private extension NodePersistenceCoordinator {
