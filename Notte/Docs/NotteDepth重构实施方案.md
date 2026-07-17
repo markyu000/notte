@@ -1,7 +1,7 @@
 # depth 去持久化重构实施方案
 
 **状态** 全部决策项已拍定，可进入实现
-**Version** v1.5（`subtreeHeight` 算法改为顺树向下一趟遍历，替换掉"对每个子孙分别往上数"的旧版本，复杂度从 O(子树大小 × 子树链深) 降到 O(n) 建表 + O(子树大小) 遍历；此前 v1.4 拍定的 maxDepth 语义、CloudKit 现状、本地数据迁移策略 (a) 均不变）
+**Version** v1.6（§4 补充定性说明：该节是终态清单而非执行顺序，删除 `Node.depth` 的时机以 §7 步骤 4 为准，§3.3 依赖的并存期不被 §4 的措辞抹掉；此前 v1.5 的 `subtreeHeight` 算法与 v1.4 的各项决策均不变）
 **Tech Stack** SwiftUI + SwiftData + CloudKit
 **关联文档** [Notte数据存储方案.md](./Notte数据存储方案.md) §2「depth 不进持久层」（设计原则已定案）、Notte数据模型定义.md
 
@@ -145,9 +145,11 @@ guard newDepth + height <= NodeHierarchyPolicy.maxDepth else { return }
 
 ## 4. 分层改动清单
 
+> **本节是终态清单,不是执行顺序**——描述的是"全部改完之后每个文件长什么样",不代表这些改动可以一把梭同时做。特别注意:§4.1 删除 `Node.depth` 属于 [§7 步骤 4](#7-实施顺序),在此之前有一段**并存期**(§4.3 的 `buildTree` 已改为重算、但 `Node.depth` 仍保留),[§3.3](#33-buildtree-改造前先跑一次等价性证明) 的 parity 测试正是靠这段并存期才能拿"重算值"和"旧持久值"对比。执行时序一律以 [§7](#7-实施顺序) 为准。
+
 ### 4.1 Domain 层
 
-`Domain/Entities/Node.swift` — 删除 `var depth: Int`（第 15 行）。保留 `parentNodeID`、`sortIndex` 不变。
+`Domain/Entities/Node.swift` — 删除 `var depth: Int`（第 15 行）。保留 `parentNodeID`、`sortIndex` 不变。**时机：[§7 步骤 4](#7-实施顺序)**，不能和 §4.3 的 `buildTree` 改造同批做——步骤 1-3 的并存期需要它还在。
 
 ### 4.2 Data 层
 
