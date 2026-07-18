@@ -122,7 +122,6 @@ id:           UUID
 pageID:       UUID
 parentNodeID: UUID?
 title:        String
-depth:        Int
 sortIndex:    Double
 isCollapsed:  Bool
 createdAt:    Date
@@ -135,17 +134,18 @@ updatedAt:    Date
 |---|---|
 | `id` | 全局唯一标识 |
 | `pageID` | 所属 Page 的 ID |
-| `parentNodeID` | 父节点 ID，为 `nil` 时表示根节点 |
+| `parentNodeID` | 父节点 ID，为 `nil` 时表示根节点；层级关系**只**由这个字段表达 |
 | `title` | 组件标题，**可为空**。空标题的 Node 作为「隐形容器」存在（只承担结构 / 分组职责，不在大纲中显示标题文字） |
-| `depth` | 缩进层级，同时决定标题渲染级别（见下） |
 | `sortIndex` | 在同级兄弟节点中的排序值 |
 | `isCollapsed` | 是否折叠子节点 |
 | `createdAt` | 创建时间 |
 | `updatedAt` | 最后修改时间 |
 
-### depth 语义
+> `depth` 不是持久化字段。Node 只存 `parentNodeID`，缩进层级由运行时模型 `EditorNode.depth` 每次从 `parentNodeID` 链重算得出（见 [§7 运行时模型](#7-运行时模型)），不写库、不缓存、不手动维护。
 
-`depth` 同时承担两个职责，不设单独的 `level` 字段：
+### depth 语义（运行时）
+
+`depth` 是 `EditorNode` 的运行时属性，同时承担两个职责，不设单独的 `level` 字段：
 
 | depth | 缩进层级 | 标题渲染 |
 |---|---|---|
@@ -157,7 +157,7 @@ updatedAt:    Date
 
 ### MVP 边界
 
-- Node 无 `type` 字段，类型语义由 depth 与其下 Block 决定
+- Node 无 `type` 字段，类型语义由运行时 depth 与其下 Block 决定
 - Node 是**组件框架**：标题（可为空）+ 内容区；内容区可以为空（纯结构条目），也可以承载 Block
 - `title` 可为空：空标题 Node 作为隐形容器使用
 - 可被复用 / 模板化的最小单位是 **Node 子树**（Node + 内容 + 全部子 Node），而非孤立单个 Node（见第 9 节）
@@ -231,8 +231,8 @@ Block 类型不影响 Node 的结构操作逻辑，所有 Node 的折叠、拖�
 采用**扁平存储**，不做嵌套持久化：
 
 ```
-Node：parentNodeID + sortIndex + depth  → 扁平存储，运行时构建树
-Block：nodeID + sortIndex               → 按 Node 关联，扁平存储
+Node：parentNodeID + sortIndex  → 扁平存储，运行时构建树（depth 不持久化，重算得出）
+Block：nodeID + sortIndex       → 按 Node 关联，扁平存储
 ```
 
 ### sortIndex 策略
@@ -266,7 +266,7 @@ Repository 负责在 `@Model` 类与 Domain 实体之间做映射转换。
 
 ## 7. 运行时模型
 
-持久化是扁平的，编辑器内部使用树形运行时模型：
+持久化是扁平的，编辑器内部使用树形运行时模型：`EditorNode.depth` 是 `depth` 唯一的存在形式，由 `NodeQueryService.buildTree` 每次从 `parentNodeID` 链 DFS 重算（`parent.depth + 1`），不来自任何持久化字段。
 
 ### EditorNode
 
@@ -305,6 +305,7 @@ EditorBlock
 | 原则 | 决策 |
 |---|---|
 | `depth` 统一缩进与标题级别 | 不设单独 `level` 字段，避免两字段语义割裂 |
+| `depth` 不持久化 | Node 只存 `parentNodeID` + `sortIndex`；`depth` 由 `EditorNode` 每次重算，避免结构变动时手动维护/批量写子孙 depth |
 | Node 无 `type` 字段 | Node 是组件框架，类型语义交给 depth 与其下 Block 表达 |
 | Node = 组件框架（标题可选 + 内容区） | 让「大纲条目」「可复用组件」「模板单位」三者统一为同一抽象，避免多套并行结构 |
 | `title` 可为空 | 支持隐形容器；标题不是内容的必要条件，降低记录阻力 |
@@ -314,7 +315,7 @@ EditorBlock
 | `sortIndex` 浮点数 | 支持任意位置插入，避免整体重排 |
 | MVP 只保留 `text` Block | bullet / image / code / quote 均为 Post-MVP |
 | 删除父节点级联删除子节点 | 行为直观，实现简单，无需复杂"提升子节点"逻辑 |
-| 插入 Node 模板用相对 depth | 保留模板内部层级关系，整体以插入点为基准平移，防止标题级别错乱（见第 9 节） |
+| 插入 Node 模板只挂 `parentNodeID` | depth 不持久化后无需手工平移；接上插入点的 `parentNodeID`，`buildTree` 自动算出正确层级（见第 9 节） |
 
 ---
 
@@ -347,15 +348,15 @@ Notte 的复用与模板能力，全部建立在一个统一抽象之上：
 
 > **Collection 模板**（Post-MVP）是更外层的扩展：本质是「一组 Page 模板的打包」，用于一次性搭建整个专题空间。不属于 MVP 的两层核心机制。
 
-### 9.3 关键实现规则：插入 Node 模板用「相对 depth」
+### 9.3 关键实现规则：插入 Node 模板只挂 parentNodeID，depth 自动正确
 
-插入 Node 模板时，**必须以插入点的 depth 为基准，对模板内部所有 Node 的 depth 做整体平移，而非沿用模板存储时的绝对 depth**。
+`depth` 不再持久化后，这条规则被简化为**结构规则**：插入 Node 模板时，**只需把模板子树的根节点 `parentNodeID` 指向插入点（或插入点的父节点，取决于「插为兄弟」还是「插为子节点」），不需要对任何 depth 做手工平移**——因为压根没有存储的 depth 值可平移。
 
-- 模板**内部**各 Node 之间的相对层级关系（谁是谁的子节点）保持不变；
-- 模板**整体**的根 depth = 插入点 depth（或插入点 depth + 1，取决于「插为兄弟」还是「插为子节点」的交互约定）；
-- 否则：一个在 depth 0（h1）存下的模板，插到 depth 2 的节点下面时，会把本该是 h4 的内容渲染成 h1，标题级别错乱。
+- 模板**内部**各 Node 之间的相对层级关系（谁是谁的子节点）由 `parentNodeID` 链天然保持，插入时不改；
+- 插入后重新 `buildTree`，模板子树的 `EditorNode.depth` 会自动从新的 `parentNodeID` 链重算出正确的绝对值；
+- 旧版本（depth 仍持久化时）需要手工把模板存储时的绝对 depth 整体平移到插入点，否则会把本该是 h4 的内容渲染成 h1——这个风险随 depth 去持久化被结构性消除，见 [Notte数据存储方案.md](./Notte数据存储方案.md) §2、[NotteDepth重构实施方案.md](./NotteDepth重构实施方案.md)。
 
-**Page 模板不涉及此问题**：它是新开一整页、从 depth 0 重建，绝对 depth 与存储时一致。
+**Page 模板同理**：新开一整页、从根节点（无 `parentNodeID`）重建，`buildTree` 自动算出从 0 开始的 depth，无需特殊处理。
 
 ### 9.4 与"简单默认，强大可选"的关系
 
