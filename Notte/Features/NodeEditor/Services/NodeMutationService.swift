@@ -207,11 +207,10 @@ struct NodeMutationService {
         guard let currentDepth = queryService.depth(of: node.id, in: nodes) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
-        let newDepth = currentDepth + 1
         let height = queryService.subtreeHeight(of: nodeID, in: nodes)
-        guard NodeHierarchyPolicy.canIndent(subtreeMaxDepth: newDepth + height) else {
+        guard NodeHierarchyPolicy.canIndent(subtreeMaxDepth: currentDepth + height) else {
             // 已达最大深度（5 级，depth 0-4），整棵子树无法继续缩进
-            logger.debug("缩进中止：超出 maxDepth, nodeID=\(nodeID), currentDepth=\(currentDepth), newDepth=\(newDepth), height=\(height), sum=\(newDepth + height)", function: #function)
+            logger.debug("缩进中止：超出 maxDepth, nodeID=\(nodeID), currentDepth=\(currentDepth), height=\(height), sum=\(currentDepth + height)", function: #function)
             return
         }
 
