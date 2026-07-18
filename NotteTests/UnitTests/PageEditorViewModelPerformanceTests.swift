@@ -16,7 +16,6 @@ final class PageEditorViewModelPerformanceTests: XCTestCase {
                 pageID: pageID,
                 parentNodeID: nil,
                 title: "Node \(i)",
-                depth: 0,
                 sortIndex: Double(i) * 1000,
                 isCollapsed: false,
                 createdAt: Date(),

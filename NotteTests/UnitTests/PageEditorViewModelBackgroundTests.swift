@@ -19,7 +19,6 @@ final class PageEditorViewModelBackgroundTests: XCTestCase {
                 pageID: pageID,
                 parentNodeID: nil,
                 title: "",
-                depth: 0,
                 sortIndex: 1000,
                 isCollapsed: false,
                 createdAt: Date(),

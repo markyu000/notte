@@ -45,7 +45,6 @@ final class DeletePageUseCaseTests: XCTestCase {
             pageID: page.id,
             parentNodeID: nil,
             title: "节点",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: false,
             createdAt: Date(),

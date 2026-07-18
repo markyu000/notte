@@ -24,7 +24,6 @@ final class NodeMutationServiceDeleteTests: XCTestCase {
     private func makeNode(
         id: UUID = UUID(),
         parentNodeID: UUID? = nil,
-        depth: Int = 0,
         sortIndex: Double
     ) -> Node {
         Node(
@@ -32,7 +31,6 @@ final class NodeMutationServiceDeleteTests: XCTestCase {
             pageID: pageID,
             parentNodeID: parentNodeID,
             title: "",
-            depth: depth,
             sortIndex: sortIndex,
             isCollapsed: false,
             createdAt: Date(),
@@ -82,7 +80,7 @@ final class NodeMutationServiceDeleteTests: XCTestCase {
         let childID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
 
         let parent = makeNode(id: parentID, sortIndex: 1000)
-        let child = makeNode(id: childID, parentNodeID: parentID, depth: 1, sortIndex: 2000)
+        let child = makeNode(id: childID, parentNodeID: parentID, sortIndex: 2000)
         nodeRepository.storedNodes = [parent, child]
 
         try await mutationService.delete(nodeID: parentID, in: pageID)
@@ -97,8 +95,8 @@ final class NodeMutationServiceDeleteTests: XCTestCase {
         let grandchildID = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
 
         let parent = makeNode(id: parentID, sortIndex: 1000)
-        let child = makeNode(id: childID, parentNodeID: parentID, depth: 1, sortIndex: 2000)
-        let grandchild = makeNode(id: grandchildID, parentNodeID: childID, depth: 2, sortIndex: 3000)
+        let child = makeNode(id: childID, parentNodeID: parentID, sortIndex: 2000)
+        let grandchild = makeNode(id: grandchildID, parentNodeID: childID, sortIndex: 3000)
         let grandchildBlock = makeBlock(nodeID: grandchildID)
 
         nodeRepository.storedNodes = [parent, child, grandchild]

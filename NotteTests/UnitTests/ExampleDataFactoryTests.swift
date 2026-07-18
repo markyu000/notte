@@ -53,7 +53,7 @@ final class ExampleDataFactoryTests: XCTestCase {
     func testNestedNodesLinkToParent() async throws {
         try await factory.importOne(file: "SwiftUILearning")
         let nodes = nodeRepository.storedNodes
-        let childNodes = nodes.filter { $0.depth > 0 }
+        let childNodes = nodes.filter { $0.parentNodeID != nil }
         XCTAssertFalse(childNodes.isEmpty)
         for child in childNodes {
             XCTAssertNotNil(child.parentNodeID)

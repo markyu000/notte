@@ -59,7 +59,7 @@ final class NodeEditorEndToEndTests: XCTestCase {
         XCTAssertGreaterThan(second.sortIndex, first.sortIndex)
     }
 
-    /// 测试：indent 后节点 parentNodeID 和 depth 持久化正确
+    /// 测试：indent 后 parentNodeID 持久化正确，重新 fetch 后 buildTree 现算出的 depth 正确
     func testIndentPersistsCorrectly() async throws {
         let first = try await mutationService.insertFirst(in: pageID)
         let second = try await mutationService.insertAfter(nodeID: first.id, in: pageID)
@@ -69,7 +69,10 @@ final class NodeEditorEndToEndTests: XCTestCase {
         let nodes = try await nodeRepository.fetchAll(in: pageID)
         let updatedSecond = nodes.first { $0.id == second.id }
         XCTAssertEqual(updatedSecond?.parentNodeID, first.id)
-        XCTAssertEqual(updatedSecond?.depth, 1)
+
+        let tree = try queryService.buildTree(nodes: nodes, blocks: [])
+        let rebuiltSecond = tree.first?.children.first { $0.id == second.id }
+        XCTAssertEqual(rebuiltSecond?.depth, 1)
     }
 
     /// 测试：delete 后节点及其 Block 从 repository 中移除
