@@ -20,10 +20,7 @@ struct NodeQueryService {
             blocksByNodeID[block.nodeID, default: []].append(block)
         }
 
-        // 2. 预构建节点字典，用于高效查询深度
-        let nodeByID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
-
-        // 3. 将每个 Node 转为 EditorNode（children 先为空）
+        // 2. 将每个 Node 转为 EditorNode（children 先为空，depth 待递归赋值）
         var editorNodes: [UUID: EditorNode] = [:]
         for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
             let nodeBlocks = (blocksByNodeID[node.id] ?? [])
@@ -38,19 +35,12 @@ struct NodeQueryService {
                         imageAlignment: $0.imageAlignment
                     )
                 }
-            
-            // 重新计算深度（传入预构建字典以提升性能）。
-            // node 取自 nodes 本身、nodeByID 也由 nodes 构建，nil 意味着这层不变式被破坏，
-            // 不能悄悄当 0 处理——用仓储层已有的 RepositoryError.notFound 显式暴露。
-            guard let calculatedDepth = depth(of: node.id, in: nodes, nodeByID: nodeByID) else {
-                throw RepositoryError.notFound
-            }
 
             editorNodes[node.id] = EditorNode(
                 id: node.id,
                 parentID: node.parentNodeID,
                 title: node.title,
-                depth: calculatedDepth,
+                depth: 0,
                 sortIndex: node.sortIndex,
                 isCollapsed: node.isCollapsed,
                 children: [],
@@ -65,19 +55,24 @@ struct NodeQueryService {
             childIDsByParent[parentID, default: []].append(node.id)
         }
 
-        // 递归构建 EditorNode 树，避免 struct 值拷贝导致孙节点丢失
-        func buildNode(_ id: UUID) -> EditorNode {
-            var node = editorNodes[id]!
-            node.children = (childIDsByParent[id] ?? []).map { buildNode($0) }
+        // 递归构建 EditorNode 树：depth 沿途下传（parent.depth + 1），单趟 DFS 算完，
+        // 不对每个节点单独往上溯到根——避免 struct 值拷贝导致孙节点丢失。
+        // id 取自 nodes 本身（根节点集合 / childIDsByParent），editorNodes 也由 nodes 构建，
+        // 找不到意味着这层不变式被破坏，不能悄悄跳过——显式抛 RepositoryError.notFound。
+        func buildNode(_ id: UUID, depth: Int) throws -> EditorNode {
+            guard var node = editorNodes[id] else {
+                throw RepositoryError.notFound
+            }
+            node.depth = depth
+            node.children = try (childIDsByParent[id] ?? []).map { try buildNode($0, depth: depth + 1) }
             return node
         }
 
         // 4. 收集根节点
-        return
-            nodes
+        return try nodes
             .filter { $0.parentNodeID == nil }
             .sorted { $0.sortIndex < $1.sortIndex }
-            .map { buildNode($0.id) }
+            .map { try buildNode($0.id, depth: 0) }
     }
 
     /// 将树形结构展平为按视觉顺序排列的 EditorNode 列表（深度优先，前序遍历）
@@ -170,15 +165,10 @@ extension NodeQueryService {
 }
 
 extension NodeQueryService {
-    // 单点查询：沿 parentNodeID 链向上走到根，返回跳数。O(链深)。
-    /// - Parameters:
-    ///   - nodeID: 目标节点ID
-    ///   - nodes: 节点数组（如果提供了 nodeByID，此参数会被忽略）
-    ///   - nodeByID: 可选的预构建字典，用于性能优化
+    // 单点查询：沿 parentNodeID 链向上走到根，返回跳数。建字典 O(n) + 沿链上溯 O(链深)。
     /// - Returns: 节点深度；如果节点不存在返回 nil
-    func depth(of nodeID: UUID, in nodes: [Node], nodeByID: [UUID: Node]? = nil) -> Int? {
-        // 优先使用预构建的字典，否则现场构建
-        let byID = nodeByID ?? Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
+    func depth(of nodeID: UUID, in nodes: [Node]) -> Int? {
+        let byID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
 
         // 如果节点不存在，返回 nil
         guard byID[nodeID] != nil else { return nil }
