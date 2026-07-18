@@ -143,6 +143,59 @@ final class NodeMutationServiceIndentTests: XCTestCase {
         XCTAssertNil(unchanged?.parentNodeID)
     }
 
+    /// 测试：子树整体逼近上限（maxDepth=4）时，缩进后子孙恰好落在合法边界，应当成功
+    /// 覆盖 §3.1 反例场景，也是曾经引发 bug-030（canIndent off-by-one）的具体边界
+    func testIndentSucceedsWhenDescendantLandsExactlyAtMaxDepth() async throws {
+        let rootID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let level1ID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let pID = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
+        let aID = UUID(uuidString: "00000000-0000-0000-0000-000000000004")!
+        let bID = UUID(uuidString: "00000000-0000-0000-0000-000000000005")!
+
+        // root(0) - level1(1) - [P(2), A(2)]；A 下挂 B(3)。indent A 到 P 下面后，
+        // A 变 depth 3，B 变 depth 4 —— 恰好是 maxDepth 允许的最大合法深度，应当放行。
+        let root = makeNode(id: rootID, sortIndex: 1000)
+        let level1 = makeNode(id: level1ID, parentNodeID: rootID, sortIndex: 1000)
+        let p = makeNode(id: pID, parentNodeID: level1ID, sortIndex: 1000)
+        let a = makeNode(id: aID, parentNodeID: level1ID, sortIndex: 2000)
+        let b = makeNode(id: bID, parentNodeID: aID, sortIndex: 1000)
+        nodeRepository.storedNodes = [root, level1, p, a, b]
+
+        try await mutationService.indent(nodeID: aID, in: pageID)
+
+        let updatedA = try await nodeRepository.fetch(by: aID)
+        XCTAssertEqual(updatedA?.parentNodeID, pID, "应当成功缩进到 P 下面")
+
+        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        let tree = try queryService.buildTree(nodes: nodes, blocks: [])
+        XCTAssertEqual(find(aID, in: tree)?.depth, 3)
+        XCTAssertEqual(find(bID, in: tree)?.depth, 4)
+    }
+
+    /// 测试：子树整体逼近上限时，缩进后子孙会越过 maxDepth，应当被挡住
+    /// 对应 §3.1 反例：A(2) - B(3) - C(4)，indent A 到同深度兄弟 P 下面，C 会变成 depth 5，越界
+    func testIndentDoesNothingWhenDescendantWouldExceedMaxDepth() async throws {
+        let rootID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let level1ID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let pID = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
+        let aID = UUID(uuidString: "00000000-0000-0000-0000-000000000004")!
+        let bID = UUID(uuidString: "00000000-0000-0000-0000-000000000005")!
+        let cID = UUID(uuidString: "00000000-0000-0000-0000-000000000006")!
+
+        let root = makeNode(id: rootID, sortIndex: 1000)
+        let level1 = makeNode(id: level1ID, parentNodeID: rootID, sortIndex: 1000)
+        let p = makeNode(id: pID, parentNodeID: level1ID, sortIndex: 1000)
+        let a = makeNode(id: aID, parentNodeID: level1ID, sortIndex: 2000)
+        let b = makeNode(id: bID, parentNodeID: aID, sortIndex: 1000)
+        let c = makeNode(id: cID, parentNodeID: bID, sortIndex: 1000)
+        nodeRepository.storedNodes = [root, level1, p, a, b, c]
+
+        try await mutationService.indent(nodeID: aID, in: pageID)
+
+        let unchangedA = try await nodeRepository.fetch(by: aID)
+        XCTAssertEqual(unchangedA?.parentNodeID, level1ID, "越界应当被挡住，parentNodeID 不变")
+    }
+
     /// 测试：找不到节点时抛出错误
     func testIndentThrowsWhenNodeNotFound() async {
         do {
