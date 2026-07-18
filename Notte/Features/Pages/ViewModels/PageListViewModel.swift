@@ -66,7 +66,7 @@ class PageListViewModel: ObservableObject {
             pages = try await fetchUseCase.execute(collectionID: collectionID)
             hasLoadedOnce = true
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -83,7 +83,7 @@ class PageListViewModel: ObservableObject {
             isShowingCreateSheet = false
             await loadPages()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -96,7 +96,7 @@ class PageListViewModel: ObservableObject {
             renamingPageID = nil
             await loadPages()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -105,7 +105,7 @@ class PageListViewModel: ObservableObject {
             try await deleteUseCase.execute(pageID: id)
             await loadPages()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -114,7 +114,7 @@ class PageListViewModel: ObservableObject {
             try await duplicateUseCase.execute(pageID: id)
             await loadPages()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -127,7 +127,7 @@ class PageListViewModel: ObservableObject {
             )
             await loadPages()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 }

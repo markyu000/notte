@@ -57,7 +57,7 @@ class CollectionListViewModel: ObservableObject {
             collections = try await fetchUseCase.execute()
             hasLoadedOnce = true
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -69,7 +69,7 @@ class CollectionListViewModel: ObservableObject {
             isShowingCreateSheet = false
             await loadCollections()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -80,7 +80,7 @@ class CollectionListViewModel: ObservableObject {
             renamingCollectionID = nil
             await loadCollections()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -89,7 +89,7 @@ class CollectionListViewModel: ObservableObject {
             try await deleteUseCase.execute(id: id)
             await loadCollections()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -98,7 +98,7 @@ class CollectionListViewModel: ObservableObject {
             try await pinUseCase.execute(id: id)
             await loadCollections()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -111,7 +111,7 @@ class CollectionListViewModel: ObservableObject {
             try await reorderUseCase.execute(moving: id, after: targetID)
             await loadCollections()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
     
@@ -122,7 +122,7 @@ class CollectionListViewModel: ObservableObject {
             try await factory.importAll()
             await loadCollections()
         } catch {
-            self.error = AppError.unknown(error)
+            self.error = AppError.wrap(error)
         }
     }
 }

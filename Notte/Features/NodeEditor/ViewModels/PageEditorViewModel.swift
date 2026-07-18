@@ -72,7 +72,7 @@ class PageEditorViewModel: ObservableObject {
                 pendingFocusNodeID = newNode.id
                 persistenceCoordinator.markStructuralChange()
             } catch {
-                self.error = error as? AppError
+                self.error = AppError.wrap(error)
             }
         }
     }
