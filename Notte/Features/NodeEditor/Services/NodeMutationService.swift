@@ -96,7 +96,12 @@ struct NodeMutationService {
         guard let parentNode = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
-        guard NodeHierarchyPolicy.canAddChild(parentDepth: parentNode.depth) else { throw NodeError.maxDepthExceeded }
+        
+        guard let parentNodeDepth = queryService.depth(of: parentNode.id, in: nodes) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        
+        guard NodeHierarchyPolicy.canAddChild(parentDepth: parentNodeDepth) else { throw NodeError.maxDepthExceeded }
         let existingChildren = queryService.children(of: nodeID, in: nodes)
         let lastChildIndex = existingChildren.map(\.sortIndex).max()
         let newSortIndex = lastChildIndex.map { SortIndexPolicy.indexAfter(last: $0) }
