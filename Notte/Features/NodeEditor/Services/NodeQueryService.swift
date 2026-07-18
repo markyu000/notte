@@ -13,7 +13,7 @@ struct NodeQueryService {
     // MARK: - 树构建
 
     /// 将扁平 Node 列表 + Block 列表构建为树形 EditorNode 列表（只含根节点）
-    func buildTree(nodes: [Node], blocks: [Block]) -> [EditorNode] {
+    func buildTree(nodes: [Node], blocks: [Block]) throws -> [EditorNode] {
         // 1. 将 Block 按 nodeID 分组
         var blocksByNodeID: [UUID: [Block]] = [:]
         for block in blocks {
@@ -39,9 +39,13 @@ struct NodeQueryService {
                     )
                 }
             
-            // 重新计算深度（传入预构建字典以提升性能）
-            let calculatedDepth = depth(of: node.id, in: nodes, nodeByID: nodeByID) ?? 0
-            
+            // 重新计算深度（传入预构建字典以提升性能）。
+            // node 取自 nodes 本身、nodeByID 也由 nodes 构建，nil 意味着这层不变式被破坏，
+            // 不能悄悄当 0 处理——用仓储层已有的 RepositoryError.notFound 显式暴露。
+            guard let calculatedDepth = depth(of: node.id, in: nodes, nodeByID: nodeByID) else {
+                throw RepositoryError.notFound
+            }
+
             editorNodes[node.id] = EditorNode(
                 id: node.id,
                 parentID: node.parentNodeID,
