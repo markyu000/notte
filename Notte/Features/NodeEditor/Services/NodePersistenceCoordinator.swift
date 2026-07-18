@@ -5,8 +5,8 @@
 //  Created by 余哲源 on 2026/4/25.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 /// 管理 Node 编辑器的自动保存策略。
 /// UI 层高频触发的内容变更先暂存为未保存状态，
@@ -26,7 +26,7 @@ class NodePersistenceCoordinator: ObservableObject {
     private let engine: NodeEditorEngine
     private var pendingBlockUpdates: [UUID: String] = [:]
     private var pendingTitleUpdates: [UUID: String] = [:]
-    
+
     private var saveTask: Task<Void, Never>?
 
     init(engine: NodeEditorEngine) {
@@ -59,7 +59,8 @@ class NodePersistenceCoordinator: ObservableObject {
     // MARK: - 强制立即保存（按钮/退出/后台时调用）
 
     func flush() async {
-        guard !pendingBlockUpdates.isEmpty || !pendingTitleUpdates.isEmpty else {
+        guard !pendingBlockUpdates.isEmpty || !pendingTitleUpdates.isEmpty
+        else {
             saveState = .saved
             hasUnsavedChanges = false
             return
@@ -70,7 +71,10 @@ class NodePersistenceCoordinator: ObservableObject {
         saveState = .saving
 
         do {
-            try await persist(blockUpdates: blockUpdatesSnapshot, titleUpdates: titleUpdatesSnapshot)
+            try await persist(
+                blockUpdates: blockUpdatesSnapshot,
+                titleUpdates: titleUpdatesSnapshot
+            )
             clearPersistedSnapshots(
                 blockUpdates: blockUpdatesSnapshot,
                 titleUpdates: titleUpdatesSnapshot
@@ -84,23 +88,24 @@ class NodePersistenceCoordinator: ObservableObject {
                 hasUnsavedChanges = true
             }
         } catch {
-            engine.error = .repositoryError(error as? RepositoryError ?? RepositoryError.saveFailed(error))
+            engine.error = .repositoryError(
+                error as? RepositoryError ?? RepositoryError.saveFailed(error)
+            )
             saveState = .unsaved
             hasUnsavedChanges = true
         }
     }
-    
-    
+
     // MARK: - 保存Debounce
     private func scheduleDebouncedFlush() {
         saveTask?.cancel()
-        saveTask = Task {
+        saveTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
-            await flush()
+            await self!.flush()
         }
     }
-    
+
     // MARK: - 强制保存
     /// 绕过 debounce ，立即同步写完所有 dirty，用于进后台等硬提交点
     func flushNow() async {
@@ -110,13 +115,15 @@ class NodePersistenceCoordinator: ObservableObject {
     }
 }
 
-private extension NodePersistenceCoordinator {
-    func persist(
+extension NodePersistenceCoordinator {
+    fileprivate func persist(
         blockUpdates: [UUID: String],
         titleUpdates: [UUID: String]
     ) async throws {
         for (blockID, content) in blockUpdates {
-            guard var block = try await engine.blockRepository.fetch(by: blockID) else {
+            guard
+                var block = try await engine.blockRepository.fetch(by: blockID)
+            else {
                 throw RepositoryError.notFound
             }
             block.content = content
@@ -125,7 +132,8 @@ private extension NodePersistenceCoordinator {
         }
 
         for (nodeID, title) in titleUpdates {
-            guard var node = try await engine.nodeRepository.fetch(by: nodeID) else {
+            guard var node = try await engine.nodeRepository.fetch(by: nodeID)
+            else {
                 throw RepositoryError.notFound
             }
             node.title = title
@@ -134,15 +142,17 @@ private extension NodePersistenceCoordinator {
         }
     }
 
-    func clearPersistedSnapshots(
+    fileprivate func clearPersistedSnapshots(
         blockUpdates: [UUID: String],
         titleUpdates: [UUID: String]
     ) {
-        for (blockID, content) in blockUpdates where pendingBlockUpdates[blockID] == content {
+        for (blockID, content) in blockUpdates
+        where pendingBlockUpdates[blockID] == content {
             pendingBlockUpdates.removeValue(forKey: blockID)
         }
 
-        for (nodeID, title) in titleUpdates where pendingTitleUpdates[nodeID] == title {
+        for (nodeID, title) in titleUpdates
+        where pendingTitleUpdates[nodeID] == title {
             pendingTitleUpdates.removeValue(forKey: nodeID)
         }
     }
