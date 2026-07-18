@@ -201,9 +201,12 @@ struct NodeMutationService {
             return
         }
         // 缩进会让整个子树 depth +1，最深的子孙 +1 后不得超过 maxDepth
-        let descendants = queryService.descendants(of: nodeID, in: nodes)
-        let subtreeMaxDepth = (descendants.map(\.depth) + [node.depth]).max() ?? node.depth
-        guard NodeHierarchyPolicy.canIndent(subtreeMaxDepth: subtreeMaxDepth) else {
+        guard let currentDepth = queryService.depth(of: node.id, in: nodes) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        let newDepth = currentDepth + 1
+        let height = queryService.subtreeHeight(of: nodeID, in: nodes)
+        guard NodeHierarchyPolicy.canIndent(subtreeMaxDepth: newDepth + height) else {
             // 已达最大深度（5 级，depth 0-4），整棵子树无法继续缩进
             return
         }
@@ -215,17 +218,10 @@ struct NodeMutationService {
 
         var updatedNode = node
         updatedNode.parentNodeID = newParent.id
-        updatedNode.depth = newParent.depth + 1
         updatedNode.sortIndex = newSortIndex
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
-
-        // 批量更新所有子孙节点的 depth +1（descendants 已在深度校验时取得，复用）
-        for var desc in descendants {
-            desc.depth += 1
-            desc.updatedAt = Date()
-            try await nodeRepository.update(desc)
-        }
+        
         logger.info("节点缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
