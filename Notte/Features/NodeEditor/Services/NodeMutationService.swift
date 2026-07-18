@@ -249,18 +249,10 @@ struct NodeMutationService {
 
         var updatedNode = node
         updatedNode.parentNodeID = parentNode.parentNodeID
-        updatedNode.depth = max(0, node.depth - 1)
         updatedNode.sortIndex = newSortIndex
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
 
-        // 批量更新所有子孙节点的 depth -1
-        let descendants = queryService.descendants(of: nodeID, in: nodes)
-        for var desc in descendants {
-            desc.depth = max(0, desc.depth - 1)
-            desc.updatedAt = Date()
-            try await nodeRepository.update(desc)
-        }
         logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
