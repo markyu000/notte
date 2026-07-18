@@ -200,6 +200,7 @@ struct NodeMutationService {
         }
         guard let newParent = queryService.previousSibling(of: nodeID, in: nodes) else {
             // 没有前一个同级节点，无法缩进
+            logger.debug("缩进中止：没有前一个同级节点, nodeID=\(nodeID)", function: #function)
             return
         }
         // 缩进会让整个子树 depth +1，最深的子孙 +1 后不得超过 maxDepth
@@ -210,6 +211,7 @@ struct NodeMutationService {
         let height = queryService.subtreeHeight(of: nodeID, in: nodes)
         guard NodeHierarchyPolicy.canIndent(subtreeMaxDepth: newDepth + height) else {
             // 已达最大深度（5 级，depth 0-4），整棵子树无法继续缩进
+            logger.debug("缩进中止：超出 maxDepth, nodeID=\(nodeID), currentDepth=\(currentDepth), newDepth=\(newDepth), height=\(height), sum=\(newDepth + height)", function: #function)
             return
         }
 
@@ -235,6 +237,7 @@ struct NodeMutationService {
         }
         guard let parentNode = queryService.parent(of: nodeID, in: nodes) else {
             // 已在根层，无法反缩进
+            logger.debug("反缩进中止：已在根层, nodeID=\(nodeID)", function: #function)
             return
         }
 
