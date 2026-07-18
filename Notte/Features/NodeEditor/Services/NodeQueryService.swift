@@ -20,7 +20,10 @@ struct NodeQueryService {
             blocksByNodeID[block.nodeID, default: []].append(block)
         }
 
-        // 2. 将每个 Node 转为 EditorNode（children 先为空）
+        // 2. 预构建节点字典，用于高效查询深度
+        let nodeByID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
+
+        // 3. 将每个 Node 转为 EditorNode（children 先为空）
         var editorNodes: [UUID: EditorNode] = [:]
         for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
             let nodeBlocks = (blocksByNodeID[node.id] ?? [])
@@ -35,11 +38,15 @@ struct NodeQueryService {
                         imageAlignment: $0.imageAlignment
                     )
                 }
+            
+            // 重新计算深度（传入预构建字典以提升性能）
+            let calculatedDepth = depth(of: node.id, in: nodes, nodeByID: nodeByID) ?? 0
+            
             editorNodes[node.id] = EditorNode(
                 id: node.id,
                 parentID: node.parentNodeID,
                 title: node.title,
-                depth: node.depth,
+                depth: calculatedDepth,
                 sortIndex: node.sortIndex,
                 isCollapsed: node.isCollapsed,
                 children: [],
@@ -62,7 +69,8 @@ struct NodeQueryService {
         }
 
         // 4. 收集根节点
-        return nodes
+        return
+            nodes
             .filter { $0.parentNodeID == nil }
             .sorted { $0.sortIndex < $1.sortIndex }
             .map { buildNode($0.id) }
@@ -154,5 +162,42 @@ extension NodeQueryService {
             }
             .sorted { $0.sortIndex < $1.sortIndex }
             .first
+    }
+}
+
+extension NodeQueryService {
+    // 单点查询：沿 parentNodeID 链向上走到根，返回跳数。O(链深)。
+    /// - Parameters:
+    ///   - nodeID: 目标节点ID
+    ///   - nodes: 节点数组（如果提供了 nodeByID，此参数会被忽略）
+    ///   - nodeByID: 可选的预构建字典，用于性能优化
+    /// - Returns: 节点深度；如果节点不存在返回 nil
+    func depth(of nodeID: UUID, in nodes: [Node], nodeByID: [UUID: Node]? = nil) -> Int? {
+        // 优先使用预构建的字典，否则现场构建
+        let byID = nodeByID ?? Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
+
+        // 如果节点不存在，返回 nil
+        guard byID[nodeID] != nil else { return nil }
+
+        var d = 0
+        var cur = byID[nodeID]?.parentNodeID
+        while let id = cur {
+            d += 1
+            cur = byID[id]?.parentNodeID
+        }
+        return d  // 根节点返回 0，子节点返回实际深度
+    }
+
+    // 子树相对高度：从 nodeID 顺着树往下走到最深的叶子，边走边计数层级，取最大值。
+    // 与 buildTree 同一套思路（先按 parentNodeID 分组，再递归 DFS 往下），
+    // 只走一趟下行遍历，不需要对每个子孙再单独往上走一次。
+    // 建分组表 O(n) + 遍历子树 O(子树大小)，比"对每个子孙分别往上数"更省。
+    func subtreeHeight(of nodeID: UUID, in nodes: [Node]) -> Int {
+        let childrenByParent = Dictionary(grouping: nodes, by: \.parentNodeID)
+        func maxDepth(from id: UUID) -> Int {
+            (childrenByParent[id] ?? []).map { 1 + maxDepth(from: $0.id) }.max()
+                ?? 0
+        }
+        return maxDepth(from: nodeID)
     }
 }
