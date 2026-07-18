@@ -1,7 +1,7 @@
 ---
 name: "🚀 Performance"
 about: "性能问题或优化建议"
-labels: ["type/performance"]
+labels: ["type/perf"]
 ---
 
 ## 问题场景
