@@ -24,7 +24,6 @@ struct NodeMutationService {
             pageID: pageID,
             parentNodeID: nil,
             title: "",
-            depth: 0,
             sortIndex: newSortIndex,
             isCollapsed: false,
             createdAt: Date(),
@@ -66,7 +65,6 @@ struct NodeMutationService {
             pageID: pageID,
             parentNodeID: current.parentNodeID,
             title: "",
-            depth: current.depth,
             sortIndex: newSortIndex,
             isCollapsed: false,
             createdAt: Date(),
@@ -96,7 +94,12 @@ struct NodeMutationService {
         guard let parentNode = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
-        guard NodeHierarchyPolicy.canAddChild(parentDepth: parentNode.depth) else { throw NodeError.maxDepthExceeded }
+        
+        guard let parentNodeDepth = queryService.depth(of: parentNode.id, in: nodes) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        
+        guard NodeHierarchyPolicy.canAddChild(parentDepth: parentNodeDepth) else { throw NodeError.maxDepthExceeded }
         let existingChildren = queryService.children(of: nodeID, in: nodes)
         let lastChildIndex = existingChildren.map(\.sortIndex).max()
         let newSortIndex = lastChildIndex.map { SortIndexPolicy.indexAfter(last: $0) }
@@ -107,7 +110,6 @@ struct NodeMutationService {
             pageID: pageID,
             parentNodeID: nodeID,
             title: "",
-            depth: parentNode.depth + 1,
             sortIndex: newSortIndex,
             isCollapsed: false,
             createdAt: Date(),
@@ -198,13 +200,17 @@ struct NodeMutationService {
         }
         guard let newParent = queryService.previousSibling(of: nodeID, in: nodes) else {
             // 没有前一个同级节点，无法缩进
+            logger.debug("缩进中止：没有前一个同级节点, nodeID=\(nodeID)", function: #function)
             return
         }
         // 缩进会让整个子树 depth +1，最深的子孙 +1 后不得超过 maxDepth
-        let descendants = queryService.descendants(of: nodeID, in: nodes)
-        let subtreeMaxDepth = (descendants.map(\.depth) + [node.depth]).max() ?? node.depth
-        guard NodeHierarchyPolicy.canIndent(subtreeMaxDepth: subtreeMaxDepth) else {
+        guard let currentDepth = queryService.depth(of: node.id, in: nodes) else {
+            throw AppError.repositoryError(RepositoryError.notFound)
+        }
+        let height = queryService.subtreeHeight(of: nodeID, in: nodes)
+        guard NodeHierarchyPolicy.canIndent(subtreeMaxDepth: currentDepth + height) else {
             // 已达最大深度（5 级，depth 0-4），整棵子树无法继续缩进
+            logger.debug("缩进中止：超出 maxDepth, nodeID=\(nodeID), currentDepth=\(currentDepth), height=\(height), sum=\(currentDepth + height)", function: #function)
             return
         }
 
@@ -215,17 +221,10 @@ struct NodeMutationService {
 
         var updatedNode = node
         updatedNode.parentNodeID = newParent.id
-        updatedNode.depth = newParent.depth + 1
         updatedNode.sortIndex = newSortIndex
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
-
-        // 批量更新所有子孙节点的 depth +1（descendants 已在深度校验时取得，复用）
-        for var desc in descendants {
-            desc.depth += 1
-            desc.updatedAt = Date()
-            try await nodeRepository.update(desc)
-        }
+        
         logger.info("节点缩进成功, nodeID=\(nodeID)", function: #function)
     }
 
@@ -237,6 +236,7 @@ struct NodeMutationService {
         }
         guard let parentNode = queryService.parent(of: nodeID, in: nodes) else {
             // 已在根层，无法反缩进
+            logger.debug("反缩进中止：已在根层, nodeID=\(nodeID)", function: #function)
             return
         }
 
@@ -253,18 +253,10 @@ struct NodeMutationService {
 
         var updatedNode = node
         updatedNode.parentNodeID = parentNode.parentNodeID
-        updatedNode.depth = max(0, node.depth - 1)
         updatedNode.sortIndex = newSortIndex
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
 
-        // 批量更新所有子孙节点的 depth -1
-        let descendants = queryService.descendants(of: nodeID, in: nodes)
-        for var desc in descendants {
-            desc.depth = max(0, desc.depth - 1)
-            desc.updatedAt = Date()
-            try await nodeRepository.update(desc)
-        }
         logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
     }
 

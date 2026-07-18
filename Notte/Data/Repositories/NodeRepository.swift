@@ -37,7 +37,6 @@ class NodeRepository: NodeRepositoryProtocol {
             pageID: node.pageID,
             parentNodeID: node.parentNodeID,
             title: node.title,
-            depth: node.depth,
             sortIndex: node.sortIndex,
             isCollapsed: node.isCollapsed,
             createdAt: node.createdAt,
@@ -58,7 +57,6 @@ class NodeRepository: NodeRepositoryProtocol {
         model.pageID = node.pageID
         model.parentNodeID = node.parentNodeID
         model.title = node.title
-        model.depth = node.depth
         model.sortIndex = node.sortIndex
         model.isCollapsed = node.isCollapsed
         model.updatedAt = node.updatedAt

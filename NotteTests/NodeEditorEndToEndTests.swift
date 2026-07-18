@@ -101,7 +101,7 @@ final class NodeEditorEndToEndTests: XCTestCase {
             return all
         }()
 
-        let tree = queryService.buildTree(nodes: nodes, blocks: allBlocks)
+        let tree = try queryService.buildTree(nodes: nodes, blocks: allBlocks)
         XCTAssertEqual(tree.count, 1)
         XCTAssertEqual(tree[0].children.count, 1)
         _ = blocks
@@ -125,7 +125,7 @@ final class NodeEditorEndToEndTests: XCTestCase {
             return all
         }()
 
-        let tree = queryService.buildTree(nodes: nodes, blocks: allBlocks)
+        let tree = try queryService.buildTree(nodes: nodes, blocks: allBlocks)
         let visible = queryService.visibleNodes(from: tree)
         XCTAssertEqual(visible.count, 1, "折叠后只有根节点可见")
     }

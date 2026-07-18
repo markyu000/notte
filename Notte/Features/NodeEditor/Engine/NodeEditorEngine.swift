@@ -52,7 +52,7 @@ class NodeEditorEngine: ObservableObject {
                 let blocks = try await blockRepository.fetchAll(in: node.id)
                 allBlocks.append(contentsOf: blocks)
             }
-            let roots = queryService.buildTree(nodes: nodes, blocks: allBlocks)
+            let roots = try queryService.buildTree(nodes: nodes, blocks: allBlocks)
             editorNodes = queryService.visibleNodes(from: roots)
         } catch {
             self.error = .repositoryError(error as? RepositoryError ?? RepositoryError.saveFailed(error))

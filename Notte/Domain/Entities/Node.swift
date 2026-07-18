@@ -12,7 +12,6 @@ struct Node: Identifiable, Hashable {
     let pageID: UUID
     var parentNodeID: UUID?
     var title: String
-    var depth: Int
     var sortIndex: Double
     var isCollapsed: Bool
     var createdAt: Date
