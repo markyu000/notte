@@ -32,6 +32,8 @@ struct NodeContentEditor: UIViewRepresentable {
     var onMoveDown: () -> Void = {}
     var onDelete: () -> Void = {}
     var canIndent: Bool = true
+    var canMoveUp: Bool = true
+    var canMoveDown: Bool = true
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -63,6 +65,20 @@ struct NodeContentEditor: UIViewRepresentable {
         )
         indentItem.isEnabled = canIndent
         coordinator.indentItem = indentItem
+        let moveUpItem = UIBarButtonItem(
+            image: UIImage(systemName: "arrow.up"),
+            style: .plain, target: coordinator,
+            action: #selector(Coordinator.didTapMoveUp)
+        )
+        moveUpItem.isEnabled = canMoveUp
+        coordinator.moveUpItem = moveUpItem
+        let moveDownItem = UIBarButtonItem(
+            image: UIImage(systemName: "arrow.down"),
+            style: .plain, target: coordinator,
+            action: #selector(Coordinator.didTapMoveDown)
+        )
+        moveDownItem.isEnabled = canMoveDown
+        coordinator.moveDownItem = moveDownItem
         toolbar.items = [
             UIBarButtonItem(
                 image: UIImage(systemName: "decrease.indent"),
@@ -70,16 +86,8 @@ struct NodeContentEditor: UIViewRepresentable {
                 action: #selector(Coordinator.didTapOutdent)
             ),
             indentItem,
-            UIBarButtonItem(
-                image: UIImage(systemName: "arrow.up"),
-                style: .plain, target: coordinator,
-                action: #selector(Coordinator.didTapMoveUp)
-            ),
-            UIBarButtonItem(
-                image: UIImage(systemName: "arrow.down"),
-                style: .plain, target: coordinator,
-                action: #selector(Coordinator.didTapMoveDown)
-            ),
+            moveUpItem,
+            moveDownItem,
             UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
             deleteItem
         ]
@@ -95,6 +103,8 @@ struct NodeContentEditor: UIViewRepresentable {
     func updateUIView(_ uiView: UITextView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.indentItem?.isEnabled = canIndent
+        context.coordinator.moveUpItem?.isEnabled = canMoveUp
+        context.coordinator.moveDownItem?.isEnabled = canMoveDown
         // 非编辑状态下才同步文本/占位符，避免打断用户输入
         if !uiView.isFirstResponder {
             if text.isEmpty {
@@ -123,6 +133,8 @@ struct NodeContentEditor: UIViewRepresentable {
     class Coordinator: NSObject, UITextViewDelegate {
         var parent: NodeContentEditor
         var indentItem: UIBarButtonItem?
+        var moveUpItem: UIBarButtonItem?
+        var moveDownItem: UIBarButtonItem?
 
         init(_ parent: NodeContentEditor) {
             self.parent = parent

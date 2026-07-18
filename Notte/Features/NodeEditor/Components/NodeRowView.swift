@@ -14,6 +14,10 @@ struct NodeRowView: View {
     /// 仅当 pendingFocusNodeID == node.id 时为 true，触发标题编辑器 becomeFirstResponder。
     /// 与 isFocused（节点高亮）分离，避免 Block 内容区获焦时标题抢焦点。
     let shouldFocusTitle: Bool
+    /// 是否还有前一个同级节点可换位。由调用方基于同级兄弟列表算出（NodeRowView 本身不掌握兄弟信息）。
+    let canMoveUp: Bool
+    /// 是否还有后一个同级节点可换位。
+    let canMoveDown: Bool
     let onTitleChanged: (String) -> Void
     let onContentChanged: (UUID, String) -> Void
     let onCommand: (NodeCommand) -> Void
@@ -120,7 +124,9 @@ struct NodeRowView: View {
                 onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
                 onDelete: { onCommand(.delete(nodeID: node.id)) },
                 onFocus: { onFocused(node.id) },
-                canIndent: canIndent
+                canIndent: canIndent,
+                canMoveUp: canMoveUp,
+                canMoveDown: canMoveDown
             )
             Spacer()
         }
@@ -148,6 +154,8 @@ struct NodeRowView: View {
             onMoveDown: { onCommand(.moveDown(nodeID: node.id)) },
             onDelete: { onCommand(.delete(nodeID: node.id)) },
             canIndent: canIndent,
+            canMoveUp: canMoveUp,
+            canMoveDown: canMoveDown,
             isSelected: isFocused,
             onMoveBlockUp: { onBlockCommand(.moveBlockUp(blockID: $0)) },
             onMoveBlockDown: { onBlockCommand(.moveBlockDown(blockID: $0)) }
@@ -180,6 +188,8 @@ struct NodeRowView: View {
             node: node,
             isFocused: true,
             shouldFocusTitle: false,
+            canMoveUp: true,
+            canMoveDown: true,
             onTitleChanged: { _ in },
             onContentChanged: { _, _ in },
             onCommand: { _ in },
@@ -190,6 +200,8 @@ struct NodeRowView: View {
             node: EditorNode(id: UUID(), title: "未聚焦节点", depth: 0, sortIndex: 2000),
             isFocused: false,
             shouldFocusTitle: false,
+            canMoveUp: true,
+            canMoveDown: true,
             onTitleChanged: { _ in },
             onContentChanged: { _, _ in },
             onCommand: { _ in },
