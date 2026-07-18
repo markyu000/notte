@@ -83,7 +83,7 @@ class NodeEditorEngine: ObservableObject {
             }
             await loadNodes()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 
@@ -107,7 +107,7 @@ class NodeEditorEngine: ObservableObject {
             }
             await loadNodes()
         } catch {
-            self.error = error as? AppError
+            self.error = AppError.wrap(error)
         }
     }
 }
