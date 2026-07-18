@@ -36,7 +36,6 @@ final class NodeEditorEngineErrorMappingTests: XCTestCase {
     private func makeNode(
         id: UUID = UUID(),
         parentNodeID: UUID? = nil,
-        depth: Int,
         sortIndex: Double
     ) -> Node {
         Node(
@@ -53,12 +52,20 @@ final class NodeEditorEngineErrorMappingTests: XCTestCase {
 
     // MARK: - 核心回归：maxDepth 触发的 NodeError 不再被吞
 
-    /// 父节点 depth == maxDepth(4)，执行 insertChild 命令：
-    /// NodeMutationService 会抛裸 NodeError.maxDepthExceeded，
+    /// 搭一条长度为 maxDepth（4）的 parentNodeID 链，链尾节点的真实 depth 由
+    /// NodeQueryService.depth(of:in:) 现算得出，等于 4——depth 不再持久化，
+    /// 不能靠手工传参伪造，必须真的堆出这条祖先链。
+    /// 对链尾节点执行 insertChild：NodeMutationService 会抛裸 NodeError.maxDepthExceeded，
     /// 经 NodeEditorEngine.dispatch 的 AppError.wrap 应落到 engine.error 为 .nodeError。
     func test_dispatchInsertChild_atMaxDepth_surfacesNodeErrorToUI() async {
-        let maxDepthParent = makeNode(depth: NodeHierarchyPolicy.maxDepth, sortIndex: 1000)
-        nodeRepository.storedNodes = [maxDepthParent]
+        var previousID: UUID?
+        var maxDepthParent: Node!
+        for level in 0...NodeHierarchyPolicy.maxDepth {
+            let node = makeNode(parentNodeID: previousID, sortIndex: Double(level) * 1000)
+            nodeRepository.storedNodes.append(node)
+            previousID = node.id
+            maxDepthParent = node
+        }
 
         await engine.dispatch(.insertChild(nodeID: maxDepthParent.id))
 
@@ -74,7 +81,7 @@ final class NodeEditorEngineErrorMappingTests: XCTestCase {
 
     /// 父节点 depth < maxDepth，insertChild 成功，engine.error 应保持为 nil。
     func test_dispatchInsertChild_belowMaxDepth_doesNotSetError() async {
-        let parent = makeNode(depth: 0, sortIndex: 1000)
+        let parent = makeNode(sortIndex: 1000)
         nodeRepository.storedNodes = [parent]
 
         await engine.dispatch(.insertChild(nodeID: parent.id))

@@ -23,7 +23,7 @@ class MockPageRepository: PageRepositoryProtocol {
     }
 
     func create(_ page: Page) async throws {
-        if shouldThrowOnCreate { throw RepositoryError.saveFailed(NSError()) }
+        if shouldThrowOnCreate { throw RepositoryError.saveFailed(NSError(domain: "MockPageRepository", code: -1)) }
         storedPages.append(page)
     }
 
