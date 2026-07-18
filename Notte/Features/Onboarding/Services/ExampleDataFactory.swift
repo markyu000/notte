@@ -97,7 +97,6 @@ struct ExampleDataFactory {
                 pageID: pageID,
                 parentNodeID: parentNodeID,
                 title: dto.title,
-                depth: dto.depth,
                 sortIndex: Double(idx + 1) * 1000,
                 isCollapsed: false,
                 createdAt: Date(),

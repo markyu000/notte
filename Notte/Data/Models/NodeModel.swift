@@ -14,7 +14,6 @@ class NodeModel {
     var pageID: UUID = UUID()
     var parentNodeID: UUID? = nil
     var title: String = ""
-    var depth: Int = 0
     var sortIndex: Double = 0
     var isCollapsed: Bool = false
     var createdAt: Date = Date()
@@ -25,7 +24,6 @@ class NodeModel {
         pageID: UUID,
         parentNodeID: UUID? = nil,
         title: String,
-        depth: Int = 0,
         sortIndex: Double = 0,
         isCollapsed: Bool = false,
         createdAt: Date = Date(),
@@ -35,7 +33,6 @@ class NodeModel {
         self.pageID = pageID
         self.parentNodeID = parentNodeID
         self.title = title
-        self.depth = depth
         self.sortIndex = sortIndex
         self.isCollapsed = isCollapsed
         self.createdAt = createdAt
@@ -50,7 +47,6 @@ extension NodeModel {
             pageID: pageID,
             parentNodeID: parentNodeID,
             title: title,
-            depth: depth,
             sortIndex: sortIndex,
             isCollapsed: isCollapsed,
             createdAt: createdAt,
