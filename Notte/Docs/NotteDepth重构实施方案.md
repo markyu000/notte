@@ -1,7 +1,7 @@
 # depth 去持久化重构实施方案
 
-**状态** 全部决策项已拍定，可进入实现
-**Version** v1.6（§4 补充定性说明：该节是终态清单而非执行顺序，删除 `Node.depth` 的时机以 §7 步骤 4 为准，§3.3 依赖的并存期不被 §4 的措辞抹掉；此前 v1.5 的 `subtreeHeight` 算法与 v1.4 的各项决策均不变）
+**状态** 已实现并落地（§7 步骤 1-6 全部完成，PR #297 已合并 develop；测试断言迁移见下）
+**Version** v1.7（补充实现记录：§7 步骤 1-4 通过 PR #297 合并（commit ef76c0d/1067e2c/8503905/b6e6dab/b74dadf/0062903），修复了实现中一处 `canIndent` off-by-one（见 [bug-030]）；§7 步骤 5 测试断言迁移完成（commit 017e05a），§7 步骤 6 全量测试已跑绿。此前 v1.6 的 §4 定性说明与 v1.5/v1.4 的各项决策均不变）
 **Tech Stack** SwiftUI + SwiftData + CloudKit
 **关联文档** [Notte数据存储方案.md](./Notte数据存储方案.md) §2「depth 不进持久层」（设计原则已定案）、Notte数据模型定义.md
 
