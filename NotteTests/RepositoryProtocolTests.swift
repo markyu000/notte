@@ -13,19 +13,21 @@ import SwiftData
 final class RepositoryProtocolTests: XCTestCase {
     var container: ModelContainer!
     var context: ModelContext!
+    var normalizationActor: SortIndexNormalizationActor!
 
     override func setUp() {
         container = try? PersistenceController.makeContainer(inMemory: true)
         context = ModelContext(container)
+        normalizationActor = SortIndexNormalizationActor(modelContainer: container)
     }
 
     func testCollectionRepositoryConformsToProtocol() {
-        let repo: any CollectionRepositoryProtocol = CollectionRepository(context: context)
+        let repo: any CollectionRepositoryProtocol = CollectionRepository(context: context, normalizationActor: normalizationActor)
         XCTAssertNotNil(repo)
     }
 
     func testPageRepositoryConformsToProtocol() {
-        let repo: any PageRepositoryProtocol = PageRepository(context: context)
+        let repo: any PageRepositoryProtocol = PageRepository(context: context, normalizationActor: normalizationActor)
         XCTAssertNotNil(repo)
     }
 

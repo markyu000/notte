@@ -40,4 +40,6 @@ class MockPageRepository: PageRepositoryProtocol {
         }
         storedPages.remove(at: index)
     }
+
+    func normalizeSortIndexesIfNeeded(in collectionID: UUID) async throws {}
 }

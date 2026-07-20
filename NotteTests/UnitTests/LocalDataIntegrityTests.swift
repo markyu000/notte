@@ -21,7 +21,8 @@ final class LocalDataIntegrityTests: XCTestCase {
     override func setUpWithError() throws {
         container = try PersistenceController.makeContainer(inMemory: true)
         let context = ModelContext(container)
-        collectionRepo = CollectionRepository(context: context)
+        let normalizationActor = SortIndexNormalizationActor(modelContainer: container)
+        collectionRepo = CollectionRepository(context: context, normalizationActor: normalizationActor)
         nodeRepo = NodeRepository(context: context)
     }
 

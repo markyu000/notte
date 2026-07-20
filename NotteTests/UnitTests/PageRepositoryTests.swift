@@ -20,7 +20,8 @@ final class PageRepositoryTests: XCTestCase {
     override func setUp() async throws {
         container = try PersistenceController.makeContainer(inMemory: true)
         context = ModelContext(container)
-        repository = PageRepository(context: context)
+        let normalizationActor = SortIndexNormalizationActor(modelContainer: container)
+        repository = PageRepository(context: context, normalizationActor: normalizationActor)
     }
 
     func test_fetchAll_whenEmpty_returnsEmptyArray() async throws {
