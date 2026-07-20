@@ -9,8 +9,8 @@ import Foundation
 
 protocol SortIndexPersistable: AnyObject {
     associatedtype Domain: SortIndexable
-    var id: UUID { get }
-    var sortIndex: Double { get set }
-    var updatedAt: Date { get set }
-    func toDomain() -> Domain
+    nonisolated var id: UUID { get }
+    nonisolated var sortIndex: Double { get set }
+    nonisolated var updatedAt: Date { get set }
+    nonisolated func toDomain() -> Domain
 }

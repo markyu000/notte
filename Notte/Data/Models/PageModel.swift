@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-class PageModel {
+nonisolated class PageModel {
     @Attribute(.unique) var id: UUID = UUID()
     var collectionID: UUID = UUID()
     var title: String = ""
