@@ -50,3 +50,5 @@ extension PageModel {
         )
     }
 }
+
+extension PageModel: SortIndexPersistable {}

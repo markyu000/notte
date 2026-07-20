@@ -54,3 +54,5 @@ extension CollectionModel {
         )
     }
 }
+
+extension CollectionModel: SortIndexPersistable {}
