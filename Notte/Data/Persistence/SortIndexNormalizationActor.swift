@@ -45,3 +45,11 @@ actor SortIndexNormalizationActor {
     // func normalizeNodes(in parentNodeID: UUID?) async throws { ... }
     // func normalizeBlocks(in nodeID: UUID) async throws { ... }
 }
+
+extension SortIndexNormalizationActor {
+    // #Preview 宏展开的上下文里直接调用 @ModelActor 合成的 init 会报
+    // "no accessible initializers"（宏套宏的已知限制），套一层普通静态方法绕开。
+    static func preview(container: ModelContainer) -> SortIndexNormalizationActor {
+        SortIndexNormalizationActor(modelContainer: container)
+    }
+}

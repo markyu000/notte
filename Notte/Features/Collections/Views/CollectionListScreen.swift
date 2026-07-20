@@ -237,8 +237,9 @@ struct CollectionListScreen: View {
 #Preview {
     let container = try! PersistenceController.makeContainer(inMemory: true)
     let context = ModelContext(container)
-    let repo = try! CollectionRepository(context: context)
-    let pageRepo = PageRepository(context: context)
+    let normalizationActor = SortIndexNormalizationActor.preview(container: container)
+    let repo = CollectionRepository(context: context, normalizationActor: normalizationActor)
+    let pageRepo = PageRepository(context: context, normalizationActor: normalizationActor)
     let nodeRepo = NodeRepository(context: context)
     let dependencyContainer = DependencyContainer(modelContainer: container)
 
