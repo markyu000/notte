@@ -10,9 +10,11 @@ import SwiftData
 
 class CollectionRepository: CollectionRepositoryProtocol {
     let context: ModelContext
+    private let normalizationActor: SortIndexNormalizationActor
 
-    init(context: ModelContext) {
+    init(context: ModelContext, normalizationActor: SortIndexNormalizationActor) {
         self.context = context
+        self.normalizationActor = normalizationActor
     }
 
     func fetchAll() async throws -> [Collection] {
@@ -91,5 +93,9 @@ class CollectionRepository: CollectionRepositoryProtocol {
         } catch {
             throw RepositoryError.saveFailed(error)
         }
+    }
+    
+    func normalizeSortIndexesIfNeeded() async throws {
+        try await normalizationActor.normalizeCollections()
     }
 }
