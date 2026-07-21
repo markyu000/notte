@@ -55,8 +55,8 @@ struct PageCreateSheet: View {
     let context = ModelContext(container)
     let normalizationActor = SortIndexNormalizationActor.preview(container: container)
     let pageRepo = PageRepository(context: context, normalizationActor: normalizationActor)
-    let nodeRepo = NodeRepository(context: context)
-    let blockRepo = BlockRepository(context: context)
+    let nodeRepo = NodeRepository(context: context, normalizationActor: normalizationActor)
+    let blockRepo = BlockRepository(context: context, normalizationActor: normalizationActor)
     let viewModel = PageListViewModel(
         collectionID: UUID(),
         collectionTitle: "我的笔记",

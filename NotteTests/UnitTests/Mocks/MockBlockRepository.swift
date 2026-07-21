@@ -35,4 +35,6 @@ class MockBlockRepository: BlockRepositoryProtocol {
     func deleteAll(in nodeID: UUID) async throws {
         storedBlocks.removeAll { $0.nodeID == nodeID }
     }
+
+    func normalizeSortIndexesIfNeeded(in nodeID: UUID) async throws {}
 }

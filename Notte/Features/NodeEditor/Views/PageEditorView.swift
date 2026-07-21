@@ -273,8 +273,9 @@ private struct NodeCollapseOffsetModifier: ViewModifier {
     let pageID = UUID()
     let container = try! PersistenceController.makeContainer(inMemory: true)
     let context = ModelContext(container)
-    let nodeRepo = NodeRepository(context: context)
-    let blockRepo = BlockRepository(context: context)
+    let normalizationActor = SortIndexNormalizationActor.preview(container: container)
+    let nodeRepo = NodeRepository(context: context, normalizationActor: normalizationActor)
+    let blockRepo = BlockRepository(context: context, normalizationActor: normalizationActor)
     let viewModel = PageEditorViewModel(
         pageID: pageID,
         pageTitle: "示例页面",

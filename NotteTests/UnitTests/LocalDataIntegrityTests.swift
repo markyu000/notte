@@ -23,7 +23,7 @@ final class LocalDataIntegrityTests: XCTestCase {
         let context = ModelContext(container)
         let normalizationActor = SortIndexNormalizationActor(modelContainer: container)
         collectionRepo = CollectionRepository(context: context, normalizationActor: normalizationActor)
-        nodeRepo = NodeRepository(context: context)
+        nodeRepo = NodeRepository(context: context, normalizationActor: normalizationActor)
     }
 
     /// 测试：CloudKit 不可用时，Collection CRUD 完整可用

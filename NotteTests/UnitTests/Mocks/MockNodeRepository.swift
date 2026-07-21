@@ -44,4 +44,6 @@ class MockNodeRepository: NodeRepositoryProtocol {
     func deleteAll(in pageID: UUID) async throws {
         storedNodes.removeAll { $0.pageID == pageID }
     }
+
+    func normalizeSortIndexesIfNeeded(in pageID: UUID, parentNodeID: UUID?) async throws {}
 }

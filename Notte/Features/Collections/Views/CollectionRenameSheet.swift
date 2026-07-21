@@ -64,7 +64,7 @@ struct CollectionRenameSheet: View {
     let normalizationActor = SortIndexNormalizationActor.preview(container: container)
     let repo = CollectionRepository(context: context, normalizationActor: normalizationActor)
     let pageRepo = PageRepository(context: context, normalizationActor: normalizationActor)
-    let nodeRepo = NodeRepository(context: context)
+    let nodeRepo = NodeRepository(context: context, normalizationActor: normalizationActor)
     let viewModel = CollectionListViewModel(
         repository: repo,
         pageRepository: pageRepo,
