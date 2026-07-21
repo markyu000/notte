@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-class BlockModel {
+nonisolated class BlockModel {
     @Attribute(.unique) var id: UUID = UUID()
     var nodeID: UUID = UUID()
     var type: String = BlockType.text.rawValue
@@ -59,3 +59,5 @@ extension BlockModel {
         )
     }
 }
+
+extension BlockModel: SortIndexPersistable {}
