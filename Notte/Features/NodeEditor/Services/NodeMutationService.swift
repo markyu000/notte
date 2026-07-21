@@ -83,8 +83,17 @@ struct NodeMutationService {
             updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
-
+        
         logger.info("节点插入成功, id=\(newNode.id)", function: #function)
+        
+        Task {
+            do {
+                try await nodeRepository.normalizeSortIndexesIfNeeded(in: pageID, parentNodeID: current.parentNodeID)
+            } catch {
+                logger.error("sortIndex 归一化失败, pageID=\(pageID)", error: error, function: #function)
+            }
+        }
+
         return newNode
     }
 
@@ -256,8 +265,16 @@ struct NodeMutationService {
         updatedNode.sortIndex = newSortIndex
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
-
+        
         logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
+        
+        Task {
+            do {
+                try await nodeRepository.normalizeSortIndexesIfNeeded(in: pageID, parentNodeID: parentNode.parentNodeID)
+            } catch {
+                logger.error("sortIndex 归一化失败, pageID=\(pageID)", error: error, function: #function)
+            }
+        }
     }
 
     // MARK: - 折叠
