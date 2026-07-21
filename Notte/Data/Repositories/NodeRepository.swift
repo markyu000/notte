@@ -10,9 +10,11 @@ import SwiftData
 
 class NodeRepository: NodeRepositoryProtocol {
     let context: ModelContext
+    private let normalizationActor: SortIndexNormalizationActor
 
-    init(context: ModelContext) {
+    init(context: ModelContext, normalizationActor: SortIndexNormalizationActor) {
         self.context = context
+        self.normalizationActor = normalizationActor
     }
 
     func fetchAll(in pageID: UUID) async throws -> [Node] {
@@ -83,5 +85,9 @@ class NodeRepository: NodeRepositoryProtocol {
             context.delete(model)
         }
         try context.save()
+    }
+    
+    func normalizeSortIndexesIfNeeded(in pageID: UUID, parentNodeID: UUID?) async throws {
+        try await normalizationActor.normalizeNodes(in: pageID, parentNodeID: parentNodeID)
     }
 }
