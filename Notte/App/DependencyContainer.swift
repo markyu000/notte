@@ -18,9 +18,10 @@ class DependencyContainer: ObservableObject {
 
     init(modelContainer: ModelContainer) {
         let context = ModelContext(modelContainer)
+        let normalizationActor = SortIndexNormalizationActor(modelContainer: modelContainer)
 
-        self.collectionRepository = CollectionRepository(context: context)
-        self.pageRepository = PageRepository(context: context)
+        self.collectionRepository = CollectionRepository(context: context, normalizationActor: normalizationActor)
+        self.pageRepository = PageRepository(context: context, normalizationActor: normalizationActor)
         self.nodeRepository = NodeRepository(context: context)
         self.blockRepository = BlockRepository(context: context)
     }
