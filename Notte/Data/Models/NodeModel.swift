@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-class NodeModel {
+nonisolated class NodeModel {
     @Attribute(.unique) var id: UUID = UUID()
     var pageID: UUID = UUID()
     var parentNodeID: UUID? = nil
@@ -54,3 +54,5 @@ extension NodeModel {
         )
     }
 }
+
+extension NodeModel: SortIndexPersistable {}

@@ -32,12 +32,12 @@ final class RepositoryProtocolTests: XCTestCase {
     }
 
     func testNodeRepositoryConformsToProtocol() {
-        let repo: any NodeRepositoryProtocol = NodeRepository(context: context)
+        let repo: any NodeRepositoryProtocol = NodeRepository(context: context, normalizationActor: normalizationActor)
         XCTAssertNotNil(repo)
     }
 
     func testBlockRepositoryConformsToProtocol() {
-        let repo: any BlockRepositoryProtocol = BlockRepository(context: context)
+        let repo: any BlockRepositoryProtocol = BlockRepository(context: context, normalizationActor: normalizationActor)
         XCTAssertNotNil(repo)
     }
 }

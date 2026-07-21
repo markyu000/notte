@@ -41,9 +41,21 @@ actor SortIndexNormalizationActor {
         try await normalizeAndSave(try modelContext.fetch(descriptor))
     }
 
-    // #299 落地时预期新增，形状类似：
-    // func normalizeNodes(in parentNodeID: UUID?) async throws { ... }
-    // func normalizeBlocks(in nodeID: UUID) async throws { ... }
+    func normalizeNodes(in pageID: UUID, parentNodeID: UUID?) async throws {
+        let descriptor = FetchDescriptor<NodeModel>(
+            predicate: #Predicate { $0.pageID == pageID && $0.parentNodeID == parentNodeID },
+            sortBy: [SortDescriptor(\.sortIndex)]
+        )
+        try await normalizeAndSave(try modelContext.fetch(descriptor))
+    }
+    
+    func normalizeBlocks(in nodeID: UUID) async throws {
+        let descriptor = FetchDescriptor<BlockModel>(
+            predicate: #Predicate { $0.nodeID == nodeID },
+            sortBy: [SortDescriptor(\.sortIndex)]
+        )
+        try await normalizeAndSave(try modelContext.fetch(descriptor))
+    }
 }
 
 extension SortIndexNormalizationActor {

@@ -19,8 +19,9 @@ final class NodeEditorEndToEndTests: XCTestCase {
         super.setUp()
         container = try? PersistenceController.makeContainer(inMemory: true)
         context = ModelContext(container)
-        nodeRepository = NodeRepository(context: context)
-        blockRepository = BlockRepository(context: context)
+        let normalizationActor = SortIndexNormalizationActor(modelContainer: container)
+        nodeRepository = NodeRepository(context: context, normalizationActor: normalizationActor)
+        blockRepository = BlockRepository(context: context, normalizationActor: normalizationActor)
         queryService = NodeQueryService()
         mutationService = NodeMutationService(
             nodeRepository: nodeRepository,

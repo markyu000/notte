@@ -22,8 +22,8 @@ class DependencyContainer: ObservableObject {
 
         self.collectionRepository = CollectionRepository(context: context, normalizationActor: normalizationActor)
         self.pageRepository = PageRepository(context: context, normalizationActor: normalizationActor)
-        self.nodeRepository = NodeRepository(context: context)
-        self.blockRepository = BlockRepository(context: context)
+        self.nodeRepository = NodeRepository(context: context, normalizationActor: normalizationActor)
+        self.blockRepository = BlockRepository(context: context, normalizationActor: normalizationActor)
     }
     
     // MARK: - ViewModel 工厂方法

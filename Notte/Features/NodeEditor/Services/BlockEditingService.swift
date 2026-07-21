@@ -94,6 +94,15 @@ extension BlockEditingService {
         block.sortIndex = newSortIndex
         block.updatedAt = Date()
         try await blockRepository.update(block)
+        
         logger.info("Block 排序更新成功, blockID=\(blockID)", function: #function)
+        
+        Task {
+            do {
+                try await blockRepository.normalizeSortIndexesIfNeeded(in: block.nodeID)
+            } catch {
+                logger.error("sortIndex 归一化失败, nodeID=\(block.nodeID), blockID=\(blockID)", error: error, function: #function)
+            }
+        }
     }
 }

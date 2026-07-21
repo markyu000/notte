@@ -14,4 +14,5 @@ protocol BlockRepositoryProtocol {
     func update(_ block: Block) async throws
     func delete(by id: UUID) async throws
     func deleteAll(in nodeID: UUID) async throws
+    func normalizeSortIndexesIfNeeded(in nodeID: UUID) async throws
 }
