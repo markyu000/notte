@@ -14,4 +14,5 @@ protocol NodeRepositoryProtocol {
     func update(_ node: Node) async throws
     func delete(by id: UUID) async throws
     func deleteAll(in pageID: UUID) async throws
+    func normalizeSortIndexesIfNeeded(in pageID: UUID, parentNodeID: UUID?) async throws
 }
