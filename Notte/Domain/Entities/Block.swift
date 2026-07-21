@@ -19,3 +19,5 @@ struct Block: Identifiable, Hashable {
     var imageWidthRatio: ImageWidthRatio? = nil
     var imageAlignment: BlockAlignment? = nil
 }
+
+extension Block: SortIndexable {}

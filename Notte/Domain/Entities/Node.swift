@@ -17,3 +17,5 @@ struct Node: Identifiable, Hashable {
     var createdAt: Date
     var updatedAt: Date
 }
+
+extension Node: SortIndexable {}
