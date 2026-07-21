@@ -35,4 +35,22 @@ enum SortIndexPolicy {
     static func normalize(count: Int) -> [Double] {
         (1...count).map { Double($0) * initialSpacing }
     }
+    
+    // Reorder引导函数
+    static func indexForReorder(lower: Double?, upper: Double?, firstSortIndex: Double?) -> Double {
+        switch (lower, upper) {
+        case (nil, nil):
+            if let firstSortIndex {
+                return indexBetween(before: 0, after: firstSortIndex)
+            } else {
+                return initialIndex()
+            }
+        case (nil, let u?):
+            return indexBetween(before: 0, after: u)
+        case (let l?, nil):
+            return indexAfter(last: l)
+        case (let l?, let u?):
+            return indexBetween(before: l, after: u)
+        }
+    }
 }

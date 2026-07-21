@@ -193,7 +193,8 @@ private struct PageErrorAlertModifier: ViewModifier {
     let collectionID = UUID()
     let container = try! PersistenceController.makeContainer(inMemory: true)
     let context = ModelContext(container)
-    let pageRepo = PageRepository(context: context)
+    let normalizationActor = SortIndexNormalizationActor.preview(container: container)
+    let pageRepo = PageRepository(context: context, normalizationActor: normalizationActor)
     let nodeRepo = NodeRepository(context: context)
     let blockRepo = BlockRepository(context: context)
 

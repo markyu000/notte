@@ -13,4 +13,5 @@ protocol PageRepositoryProtocol {
     func create(_ page: Page) async throws
     func update(_ page: Page) async throws
     func delete(by id: UUID) async throws
+    func normalizeSortIndexesIfNeeded(in collectionID: UUID) async throws
 }

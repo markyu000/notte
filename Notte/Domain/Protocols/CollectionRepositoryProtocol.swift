@@ -13,4 +13,5 @@ protocol CollectionRepositoryProtocol {
     func create(_ collection: Collection) async throws
     func update(_ collection: Collection) async throws
     func delete(by id: UUID) async throws
+    func normalizeSortIndexesIfNeeded() async throws
 }

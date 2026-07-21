@@ -41,4 +41,6 @@ class MockCollectionRepository: CollectionRepositoryProtocol {
         }
         storedCollections.remove(at: index)
     }
+
+    func normalizeSortIndexesIfNeeded() async throws {}
 }

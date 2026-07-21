@@ -27,36 +27,21 @@ struct ReorderCollectionsUseCase {
             all.indices.contains(idx + 1) ? all[idx + 1].sortIndex : nil
         }
 
-        let newIndex: Double!
-        switch (lower, upper) {
-        case (nil, nil):
-            // 移动到最前面：用 (0 + 当前第一项sortIndex)/2，避免出现与第一项相同的 sortIndex。
-            // 例如当前第一项是 1000，则新值是 500。
-            if let firstSortIndex {
-                newIndex = SortIndexPolicy.indexBetween(before: 0, after: firstSortIndex)
-            } else {
-                newIndex = SortIndexPolicy.initialIndex()
-            }
-        case (nil, let u?):
-            newIndex = SortIndexPolicy.indexBetween(before: 0, after: u)
-        case (let l?, nil):
-            newIndex = SortIndexPolicy.indexAfter(last: l)
-        case (let l?, let u?):
-            newIndex = SortIndexPolicy.indexBetween(before: l, after: u)
-        }
-        
+        let newIndex = SortIndexPolicy.indexForReorder(lower: lower, upper: upper, firstSortIndex: firstSortIndex)
+
         guard var collection = try await repository.fetch(by: id) else {
             throw AppError.repositoryError(.notFound)
         }
         collection.sortIndex = newIndex
         collection.updatedAt = Date()
         try await repository.update(collection)
-        logger.info("Collection 重排成功, id=\(id), newIndex=\(newIndex!)", function: #function)
+        logger.info("Collection 重排成功, id=\(id), newIndex=\(newIndex)", function: #function)
 
-        Task.detached {
-            let latest = try await repository.fetchAll()
-            try await SortIndexNormalizer.normalizeIfNeeded(latest) { updated in
-                try await repository.update(updated)
+        Task {
+            do {
+                try await repository.normalizeSortIndexesIfNeeded()
+            } catch {
+                logger.error("sortIndex 归一化失败", error: error, function: #function)
             }
         }
     }

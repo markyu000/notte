@@ -10,9 +10,11 @@ import SwiftData
 
 class PageRepository: PageRepositoryProtocol {
     let context: ModelContext
+    let normalizationActor: SortIndexNormalizationActor
 
-    init(context: ModelContext) {
+    init(context: ModelContext, normalizationActor: SortIndexNormalizationActor) {
         self.context = context
+        self.normalizationActor = normalizationActor
     }
 
     func fetchAll(in collectionID: UUID) async throws -> [Page] {
@@ -89,5 +91,9 @@ class PageRepository: PageRepositoryProtocol {
         } catch {
             throw RepositoryError.saveFailed(error)
         }
+    }
+    
+    func normalizeSortIndexesIfNeeded(in collectionID: UUID) async throws {
+        try await normalizationActor.normalizePages(in: collectionID)
     }
 }

@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-class CollectionModel {
+nonisolated class CollectionModel {
     @Attribute(.unique) var id: UUID = UUID()
     var title: String = ""
     var iconName: String? = nil
@@ -54,3 +54,5 @@ extension CollectionModel {
         )
     }
 }
+
+extension CollectionModel: SortIndexPersistable {}

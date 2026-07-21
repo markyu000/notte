@@ -27,21 +27,7 @@ struct ReorderPagesUseCase {
             all.indices.contains(idx + 1) ? all[idx + 1].sortIndex : nil
         }
         
-        let newIndex: Double!
-        switch (lower, upper) {
-        case (nil, nil):
-            if let firstSortIndex {
-                newIndex = SortIndexPolicy.indexBetween(before: 0, after: firstSortIndex)
-            } else {
-                newIndex = SortIndexPolicy.initialIndex()
-            }
-        case (nil, let u?):
-            newIndex = SortIndexPolicy.indexBetween(before: 0, after: u)
-        case (let l?, nil):
-            newIndex = SortIndexPolicy.indexAfter(last: l)
-        case (let l?, let u?):
-            newIndex = SortIndexPolicy.indexBetween(before: l, after: u)
-        }
+        let newIndex = SortIndexPolicy.indexForReorder(lower: lower, upper: upper, firstSortIndex: firstSortIndex)
 
         guard var page = try await repository.fetch(by: id) else {
             throw AppError.repositoryError(.notFound)
@@ -49,12 +35,13 @@ struct ReorderPagesUseCase {
         page.sortIndex = newIndex
         page.updatedAt = Date()
         try await repository.update(page)
-        logger.info("Page 重排成功, id=\(id), newIndex=\(newIndex!)", function: #function)
+        logger.info("Page 重排成功, id=\(id), newIndex=\(newIndex)", function: #function)
 
-        Task.detached {
-            let latest = try await repository.fetchAll(in: collectionID)
-            try await SortIndexNormalizer.normalizeIfNeeded(latest) { updated in
-                try await repository.update(updated)
+        Task {
+            do {
+                try await repository.normalizeSortIndexesIfNeeded(in: collectionID)
+            } catch {
+                logger.error("sortIndex 归一化失败, collectionID=\(collectionID)", error: error, function: #function)
             }
         }
     }

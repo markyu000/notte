@@ -14,11 +14,12 @@ final class CollectionRepositoryTests: XCTestCase {
     var container: ModelContainer!
     var context: ModelContext!
     var repository: CollectionRepository!
-    
+
     override func setUp() async throws {
         container = try PersistenceController.makeContainer(inMemory: true)
         context = ModelContext(container)
-        repository = CollectionRepository(context: context)
+        let normalizationActor = SortIndexNormalizationActor(modelContainer: container)
+        repository = CollectionRepository(context: context, normalizationActor: normalizationActor)
     }
     
     func test_fetchAll_whenEmpty_returnsEmptyArray() async throws {
