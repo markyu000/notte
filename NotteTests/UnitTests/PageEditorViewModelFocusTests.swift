@@ -25,7 +25,6 @@ final class PageEditorViewModelFocusTests: XCTestCase {
     private func makeNode(
         id: UUID = UUID(),
         parentNodeID: UUID? = nil,
-        depth: Int = 0,
         sortIndex: Double
     ) -> Node {
         Node(
@@ -33,7 +32,6 @@ final class PageEditorViewModelFocusTests: XCTestCase {
             pageID: pageID,
             parentNodeID: parentNodeID,
             title: "",
-            depth: depth,
             sortIndex: sortIndex,
             isCollapsed: false,
             createdAt: Date(),
@@ -72,7 +70,7 @@ final class PageEditorViewModelFocusTests: XCTestCase {
         let nextRootID = UUID()
         nodeRepository.storedNodes = [
             makeNode(id: rootID, sortIndex: 1000),
-            makeNode(id: childID, parentNodeID: rootID, depth: 1, sortIndex: 1000),
+            makeNode(id: childID, parentNodeID: rootID, sortIndex: 1000),
             makeNode(id: nextRootID, sortIndex: 2000)
         ]
         await viewModel.loadPage()

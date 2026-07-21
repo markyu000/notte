@@ -25,7 +25,6 @@ final class PageEditorViewModelLoadTests: XCTestCase {
     private func makeNode(
         id: UUID = UUID(),
         parentNodeID: UUID? = nil,
-        depth: Int = 0,
         sortIndex: Double
     ) -> Node {
         Node(
@@ -33,7 +32,6 @@ final class PageEditorViewModelLoadTests: XCTestCase {
             pageID: pageID,
             parentNodeID: parentNodeID,
             title: "Node",
-            depth: depth,
             sortIndex: sortIndex,
             isCollapsed: false,
             createdAt: Date(),
@@ -86,7 +84,7 @@ final class PageEditorViewModelLoadTests: XCTestCase {
 
         var parent = makeNode(id: parentID, sortIndex: 1000)
         parent.isCollapsed = true
-        let child = makeNode(id: childID, parentNodeID: parentID, depth: 1, sortIndex: 1500)
+        let child = makeNode(id: childID, parentNodeID: parentID, sortIndex: 1500)
         nodeRepository.storedNodes = [parent, child]
 
         await viewModel.loadPage()
@@ -100,8 +98,8 @@ final class PageEditorViewModelLoadTests: XCTestCase {
         let parentID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let childID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
 
-        let parent = makeNode(id: parentID, depth: 0, sortIndex: 1000)
-        let child = makeNode(id: childID, parentNodeID: parentID, depth: 1, sortIndex: 1500)
+        let parent = makeNode(id: parentID, sortIndex: 1000)
+        let child = makeNode(id: childID, parentNodeID: parentID, sortIndex: 1500)
         nodeRepository.storedNodes = [parent, child]
 
         await viewModel.loadPage()

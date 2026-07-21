@@ -25,7 +25,6 @@ final class NodeMutationServiceToggleCollapseTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: nil,
             title: "",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: isCollapsed,
             createdAt: Date(),

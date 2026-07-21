@@ -13,30 +13,29 @@ final class NodeQueryServiceTests: XCTestCase {
     // MARK: - buildTree Tests
 
     /// 测试：空节点列表构建树
-    func testBuildTreeWithEmptyNodes() {
+    func testBuildTreeWithEmptyNodes() throws {
         let nodes: [Node] = []
         let blocks: [Block] = []
 
-        let tree = queryService.buildTree(nodes: nodes, blocks: blocks)
+        let tree = try queryService.buildTree(nodes: nodes, blocks: blocks)
 
         XCTAssertTrue(tree.isEmpty)
     }
 
     /// 测试：单个根节点构建树
-    func testBuildTreeWithSingleRoot() {
+    func testBuildTreeWithSingleRoot() throws {
         let node1 = Node(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
             pageID: UUID(),
             parentNodeID: nil,
             title: "Root",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: false,
             createdAt: Date(),
             updatedAt: Date()
         )
 
-        let editorNode = queryService.buildTree(nodes: [node1], blocks: []).first
+        let editorNode = try queryService.buildTree(nodes: [node1], blocks: []).first
 
         XCTAssertNotNil(editorNode)
         XCTAssertEqual(editorNode?.id, node1.id)
@@ -46,13 +45,12 @@ final class NodeQueryServiceTests: XCTestCase {
     }
 
     /// 测试：多个根节点按 sortIndex 排序
-    func testBuildTreeWithMultipleRootsOrderedBySortIndex() {
+    func testBuildTreeWithMultipleRootsOrderedBySortIndex() throws {
         let node1 = Node(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
             pageID: UUID(),
             parentNodeID: nil,
             title: "First",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: false,
             createdAt: Date(),
@@ -63,14 +61,13 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: nil,
             title: "Second",
-            depth: 0,
             sortIndex: 2000,
             isCollapsed: false,
             createdAt: Date(),
             updatedAt: Date()
         )
 
-        let tree = queryService.buildTree(nodes: [node2, node1], blocks: [])
+        let tree = try queryService.buildTree(nodes: [node2, node1], blocks: [])
 
         XCTAssertEqual(tree.count, 2)
         XCTAssertEqual(tree[0].id, node1.id)
@@ -78,7 +75,7 @@ final class NodeQueryServiceTests: XCTestCase {
     }
 
     /// 测试：二级嵌套结构
-    func testBuildTreeWithTwoLevels() {
+    func testBuildTreeWithTwoLevels() throws {
         let rootID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let childID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
 
@@ -87,7 +84,6 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: nil,
             title: "Root",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: false,
             createdAt: Date(),
@@ -98,14 +94,13 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: rootID,
             title: "Child",
-            depth: 1,
             sortIndex: 1500,
             isCollapsed: false,
             createdAt: Date(),
             updatedAt: Date()
         )
 
-        let tree = queryService.buildTree(nodes: [root, child], blocks: [])
+        let tree = try queryService.buildTree(nodes: [root, child], blocks: [])
 
         XCTAssertEqual(tree.count, 1)
         XCTAssertEqual(tree[0].children.count, 1)
@@ -113,7 +108,7 @@ final class NodeQueryServiceTests: XCTestCase {
     }
 
     /// 测试：三级嵌套结构（关键：测试之前的 bug fix）
-    func testBuildTreeWithThreeLevels() {
+    func testBuildTreeWithThreeLevels() throws {
         let rootID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let child1ID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
         let grandchildID = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
@@ -123,7 +118,6 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: nil,
             title: "Root",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: false,
             createdAt: Date(),
@@ -134,7 +128,6 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: rootID,
             title: "Child",
-            depth: 1,
             sortIndex: 1500,
             isCollapsed: false,
             createdAt: Date(),
@@ -145,14 +138,13 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: child1ID,
             title: "Grandchild",
-            depth: 2,
             sortIndex: 1750,
             isCollapsed: false,
             createdAt: Date(),
             updatedAt: Date()
         )
 
-        let tree = queryService.buildTree(nodes: [root, child, grandchild], blocks: [])
+        let tree = try queryService.buildTree(nodes: [root, child, grandchild], blocks: [])
 
         XCTAssertEqual(tree.count, 1)
         XCTAssertEqual(tree[0].children.count, 1)
@@ -161,7 +153,7 @@ final class NodeQueryServiceTests: XCTestCase {
     }
 
     /// 测试：多个子节点按 sortIndex 排序
-    func testBuildTreeWithMultipleChildrenOrdering() {
+    func testBuildTreeWithMultipleChildrenOrdering() throws {
         let rootID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let child1ID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
         let child2ID = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
@@ -171,7 +163,6 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: nil,
             title: "Root",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: false,
             createdAt: Date(),
@@ -182,7 +173,6 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: rootID,
             title: "Child 1",
-            depth: 1,
             sortIndex: 2000,
             isCollapsed: false,
             createdAt: Date(),
@@ -193,14 +183,13 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: rootID,
             title: "Child 2",
-            depth: 1,
             sortIndex: 1500,
             isCollapsed: false,
             createdAt: Date(),
             updatedAt: Date()
         )
 
-        let tree = queryService.buildTree(nodes: [root, child1, child2], blocks: [])
+        let tree = try queryService.buildTree(nodes: [root, child1, child2], blocks: [])
 
         XCTAssertEqual(tree[0].children.count, 2)
         XCTAssertEqual(tree[0].children[0].id, child2ID, "sortIndex 较小的 child 应该在前")
@@ -208,7 +197,7 @@ final class NodeQueryServiceTests: XCTestCase {
     }
 
     /// 测试：带 Block 的节点
-    func testBuildTreeWithBlocks() {
+    func testBuildTreeWithBlocks() throws {
         let nodeID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let blockID1 = UUID(uuidString: "00000000-0000-0000-0000-000000000100")!
         let blockID2 = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
@@ -218,7 +207,6 @@ final class NodeQueryServiceTests: XCTestCase {
             pageID: UUID(),
             parentNodeID: nil,
             title: "Root",
-            depth: 0,
             sortIndex: 1000,
             isCollapsed: false,
             createdAt: Date(),
@@ -243,7 +231,7 @@ final class NodeQueryServiceTests: XCTestCase {
             updatedAt: Date()
         )
 
-        let tree = queryService.buildTree(nodes: [node], blocks: [block2, block1])
+        let tree = try queryService.buildTree(nodes: [node], blocks: [block2, block1])
 
         XCTAssertEqual(tree[0].blocks.count, 2)
         XCTAssertEqual(tree[0].blocks[0].id, blockID1, "Block 按 sortIndex 排序")

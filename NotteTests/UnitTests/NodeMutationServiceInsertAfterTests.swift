@@ -26,7 +26,6 @@ final class NodeMutationServiceInsertAfterTests: XCTestCase {
     private func makeNode(
         id: UUID = UUID(),
         parentNodeID: UUID? = nil,
-        depth: Int = 0,
         sortIndex: Double
     ) -> Node {
         Node(
@@ -34,7 +33,6 @@ final class NodeMutationServiceInsertAfterTests: XCTestCase {
             pageID: pageID,
             parentNodeID: parentNodeID,
             title: "",
-            depth: depth,
             sortIndex: sortIndex,
             isCollapsed: false,
             createdAt: Date(),
@@ -53,16 +51,6 @@ final class NodeMutationServiceInsertAfterTests: XCTestCase {
 
         XCTAssertEqual(nodeRepository.storedNodes.count, 2)
         XCTAssertGreaterThan(newNode.sortIndex, existing.sortIndex)
-    }
-
-    /// 测试：新节点继承当前节点的 depth
-    func testInsertAfterInheritsDepth() async throws {
-        let existing = makeNode(depth: 2, sortIndex: 1000)
-        nodeRepository.storedNodes = [existing]
-
-        let newNode = try await mutationService.insertAfter(nodeID: existing.id, in: pageID)
-
-        XCTAssertEqual(newNode.depth, existing.depth)
     }
 
     /// 测试：新节点继承当前节点的 parentNodeID

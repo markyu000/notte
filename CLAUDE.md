@@ -82,7 +82,7 @@ All entities carry `UUID id`, `createdAt`, `updatedAt`, and `sortIndex`.
 ## Key Conventions
 
 - **Naming:** Follow the conventions documented in `Notte/Docs/Notte命名规范.md`
-- **Git:** Follow branch and commit conventions in `Notte/Docs/NotteGit规范.md`
+- **Git:** Follow branch and commit conventions and commit messages and PRs in `Notte/Docs/NotteGit规范.md`
 - **Design tokens:** Use `ColorTokens`, `TypographyTokens`, `SpacingTokens` — never raw hex values or magic numbers in views
 - **Error handling:** Use `RepositoryError` at the data layer and `AppError` at the presentation layer
 - **Sort ordering:** `SortIndexNormalizer` and `SortIndexPolicy` in `Shared/Utilities/` govern all reordering logic — use these, don't roll custom sort logic

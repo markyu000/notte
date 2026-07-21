@@ -27,6 +27,8 @@ struct NodeTitleEditor: UIViewRepresentable {
     var onDelete: () -> Void
     var onFocus: () -> Void
     var canIndent: Bool = true
+    var canMoveUp: Bool = true
+    var canMoveDown: Bool = true
 
     func makeUIView(context: Context) -> CustomTextField {
         let field = CustomTextField()
@@ -58,6 +60,8 @@ struct NodeTitleEditor: UIViewRepresentable {
     func updateUIView(_ uiView: CustomTextField, context: Context) {
         context.coordinator.parent = self
         context.coordinator.indentItem?.isEnabled = canIndent
+        context.coordinator.moveUpItem?.isEnabled = canMoveUp
+        context.coordinator.moveDownItem?.isEnabled = canMoveDown
         if uiView.text != text {
             uiView.text = text
         }
@@ -85,6 +89,20 @@ struct NodeTitleEditor: UIViewRepresentable {
         )
         indentItem.isEnabled = canIndent
         coordinator.indentItem = indentItem
+        let moveUpItem = UIBarButtonItem(
+            image: UIImage(systemName: "arrow.up"),
+            style: .plain, target: coordinator,
+            action: #selector(Coordinator.didTapMoveUp)
+        )
+        moveUpItem.isEnabled = canMoveUp
+        coordinator.moveUpItem = moveUpItem
+        let moveDownItem = UIBarButtonItem(
+            image: UIImage(systemName: "arrow.down"),
+            style: .plain, target: coordinator,
+            action: #selector(Coordinator.didTapMoveDown)
+        )
+        moveDownItem.isEnabled = canMoveDown
+        coordinator.moveDownItem = moveDownItem
         toolbar.items = [
             UIBarButtonItem(
                 image: UIImage(systemName: "decrease.indent"),
@@ -92,16 +110,8 @@ struct NodeTitleEditor: UIViewRepresentable {
                 action: #selector(Coordinator.didTapOutdent)
             ),
             indentItem,
-            UIBarButtonItem(
-                image: UIImage(systemName: "arrow.up"),
-                style: .plain, target: coordinator,
-                action: #selector(Coordinator.didTapMoveUp)
-            ),
-            UIBarButtonItem(
-                image: UIImage(systemName: "arrow.down"),
-                style: .plain, target: coordinator,
-                action: #selector(Coordinator.didTapMoveDown)
-            ),
+            moveUpItem,
+            moveDownItem,
             UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
             deleteItem
         ]
@@ -131,6 +141,8 @@ struct NodeTitleEditor: UIViewRepresentable {
     class Coordinator: NSObject, UITextFieldDelegate {
         var parent: NodeTitleEditor
         var indentItem: UIBarButtonItem?
+        var moveUpItem: UIBarButtonItem?
+        var moveDownItem: UIBarButtonItem?
 
         init(_ parent: NodeTitleEditor) {
             self.parent = parent

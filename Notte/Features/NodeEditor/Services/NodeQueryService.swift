@@ -13,14 +13,14 @@ struct NodeQueryService {
     // MARK: - 树构建
 
     /// 将扁平 Node 列表 + Block 列表构建为树形 EditorNode 列表（只含根节点）
-    func buildTree(nodes: [Node], blocks: [Block]) -> [EditorNode] {
+    func buildTree(nodes: [Node], blocks: [Block]) throws -> [EditorNode] {
         // 1. 将 Block 按 nodeID 分组
         var blocksByNodeID: [UUID: [Block]] = [:]
         for block in blocks {
             blocksByNodeID[block.nodeID, default: []].append(block)
         }
 
-        // 2. 将每个 Node 转为 EditorNode（children 先为空）
+        // 2. 将每个 Node 转为 EditorNode（children 先为空，depth 待递归赋值）
         var editorNodes: [UUID: EditorNode] = [:]
         for node in nodes.sorted(by: { $0.sortIndex < $1.sortIndex }) {
             let nodeBlocks = (blocksByNodeID[node.id] ?? [])
@@ -35,11 +35,12 @@ struct NodeQueryService {
                         imageAlignment: $0.imageAlignment
                     )
                 }
+
             editorNodes[node.id] = EditorNode(
                 id: node.id,
                 parentID: node.parentNodeID,
                 title: node.title,
-                depth: node.depth,
+                depth: 0,
                 sortIndex: node.sortIndex,
                 isCollapsed: node.isCollapsed,
                 children: [],
@@ -54,18 +55,24 @@ struct NodeQueryService {
             childIDsByParent[parentID, default: []].append(node.id)
         }
 
-        // 递归构建 EditorNode 树，避免 struct 值拷贝导致孙节点丢失
-        func buildNode(_ id: UUID) -> EditorNode {
-            var node = editorNodes[id]!
-            node.children = (childIDsByParent[id] ?? []).map { buildNode($0) }
+        // 递归构建 EditorNode 树：depth 沿途下传（parent.depth + 1），单趟 DFS 算完，
+        // 不对每个节点单独往上溯到根——避免 struct 值拷贝导致孙节点丢失。
+        // id 取自 nodes 本身（根节点集合 / childIDsByParent），editorNodes 也由 nodes 构建，
+        // 找不到意味着这层不变式被破坏，不能悄悄跳过——显式抛 RepositoryError.notFound。
+        func buildNode(_ id: UUID, depth: Int) throws -> EditorNode {
+            guard var node = editorNodes[id] else {
+                throw RepositoryError.notFound
+            }
+            node.depth = depth
+            node.children = try (childIDsByParent[id] ?? []).map { try buildNode($0, depth: depth + 1) }
             return node
         }
 
         // 4. 收集根节点
-        return nodes
+        return try nodes
             .filter { $0.parentNodeID == nil }
             .sorted { $0.sortIndex < $1.sortIndex }
-            .map { buildNode($0.id) }
+            .map { try buildNode($0.id, depth: 0) }
     }
 
     /// 将树形结构展平为按视觉顺序排列的 EditorNode 列表（深度优先，前序遍历）
@@ -154,5 +161,37 @@ extension NodeQueryService {
             }
             .sorted { $0.sortIndex < $1.sortIndex }
             .first
+    }
+}
+
+extension NodeQueryService {
+    // 单点查询：沿 parentNodeID 链向上走到根，返回跳数。建字典 O(n) + 沿链上溯 O(链深)。
+    /// - Returns: 节点深度；如果节点不存在返回 nil
+    func depth(of nodeID: UUID, in nodes: [Node]) -> Int? {
+        let byID = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
+
+        // 如果节点不存在，返回 nil
+        guard byID[nodeID] != nil else { return nil }
+
+        var d = 0
+        var cur = byID[nodeID]?.parentNodeID
+        while let id = cur {
+            d += 1
+            cur = byID[id]?.parentNodeID
+        }
+        return d  // 根节点返回 0，子节点返回实际深度
+    }
+
+    // 子树相对高度：从 nodeID 顺着树往下走到最深的叶子，边走边计数层级，取最大值。
+    // 与 buildTree 同一套思路（先按 parentNodeID 分组，再递归 DFS 往下），
+    // 只走一趟下行遍历，不需要对每个子孙再单独往上走一次。
+    // 建分组表 O(n) + 遍历子树 O(子树大小)，比"对每个子孙分别往上数"更省。
+    func subtreeHeight(of nodeID: UUID, in nodes: [Node]) -> Int {
+        let childrenByParent = Dictionary(grouping: nodes, by: \.parentNodeID)
+        func maxDepth(from id: UUID) -> Int {
+            (childrenByParent[id] ?? []).map { 1 + maxDepth(from: $0.id) }.max()
+                ?? 0
+        }
+        return maxDepth(from: nodeID)
     }
 }

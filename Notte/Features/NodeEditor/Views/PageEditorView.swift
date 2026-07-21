@@ -98,12 +98,29 @@ struct PageEditorView: View {
             .frame(height: 200)
     }
 
+    /// node 的同级兄弟（父节点相同），按 sortIndex 排序。用于判断上移/下移按钮是否应禁用。
+    private func siblings(of node: EditorNode) -> [EditorNode] {
+        viewModel.visibleNodes
+            .filter { $0.parentID == node.parentID }
+            .sorted { $0.sortIndex < $1.sortIndex }
+    }
+
+    private func canMoveUp(_ node: EditorNode) -> Bool {
+        siblings(of: node).first?.id != node.id
+    }
+
+    private func canMoveDown(_ node: EditorNode) -> Bool {
+        siblings(of: node).last?.id != node.id
+    }
+
     private func nodeRow(index: Int, node: EditorNode) -> some View {
         NodeRowView(
             node: node,
             isFocused: viewModel.focusedNodeID == node.id
                 || viewModel.pendingFocusNodeID == node.id,
             shouldFocusTitle: viewModel.pendingFocusNodeID == node.id,
+            canMoveUp: canMoveUp(node),
+            canMoveDown: canMoveDown(node),
             onTitleChanged: { title in
                 viewModel.onTitleChanged(nodeID: node.id, title: title)
             },

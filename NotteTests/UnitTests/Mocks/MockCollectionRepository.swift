@@ -23,7 +23,7 @@ class MockCollectionRepository: CollectionRepositoryProtocol {
     
     func create(_ collection: Collection) async throws {
         if shouldThrowOnCreate {
-            throw RepositoryError.saveFailed(NSError())
+            throw RepositoryError.saveFailed(NSError(domain: "MockCollectionRepository", code: -1))
         }
         storedCollections.append(collection)
     }

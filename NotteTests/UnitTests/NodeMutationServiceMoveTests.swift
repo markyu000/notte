@@ -31,7 +31,6 @@ final class NodeMutationServiceMoveTests: XCTestCase {
             pageID: pageID,
             parentNodeID: parentNodeID,
             title: "",
-            depth: 0,
             sortIndex: sortIndex,
             isCollapsed: false,
             createdAt: Date(),
