@@ -48,11 +48,28 @@ struct NodeMutationService {
 
     func insertAfter(nodeID: UUID, in pageID: UUID) async throws -> Node {
         logger.debug("开始在节点后插入, nodeID=\(nodeID), pageID=\(pageID)", function: #function)
-        let nodes = try await nodeRepository.fetchAll(in: pageID)
-        guard let current = nodes.first(where: { $0.id == nodeID }) else {
+        var nodes = try await nodeRepository.fetchAll(in: pageID)
+        guard var current = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
-        let nextSibling = queryService.nextSibling(of: nodeID, in: nodes)
+        var nextSibling = queryService.nextSibling(of: nodeID, in: nodes)
+
+        if let next = nextSibling, SortIndexPolicy.needsNormalization(before: current.sortIndex, after: next.sortIndex) {
+            try await nodeRepository.normalizeSortIndexesIfNeeded(in: pageID, parentNodeID: current.parentNodeID)
+            nodes = try await nodeRepository.fetchAll(in: pageID)
+            guard let refreshedCurrent = nodes.first(where: { $0.id == nodeID }) else {
+                throw AppError.repositoryError(RepositoryError.notFound)
+            }
+            current = refreshedCurrent
+            nextSibling = queryService.nextSibling(of: nodeID, in: nodes)
+            if let next2 = nextSibling {
+                assert(
+                    !SortIndexPolicy.needsNormalization(before: current.sortIndex, after: next2.sortIndex),
+                    "归一化后间隙仍然过小，normalize 或 scope 可能有 bug"
+                )
+            }
+        }
+
         let newSortIndex: Double
         if let next = nextSibling {
             newSortIndex = SortIndexPolicy.indexBetween(before: current.sortIndex, after: next.sortIndex)
@@ -83,17 +100,8 @@ struct NodeMutationService {
             updatedAt: Date()
         )
         try await blockRepository.create(emptyBlock)
-        
-        logger.info("节点插入成功, id=\(newNode.id)", function: #function)
-        
-        Task {
-            do {
-                try await nodeRepository.normalizeSortIndexesIfNeeded(in: pageID, parentNodeID: current.parentNodeID)
-            } catch {
-                logger.error("sortIndex 归一化失败, pageID=\(pageID)", error: error, function: #function)
-            }
-        }
 
+        logger.info("节点插入成功, id=\(newNode.id)", function: #function)
         return newNode
     }
 
@@ -239,17 +247,34 @@ struct NodeMutationService {
 
     func outdent(nodeID: UUID, in pageID: UUID) async throws {
         logger.debug("反缩进节点, nodeID=\(nodeID)", function: #function)
-        let nodes = try await nodeRepository.fetchAll(in: pageID)
+        var nodes = try await nodeRepository.fetchAll(in: pageID)
         guard let node = nodes.first(where: { $0.id == nodeID }) else {
             throw AppError.repositoryError(RepositoryError.notFound)
         }
-        guard let parentNode = queryService.parent(of: nodeID, in: nodes) else {
+        guard var parentNode = queryService.parent(of: nodeID, in: nodes) else {
             // 已在根层，无法反缩进
             logger.debug("反缩进中止：已在根层, nodeID=\(nodeID)", function: #function)
             return
         }
 
-        let nextOfParent = queryService.nextSibling(of: parentNode.id, in: nodes)
+        var nextOfParent = queryService.nextSibling(of: parentNode.id, in: nodes)
+
+        if let next = nextOfParent, SortIndexPolicy.needsNormalization(before: parentNode.sortIndex, after: next.sortIndex) {
+            try await nodeRepository.normalizeSortIndexesIfNeeded(in: pageID, parentNodeID: parentNode.parentNodeID)
+            nodes = try await nodeRepository.fetchAll(in: pageID)
+            guard let refreshedParent = nodes.first(where: { $0.id == parentNode.id }) else {
+                throw AppError.repositoryError(RepositoryError.notFound)
+            }
+            parentNode = refreshedParent
+            nextOfParent = queryService.nextSibling(of: parentNode.id, in: nodes)
+            if let next2 = nextOfParent {
+                assert(
+                    !SortIndexPolicy.needsNormalization(before: parentNode.sortIndex, after: next2.sortIndex),
+                    "归一化后间隙仍然过小，normalize 或 scope 可能有 bug"
+                )
+            }
+        }
+
         let newSortIndex: Double
         if let next = nextOfParent {
             newSortIndex = SortIndexPolicy.indexBetween(
@@ -265,16 +290,8 @@ struct NodeMutationService {
         updatedNode.sortIndex = newSortIndex
         updatedNode.updatedAt = Date()
         try await nodeRepository.update(updatedNode)
-        
+
         logger.info("节点反缩进成功, nodeID=\(nodeID)", function: #function)
-        
-        Task {
-            do {
-                try await nodeRepository.normalizeSortIndexesIfNeeded(in: pageID, parentNodeID: parentNode.parentNodeID)
-            } catch {
-                logger.error("sortIndex 归一化失败, pageID=\(pageID)", error: error, function: #function)
-            }
-        }
     }
 
     // MARK: - 折叠
