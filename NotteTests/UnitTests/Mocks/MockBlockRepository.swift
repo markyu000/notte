@@ -5,6 +5,8 @@ import Foundation
 class MockBlockRepository: BlockRepositoryProtocol {
 
     var storedBlocks: [Block] = []
+    var shouldThrowOnNormalize = false
+    var normalizeCallCount = 0
 
     func fetchAll(in nodeID: UUID) async throws -> [Block] {
         storedBlocks.filter { $0.nodeID == nodeID }
@@ -36,5 +38,17 @@ class MockBlockRepository: BlockRepositoryProtocol {
         storedBlocks.removeAll { $0.nodeID == nodeID }
     }
 
-    func normalizeSortIndexesIfNeeded(in nodeID: UUID) async throws {}
+    /// 忠实复现真实归一化：按 nodeID 过滤后跑域层 SortIndexNormalizer 并写回。
+    func normalizeSortIndexesIfNeeded(in nodeID: UUID) async throws {
+        normalizeCallCount += 1
+        if shouldThrowOnNormalize {
+            throw RepositoryError.saveFailed(NSError(domain: "MockBlockRepository", code: -2))
+        }
+        let scoped = storedBlocks.filter { $0.nodeID == nodeID }
+        try await SortIndexNormalizer.normalizeIfNeeded(scoped) { updated in
+            if let index = storedBlocks.firstIndex(where: { $0.id == updated.id }) {
+                storedBlocks[index] = updated
+            }
+        }
+    }
 }

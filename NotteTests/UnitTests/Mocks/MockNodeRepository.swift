@@ -13,6 +13,8 @@ class MockNodeRepository: NodeRepositoryProtocol {
 
     var storedNodes: [Node] = []
     var updateCallCount = 0
+    var shouldThrowOnNormalize = false
+    var normalizeCallCount = 0
 
     func fetchAll(in pageID: UUID) async throws -> [Node] {
         storedNodes.filter { $0.pageID == pageID }
@@ -45,5 +47,17 @@ class MockNodeRepository: NodeRepositoryProtocol {
         storedNodes.removeAll { $0.pageID == pageID }
     }
 
-    func normalizeSortIndexesIfNeeded(in pageID: UUID, parentNodeID: UUID?) async throws {}
+    /// 忠实复现真实归一化：按 pageID + parentNodeID 过滤同级节点后跑域层 SortIndexNormalizer 并写回。
+    func normalizeSortIndexesIfNeeded(in pageID: UUID, parentNodeID: UUID?) async throws {
+        normalizeCallCount += 1
+        if shouldThrowOnNormalize {
+            throw RepositoryError.saveFailed(NSError(domain: "MockNodeRepository", code: -2))
+        }
+        let scoped = storedNodes.filter { $0.pageID == pageID && $0.parentNodeID == parentNodeID }
+        try await SortIndexNormalizer.normalizeIfNeeded(scoped) { updated in
+            if let index = storedNodes.firstIndex(where: { $0.id == updated.id }) {
+                storedNodes[index] = updated
+            }
+        }
+    }
 }

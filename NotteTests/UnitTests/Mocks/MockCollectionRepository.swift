@@ -12,6 +12,8 @@ import Foundation
 class MockCollectionRepository: CollectionRepositoryProtocol {
     var storedCollections: [Collection] = []
     var shouldThrowOnCreate = false
+    var shouldThrowOnNormalize = false
+    var normalizeCallCount = 0
     
     func fetchAll() async throws -> [Collection] {
         storedCollections
@@ -42,5 +44,16 @@ class MockCollectionRepository: CollectionRepositoryProtocol {
         storedCollections.remove(at: index)
     }
 
-    func normalizeSortIndexesIfNeeded() async throws {}
+    /// 忠实复现真实归一化：跑域层 SortIndexNormalizer 并写回。
+    func normalizeSortIndexesIfNeeded() async throws {
+        normalizeCallCount += 1
+        if shouldThrowOnNormalize {
+            throw RepositoryError.saveFailed(NSError(domain: "MockCollectionRepository", code: -2))
+        }
+        try await SortIndexNormalizer.normalizeIfNeeded(storedCollections) { updated in
+            if let index = storedCollections.firstIndex(where: { $0.id == updated.id }) {
+                storedCollections[index] = updated
+            }
+        }
+    }
 }
