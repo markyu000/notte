@@ -13,20 +13,20 @@ struct ReorderPagesUseCase {
 
     func execute(collectionID: UUID, moving id: UUID, after targetID: UUID?) async throws {
         logger.debug("重排 Page, id=\(id), after=\(String(describing: targetID))", function: #function)
-        let all = try await repository.fetchAll(in: collectionID)
-            .sorted { $0.sortIndex < $1.sortIndex }
 
-        let firstSortIndex = all.first?.sortIndex
+        var (lower, upper, firstSortIndex) = try await neighborIndexes(collectionID: collectionID, targetID: targetID)
 
-        let targetIndex = targetID.flatMap { tid in
-            all.firstIndex { $0.id == tid }
+        if let l = lower, let u = upper, SortIndexPolicy.needsNormalization(before: l, after: u) {
+            try await repository.normalizeSortIndexesIfNeeded(in: collectionID)
+            (lower, upper, firstSortIndex) = try await neighborIndexes(collectionID: collectionID, targetID: targetID)
+            if let l2 = lower, let u2 = upper {
+                assert(
+                    !SortIndexPolicy.needsNormalization(before: l2, after: u2),
+                    "归一化后间隙仍然过小，normalize 或 scope 可能有 bug"
+                )
+            }
         }
 
-        let lower: Double? = targetIndex.map { all[$0].sortIndex }
-        let upper: Double? = targetIndex.flatMap { idx in
-            all.indices.contains(idx + 1) ? all[idx + 1].sortIndex : nil
-        }
-        
         let newIndex = SortIndexPolicy.indexForReorder(lower: lower, upper: upper, firstSortIndex: firstSortIndex)
 
         guard var page = try await repository.fetch(by: id) else {
@@ -36,13 +36,19 @@ struct ReorderPagesUseCase {
         page.updatedAt = Date()
         try await repository.update(page)
         logger.info("Page 重排成功, id=\(id), newIndex=\(newIndex)", function: #function)
+    }
 
-        Task {
-            do {
-                try await repository.normalizeSortIndexesIfNeeded(in: collectionID)
-            } catch {
-                logger.error("sortIndex 归一化失败, collectionID=\(collectionID)", error: error, function: #function)
-            }
+    private func neighborIndexes(
+        collectionID: UUID,
+        targetID: UUID?
+    ) async throws -> (lower: Double?, upper: Double?, firstSortIndex: Double?) {
+        let all = try await repository.fetchAll(in: collectionID)
+            .sorted { $0.sortIndex < $1.sortIndex }
+        let targetIndex = targetID.flatMap { tid in all.firstIndex { $0.id == tid } }
+        let lower: Double? = targetIndex.map { all[$0].sortIndex }
+        let upper: Double? = targetIndex.flatMap { idx in
+            all.indices.contains(idx + 1) ? all[idx + 1].sortIndex : nil
         }
+        return (lower, upper, all.first?.sortIndex)
     }
 }

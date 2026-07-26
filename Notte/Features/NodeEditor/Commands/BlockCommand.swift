@@ -17,8 +17,8 @@ enum BlockCommand {
     case deleteBlock(blockID: UUID)
     /// 更新 Block 的文本内容
     case updateContent(blockID: UUID, content: String)
-    /// 调整 Block 的排序位置
-    case reorderBlock(blockID: UUID, newSortIndex: Double)
+    /// 调整 Block 的排序位置：移动到 after 指定的块之后（nil 表示移到最前）
+    case reorderBlock(blockID: UUID, after: UUID?)
     /// 与同节点内前一个 Block 互换位置（朴素块移动）
     case moveBlockUp(blockID: UUID)
     /// 与同节点内后一个 Block 互换位置（朴素块移动）

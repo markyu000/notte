@@ -98,8 +98,8 @@ class NodeEditorEngine: ObservableObject {
                 try await blockService.deleteBlock(blockID: blockID)
             case .updateContent(let blockID, let content):
                 try await blockService.updateContent(blockID: blockID, content: content)
-            case .reorderBlock(let blockID, let newSortIndex):
-                try await blockService.reorderBlock(blockID: blockID, newSortIndex: newSortIndex)
+            case .reorderBlock(let blockID, let targetID):
+                try await blockService.reorderBlock(blockID: blockID, after: targetID)
             case .moveBlockUp(let blockID):
                 try await blockService.moveUp(blockID: blockID)
             case .moveBlockDown(let blockID):
